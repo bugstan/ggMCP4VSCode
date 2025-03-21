@@ -91,12 +91,12 @@
         "description": "This extension requires workspace trust to access the file system and execute commands"
     },
     "scripts": {
-        "vscode:prepublish": "npm run compile && npm run update-readme && npm run package",
+        "vscode:prepublish": "npm run compile && npm run update-readme",
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
         "lint": "eslint . --ext .ts",
         "test": "node ./test/run-all-tests.js",
-        "update-readme": "node -e \"const fs = require('fs'); const packageJson = require('./package.json'); const readmePath = './README.md'; const readme = fs.readFileSync(readmePath, 'utf8'); const updatedReadme = readme.replace(/version-\\d+\\.\\d+\\.\\d+-blue/g, `version-${packageJson.version}-blue`); fs.writeFileSync(readmePath, updatedReadme);\"",
+        "update-readme": "node update-readme.js",
         "package": "vsce package"
     },
     "devDependencies": {
