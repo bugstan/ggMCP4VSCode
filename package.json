@@ -1,12 +1,16 @@
 {
-    "name": "vscode-mcp-server",
-    "displayName": "VSCode MCP Server",
+    "name": "gg-mcp-for-vscode",
+    "displayName": "ggMCP4VSCode",
     "description": "A Model Context Protocol (MCP) Server extension for VSCode. Enables AI assistants to read, write, and analyze code in your workspace.",
-    "version": "0.2.0",
+    "version": "1.0.0",
     "publisher": "bugstan",
     "repository": {
         "type": "git",
-        "url": "https://github.com/bugstan/vscode-mcp-server.git"
+        "url": "https://github.com/bugstan/ggMCP4VSCode.git"
+    },
+    "homepage": "https://github.com/bugstan/ggMCP4VSCode",
+    "bugs": {
+        "url": "https://github.com/bugstan/ggMCP4VSCode/issues"
     },
     "license": "MIT",
     "engines": {
@@ -15,7 +19,7 @@
     "categories": [
         "Other",
         "Programming Languages",
-        "Formatters"
+        "AI"
     ],
     "keywords": [
         "mcp",
@@ -36,45 +40,45 @@
         "commands": [
             {
                 "command": "ggMCP.showStatus",
-                "title": "MCP: 显示服务器状态"
+                "title": "MCP: Show Server Status"
             },
             {
                 "command": "ggMCP.restart",
-                "title": "MCP: 重启服务器"
+                "title": "MCP: Restart Server"
             }
         ],
         "configuration": {
-            "title": "VSCode MCP Server",
+            "title": "ggMCP4VSCode",
             "properties": {
                 "ggMCP.portStart": {
                     "type": "number",
                     "default": 9960,
-                    "description": "MCP服务器端口范围起始值"
+                    "description": "Port range start value for MCP server"
                 },
                 "ggMCP.portEnd": {
                     "type": "number",
                     "default": 9990,
-                    "description": "MCP服务器端口范围结束值"
+                    "description": "Port range end value for MCP server"
                 },
                 "ggMCP.terminalTimeout": {
                     "type": "number",
                     "default": 15000,
-                    "description": "终端命令执行超时时间(毫秒)"
+                    "description": "Terminal command execution timeout (milliseconds)"
                 },
                 "ggMCP.enableLogging": {
                     "type": "boolean",
                     "default": true,
-                    "description": "启用日志记录"
+                    "description": "Enable logging"
                 },
                 "ggMCP.autoReloadModifiedFiles": {
                     "type": "boolean",
                     "default": true,
-                    "description": "当 AI 助手修改已在编辑器中打开的文件时，是否自动重新加载该文件"
+                    "description": "Whether to automatically reload files that are modified by AI assistants"
                 },
                 "ggMCP.autoOpenModifiedFiles": {
                     "type": "boolean",
                     "default": false,
-                    "description": "当 AI 助手修改未在编辑器中打开的文件时，是否自动打开该文件"
+                    "description": "Whether to automatically open files that are modified by AI assistants but not already open in editor"
                 }
             }
         }
@@ -84,7 +88,7 @@
     },
     "workspaceTrust": {
         "required": true,
-        "description": "此扩展需要工作区信任以便访问文件系统并执行命令"
+        "description": "This extension requires workspace trust to access the file system and execute commands"
     },
     "scripts": {
         "vscode:prepublish": "npm run compile",

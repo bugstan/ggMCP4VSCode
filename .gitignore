@@ -46,3 +46,4 @@ tmp/
 
 # 不需要发布的工作区文件
 *.code-workspace
+/test/

@@ -1,86 +1,86 @@
-# 贡献指南
+# Contributing Guide
 
-非常感谢您对VSCode MCP服务器扩展的关注！我们欢迎并鼓励社区成员参与到项目的开发和改进中。本文档将指导您如何为该项目做出贡献。
+Thank you for your interest in ggMCP4VSCode! We welcome and encourage community members to participate in the development and improvement of this project. This document will guide you on how to contribute to the project.
 
-## 行为准则
+## Code of Conduct
 
-参与本项目的所有贡献者都应遵循开源社区的基本行为准则：
-- 尊重所有项目参与者
-- 使用友好和包容的语言
-- 尊重不同的观点和经验
-- 优雅地接受建设性批评
-- 关注对社区最有利的事情
+All contributors to this project should follow these basic open-source community guidelines:
+- Respect all project participants
+- Use friendly and inclusive language
+- Respect different viewpoints and experiences
+- Gracefully accept constructive criticism
+- Focus on what is best for the community
 
-## 如何贡献
+## How to Contribute
 
-### 提交问题(Issues)
+### Submitting Issues
 
-如果您发现bug或有新功能建议，欢迎通过GitHub Issues提交：
+If you find a bug or have a suggestion for a new feature, please submit it through GitHub Issues:
 
-1. 使用我们提供的Issue模板
-2. 清晰描述问题或建议
-3. 提供复现步骤（如适用）
-4. 添加相关日志和截图（如适用）
-5. 说明您的环境（VSCode版本、操作系统等）
+1. Use our provided Issue templates
+2. Clearly describe the problem or suggestion
+3. Provide steps to reproduce (if applicable)
+4. Add relevant logs and screenshots (if applicable)
+5. Specify your environment (VSCode version, operating system, etc.)
 
-### 提交代码
+### Contributing Code
 
-如果您想直接贡献代码，请遵循以下步骤：
+If you want to contribute code directly, please follow these steps:
 
-1. Fork本仓库
-2. 创建您的特性分支 (`git checkout -b feature/amazing-feature`)
-3. 提交您的更改 (`git commit -m 'Add some amazing feature'`)
-4. 将您的更改推送到分支 (`git push origin feature/amazing-feature`)
-5. 提交Pull Request
+1. Fork this repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Submit a Pull Request
 
-### 开发环境设置
+### Development Environment Setup
 
-1. 克隆仓库：
+1. Clone the repository:
    ```bash
-   git clone https://github.com/bugstan/vscode-mcp-server.git
-   cd vscode-mcp-server
+   git clone https://github.com/bugstan/ggMCP4VSCode.git
+   cd ggMCP4VSCode
    ```
 
-2. 安装依赖：
+2. Install dependencies:
    ```bash
    npm install
    ```
 
-3. 编译代码：
+3. Compile the code:
    ```bash
    npm run compile
    ```
 
-4. 调试：
-   在VSCode中按F5启动一个新的VSCode窗口进行调试。
+4. Debugging:
+   Press F5 in VSCode to launch a new VSCode window for debugging.
 
-### 代码风格指南
+### Code Style Guide
 
-- 遵循TypeScript的官方风格指南
-- 所有新代码必须有适当的注释
-- 保持代码简洁和可读性
-- 遵循现有的项目结构
+- Follow the official TypeScript style guide
+- All new code must have appropriate comments
+- Keep code concise and readable
+- Follow the existing project structure
 
-## Pull Request流程
+## Pull Request Process
 
-1. 确保您的PR描述清晰地说明了更改内容和原因
-2. 如果PR与某个Issue相关，请在PR描述中引用该Issue
-3. 更新相关文档（如README.md）
-4. 所有CI检查必须通过
-5. 需要通过代码审查后才能合并
+1. Ensure your PR description clearly explains the changes and the reasons for them
+2. If the PR is related to an Issue, reference that Issue in the PR description
+3. Update relevant documentation (e.g., README.md)
+4. All CI checks must pass
+5. Code review approval is required before merging
 
-## 发布流程
+## Release Process
 
-项目维护者负责发布新版本，流程如下：
+Project maintainers are responsible for releasing new versions, following this process:
 
-1. 更新版本号（遵循语义化版本规范）
-2. 更新CHANGELOG.md
-3. 创建发布分支
-4. 创建标签和GitHub Release
-5. 发布到VSCode扩展市场
+1. Update the version number (follow Semantic Versioning)
+2. Update CHANGELOG.md
+3. Create a release branch
+4. Create a tag and GitHub Release
+5. Publish to the VSCode extension marketplace
 
-## 感谢
+## Acknowledgements
 
-再次感谢您对项目的贡献！您的参与对于改进VSCode MCP服务器扩展至关重要。
+Thank you again for your contributions to the project! Your participation is essential for improving ggMCP4VSCode.
 
-如有任何问题，请通过GitHub Issues联系我们。
+If you have any questions, please contact us through GitHub Issues.

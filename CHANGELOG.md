@@ -1,25 +1,25 @@
-# 更新日志
+# Changelog
 
-所有VSCode MCP服务器扩展的显著变更都将记录在此文件中。
+All notable changes to the ggMCP4VSCode extension will be documented in this file.
 
 ## [0.2.0] - 2025-03-21
 
-### 新增
-- 项目GitHub仓库初始发布
-- 支持30多种VSCode API工具接口
-- 自动端口扫描和分配
-- 服务器状态管理UI
+### Added
+- Initial GitHub repository release
+- Support for over 30 VSCode API tool interfaces
+- Automatic port scanning and allocation
+- Server status management UI
 
-### 变更
-- 优化了服务器启动流程
-- 改进了错误处理机制
+### Changed
+- Optimized server startup process
+- Improved error handling mechanisms
 
-### 修复
-- 修正了终端命令执行中的超时问题
+### Fixed
+- Fixed timeout issues in terminal command execution
 
-## [0.1.0] - 未发布
+## [0.1.0] - Unreleased
 
-### 新增
-- 初始版本基础功能
-- MCP协议基本实现
-- 文件和编辑器操作基础功能
+### Added
+- Basic functionality for initial version
+- Basic MCP protocol implementation
+- Basic file and editor operation functionality

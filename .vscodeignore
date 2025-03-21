@@ -2,6 +2,8 @@
 .vscode-test/**
 src/**
 .gitignore
+.git/**
+.github/**
 .yarnrc
 vsc-extension-quickstart.md
 **/tsconfig.json
@@ -10,3 +12,28 @@ vsc-extension-quickstart.md
 **/*.ts
 node_modules/**
 !node_modules/@types/**
+test/**
+out/test/**
+images/**/*.psd
+docs/**
+.editorconfig
+.eslintignore
+CHANGELOG.md
+**/jest.config.js
+**/.npmrc
+webpack.config.js
+.prettierrc
+.prettierignore
+*.log
+coverage/**
+**/*.tsbuildinfo
+
+# 新增的忽略项
+.idea/**
+clear.bat
+backup/**
+CONTRIBUTING-zh.md
+CONTRIBUTING.md
+interface.md
+**/*.bat
+**/*.iml
