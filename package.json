@@ -1,0 +1,105 @@
+{
+    "name": "vscode-mcp-server",
+    "displayName": "VSCode MCP Server",
+    "description": "A Model Context Protocol (MCP) Server extension for VSCode. Enables AI assistants to read, write, and analyze code in your workspace.",
+    "version": "0.2.0",
+    "publisher": "bugstan",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/bugstan/vscode-mcp-server.git"
+    },
+    "license": "MIT",
+    "engines": {
+        "vscode": "^1.80.0"
+    },
+    "categories": [
+        "Other",
+        "Programming Languages",
+        "Formatters"
+    ],
+    "keywords": [
+        "mcp",
+        "model context protocol",
+        "ai",
+        "artificial intelligence",
+        "ai assistant"
+    ],
+    "activationEvents": [
+        "onStartupFinished",
+        "onCommand:ggMCP.getAllOpenFilePaths",
+        "onCommand:ggMCP.listFiles",
+        "workspaceContains:package.json",
+        "workspaceContains:.git"
+    ],
+    "main": "./dist/extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "ggMCP.showStatus",
+                "title": "MCP: 显示服务器状态"
+            },
+            {
+                "command": "ggMCP.restart",
+                "title": "MCP: 重启服务器"
+            }
+        ],
+        "configuration": {
+            "title": "VSCode MCP Server",
+            "properties": {
+                "ggMCP.portStart": {
+                    "type": "number",
+                    "default": 9960,
+                    "description": "MCP服务器端口范围起始值"
+                },
+                "ggMCP.portEnd": {
+                    "type": "number",
+                    "default": 9990,
+                    "description": "MCP服务器端口范围结束值"
+                },
+                "ggMCP.terminalTimeout": {
+                    "type": "number",
+                    "default": 15000,
+                    "description": "终端命令执行超时时间(毫秒)"
+                },
+                "ggMCP.enableLogging": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "启用日志记录"
+                },
+                "ggMCP.autoReloadModifiedFiles": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "当 AI 助手修改已在编辑器中打开的文件时，是否自动重新加载该文件"
+                },
+                "ggMCP.autoOpenModifiedFiles": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "当 AI 助手修改未在编辑器中打开的文件时，是否自动打开该文件"
+                }
+            }
+        }
+    },
+    "capabilities": {
+        "virtualWorkspaces": true
+    },
+    "workspaceTrust": {
+        "required": true,
+        "description": "此扩展需要工作区信任以便访问文件系统并执行命令"
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "lint": "eslint . --ext .ts",
+        "test": "node ./test/run-all-tests.js"
+    },
+    "devDependencies": {
+        "@types/node": "^18.16.0",
+        "@types/vscode": "^1.80.0",
+        "typescript": "^5.8.2"
+    },
+    "enabledApiProposals": [
+        "terminalDataWriteEvent",
+        "terminalSelection"
+    ]
+}

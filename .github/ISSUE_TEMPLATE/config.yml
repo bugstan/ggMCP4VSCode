@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: VSCode MCP Server 问答
+    url: https://github.com/bugstan/vscode-mcp-server/discussions/categories/q-a
+    about: 请使用讨论区进行一般性问题和支持
+  - name: VSCode MCP Server 文档
+    url: https://github.com/bugstan/vscode-mcp-server#readme
+    about: 请先查阅项目文档以获取更多信息
