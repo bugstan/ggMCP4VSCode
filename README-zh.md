@@ -1,6 +1,6 @@
 # ggMCP4VSCode
 
-[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](https://github.com/bugstan/ggMCP4VSCode)
+[![Version](https://img.shields.io/badge/version-1.0.2-blue.svg)](https://github.com/bugstan/ggMCP4VSCode)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/bugstan/ggMCP4VSCode/blob/main/LICENSE)
 
 为你的VSCode超级充能AI助手！这个扩展启用了模型上下文协议（Model Context Protocol, MCP）服务器，允许AI助手直接与你的VSCode环境交互。
