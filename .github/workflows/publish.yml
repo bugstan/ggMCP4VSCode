@@ -22,13 +22,7 @@ jobs:
       - name: Compile
         run: npm run compile
         
-      # 跳过测试步骤，因为它需要启动本地服务器
-      # - name: Run tests
-      #   run: npm test
-        
-      - name: Package Extension
-        run: npm run package
-        
+      # 直接使用vsce命令打包和发布
       - name: Publish to Visual Studio Marketplace
         run: npx @vscode/vsce publish -p ${{ secrets.VSCE_PAT }}
         env:

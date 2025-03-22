@@ -13,3 +13,6 @@ test/**
 CONTRIBUTING*
 README-zh.md
 .idea/**
+
+# 确保不忽略dist目录
+!dist/**
