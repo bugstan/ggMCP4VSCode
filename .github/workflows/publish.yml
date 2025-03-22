@@ -19,11 +19,9 @@ jobs:
       - name: Install dependencies
         run: npm install
         
-      - name: Compile
-        run: npm run compile
-        
-      # 直接使用vsce命令打包和发布
       - name: Publish to Visual Studio Marketplace
-        run: npx @vscode/vsce publish -p ${{ secrets.VSCE_PAT }}
+        run: |
+          # 使用发布命令而不是尝试构建
+          npx @vscode/vsce publish -p ${{ secrets.VSCE_PAT }} --no-dependencies
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}

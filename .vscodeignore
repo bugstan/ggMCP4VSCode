@@ -1,8 +1,7 @@
+# ------------------- 标准排除项 -------------------
 .vscode/**
 .vscode-test/**
-out/**
 node_modules/**
-src/**
 .gitignore
 tsconfig.json
 *.vsix
@@ -14,5 +13,9 @@ CONTRIBUTING*
 README-zh.md
 .idea/**
 
-# 确保不忽略dist目录
+# ------------------- 源码可以被排除，但保留编译后的文件 -------------------
+src/**
+
+# ------------------- 特别确保以下文件/目录不被排除 -------------------
 !dist/**
+!dist/extension.js
