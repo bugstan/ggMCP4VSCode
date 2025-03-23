@@ -3,7 +3,7 @@ import { AbstractMcpTool } from '../types/tool';
 import { Response } from '../types';
 import { createResponse, formatError } from '../utils/response';
 import { Logger } from '../utils/logger';
-import { TerminalDetector, TerminalType, OSType, TerminalInfo } from '../utils/terminalDetector';
+import { TerminalDetector, OSType, TerminalInfo } from '../utils/terminalDetector';
 
 // Create module-specific logger
 const log = Logger.forModule('TerminalInfoTools');
