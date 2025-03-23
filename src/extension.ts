@@ -57,7 +57,7 @@ function updateStatusBar(): void {
     
     switch (serverStatus) {
         case 'starting':
-            statusBarItem.text = '$(sync~spin) VSCode MCP Server';
+            statusBarItem.text = '$(sync-spin) VSCode MCP Server';
             statusBarItem.tooltip = 'Starting VSCode MCP Server...';
             statusBarItem.backgroundColor = undefined;
             break;
@@ -85,7 +85,7 @@ function updateStatusBar(): void {
     // Set click command
     statusBarItem.command = 'ggMCP.showStatus';
     
-    // 确保强制刷新状态栏
+    // Ensure the status bar is refreshed
     statusBarItem.show();
 }
 
@@ -112,12 +112,12 @@ export function activate(context: vscode.ExtensionContext) {
     log.info(`Port range configured as: ${portStart}-${portEnd}`);
 
     // Initialize status bar item with higher priority (lower number)
-    // 将优先级提高到 10，以确保显示在状态栏的前面
+    // Set priority to 10 to ensure it appears at the front of the status bar
     statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 10);
     statusBarItem.show();
     updateServerStatus('starting');
     
-    // 先注册命令，然后再启动服务器
+    // Register commands first, then start the server
     
     // Register command: Show server status
     const showStatusCommand = vscode.commands.registerCommand('ggMCP.showStatus', () => {
@@ -232,8 +232,8 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
-    // 添加一个定时器，在激活扩展 5 秒后检查服务器状态
-    // 如果状态仍为 starting，则尝试强制更新为 running
+    // Add a timer to check server status 5 seconds after extension activation
+    // If status is still 'starting', try to force update to 'running'
     setTimeout(() => {
         if (serverStatus === 'starting' && currentServerPort) {
             log.info('Server status still showing as starting after 5 seconds, forcing update to running');
@@ -241,7 +241,7 @@ export function activate(context: vscode.ExtensionContext) {
         }
     }, 5000);
 
-    // 现在启动服务器
+    // Now start the server
     let serverDisposable = startMCPServer(portStart, portEnd);
 
     // Add disposable objects to context for cleanup when plugin is deactivated

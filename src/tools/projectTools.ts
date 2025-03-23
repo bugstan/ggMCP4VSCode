@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { AbstractMcpTool } from '../types/tool';
 import { Response } from '../types';
-import { successResponse, errorResponse, formatError } from '../utils/response';
+import { createResponse, formatError } from '../utils/response';
 import { getProjectRoot } from '../utils/pathUtils';
 import { Logger } from '../utils/logger';
 
@@ -28,7 +28,7 @@ export class GetProjectModulesTool extends AbstractMcpTool {
             
             if (!rootPath) {
                 log.warn('Project root not found');
-                return errorResponse('Project root not found');
+                return createResponse(null, 'Project root not found');
             }
             
             log.debug(`Analyzing project modules in: ${rootPath}`);
@@ -94,10 +94,10 @@ export class GetProjectModulesTool extends AbstractMcpTool {
             }
             
             log.info(`Found ${modules.length} modules in project`);
-            return successResponse(modules);
+            return createResponse(modules);
         } catch (error) {
             log.error('Error retrieving project modules', error);
-            return errorResponse(`Error retrieving project modules: ${formatError(error)}`);
+            return createResponse(null, `Error retrieving project modules: ${formatError(error)}`);
         }
     }
 }
@@ -120,7 +120,7 @@ export class GetProjectDependenciesTool extends AbstractMcpTool {
             
             if (!rootPath) {
                 log.warn('Project root not found');
-                return errorResponse('Project root not found');
+                return createResponse(null, 'Project root not found');
             }
             
             log.debug(`Analyzing project dependencies in: ${rootPath}`);
@@ -194,10 +194,10 @@ export class GetProjectDependenciesTool extends AbstractMcpTool {
             }
             
             log.info(`Found ${dependencies.length} dependencies in project`);
-            return successResponse(dependencies);
+            return createResponse(dependencies);
         } catch (error) {
             log.error('Error retrieving project dependencies', error);
-            return errorResponse(`Error retrieving project dependencies: ${formatError(error)}`);
+            return createResponse(null, `Error retrieving project dependencies: ${formatError(error)}`);
         }
     }
 }

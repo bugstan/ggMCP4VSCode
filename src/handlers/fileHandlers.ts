@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { Response } from '../types';
-import { successResponse, errorResponse, formatError } from '../utils/response';
+import { createResponse, formatError } from '../utils/response';
 import { analyzePath, toRelativePath } from '../utils/pathUtils';
 import { FileReloader } from '../utils/fileReloader';
 import { getCurrentDirectory } from '../utils/project';
@@ -22,7 +22,7 @@ export async function createNewFileWithText(params: { pathInProject: string, tex
         log.debug('Creating new file', { path: pathInfo.normalized });
 
         if (!pathInfo.isSafe || !pathInfo.absolute) {
-            return errorResponse('Cannot determine file path or path is unsafe');
+            return createResponse(null, 'Cannot determine file path or path is unsafe');
         }
 
         // Create URI
@@ -43,17 +43,17 @@ export async function createNewFileWithText(params: { pathInProject: string, tex
             await vscode.window.showTextDocument(document);
 
             log.info('File created successfully', { path: pathInfo.absolute });
-            return successResponse({
+            return createResponse({
                 path: pathInfo.absolute,
                 relativePath: pathInfo.relative
             });
         } catch (err) {
             log.error('File creation operation failed', err);
-            return errorResponse(`File creation operation failed: ${formatError(err)}`);
+            return createResponse(null, `File creation operation failed: ${formatError(err)}`);
         }
     } catch (error) {
         log.error('Error creating file', error);
-        return errorResponse(`Error creating file: ${formatError(error)}`);
+        return createResponse(null, `Error creating file: ${formatError(error)}`);
     }
 }
 
@@ -66,14 +66,14 @@ export async function findFilesByNameSubstring(params: { nameSubstring: string }
 
         if (!nameSubstring) {
             log.warn('Search string is empty');
-            return errorResponse('Search string cannot be empty');
+            return createResponse(null, 'Search string cannot be empty');
         }
 
         // Get current working directory
         const currentDir = getCurrentDirectory();
         if (!currentDir) {
             log.warn('Cannot determine search scope');
-            return errorResponse('Cannot determine search scope');
+            return createResponse(null, 'Cannot determine search scope');
         }
 
         log.debug('Starting file search', { substring: nameSubstring, directory: currentDir });
@@ -92,13 +92,13 @@ export async function findFilesByNameSubstring(params: { nameSubstring: string }
             };
         });
 
-        return successResponse({
+        return createResponse({
             results: results,
             currentDirectory: currentDir
         });
     } catch (error) {
         log.error('Error finding files', error);
-        return errorResponse(`Error finding files: ${formatError(error)}`);
+        return createResponse(null, `Error finding files: ${formatError(error)}`);
     }
 }
 
@@ -115,7 +115,7 @@ export async function getFileTextByPath(params: { pathInProject: string }): Prom
 
         if (!pathInfo.isSafe || !pathInfo.absolute) {
             log.warn('Cannot determine file path or path is unsafe', { path: pathInProject });
-            return errorResponse('Cannot determine file path or path is unsafe');
+            return createResponse(null, 'Cannot determine file path or path is unsafe');
         }
 
         try {
@@ -125,18 +125,18 @@ export async function getFileTextByPath(params: { pathInProject: string }): Prom
             const text = new TextDecoder().decode(content);
 
             log.debug('File content read', { path: pathInfo.absolute, size: content.byteLength });
-            return successResponse({
+            return createResponse({
                 content: text,
                 path: pathInfo.absolute,
                 relativePath: pathInfo.relative
             });
         } catch (err) {
             log.error('File does not exist or cannot be accessed', err, { path: pathInfo.absolute });
-            return errorResponse('File does not exist or cannot be accessed');
+            return createResponse(null, 'File does not exist or cannot be accessed');
         }
     } catch (error) {
         log.error('Error getting file content', error);
-        return errorResponse(`Error getting file content: ${formatError(error)}`);
+        return createResponse(null, `Error getting file content: ${formatError(error)}`);
     }
 }
 
@@ -153,7 +153,7 @@ export async function replaceFileTextByPath(params: { pathInProject: string, tex
 
         if (!pathInfo.isSafe || !pathInfo.absolute) {
             log.warn('Cannot determine file path or path is unsafe', { path: pathInProject });
-            return errorResponse('Cannot determine file path or path is unsafe');
+            return createResponse(null, 'Cannot determine file path or path is unsafe');
         }
 
         // Create URI
@@ -164,13 +164,13 @@ export async function replaceFileTextByPath(params: { pathInProject: string, tex
             await vscode.workspace.fs.stat(fileUri);
         } catch (err) {
             log.error('File does not exist or cannot be accessed', err, { path: pathInfo.absolute });
-            return errorResponse('File does not exist or cannot be accessed');
+            return createResponse(null, 'File does not exist or cannot be accessed');
         }
 
         // Check if file is already open in editor and has unsaved changes
         if (FileReloader.hasUnsavedChanges(pathInfo.absolute)) {
             log.warn('File has unsaved changes', { path: pathInfo.absolute });
-            return errorResponse('File has unsaved changes, please save or discard changes before trying to modify');
+            return createResponse(null, 'File has unsaved changes, please save or discard changes before trying to modify');
         }
 
         try {
@@ -183,18 +183,18 @@ export async function replaceFileTextByPath(params: { pathInProject: string, tex
             await FileReloader.reloadFile(pathInfo.absolute);
 
             log.info('File content updated', { path: pathInfo.absolute, size: bytes.byteLength });
-            return successResponse({
+            return createResponse({
                 path: pathInfo.absolute,
                 relativePath: pathInfo.relative,
                 status: 'File has been updated and reloaded'
             });
         } catch (err) {
             log.error('Cannot modify file content', err, { path: pathInfo.absolute });
-            return errorResponse(`Cannot modify file content: ${formatError(err)}`);
+            return createResponse(null, `Cannot modify file content: ${formatError(err)}`);
         }
     } catch (error) {
         log.error('Error replacing file content', error);
-        return errorResponse(`Error replacing file content: ${formatError(error)}`);
+        return createResponse(null, `Error replacing file content: ${formatError(error)}`);
     }
 }
 
@@ -213,7 +213,7 @@ export async function listFilesInFolder(params: { pathInProject: string }): Prom
 
         if (!pathInfo.isSafe || !pathInfo.absolute) {
             log.warn('Cannot determine directory path or path is unsafe', { path: pathInProject });
-            return errorResponse('Cannot determine directory path or path is unsafe');
+            return createResponse(null, 'Cannot determine directory path or path is unsafe');
         }
 
         // Create URI
@@ -225,11 +225,11 @@ export async function listFilesInFolder(params: { pathInProject: string }): Prom
                 const stat = await vscode.workspace.fs.stat(dirUri);
                 if (stat.type !== vscode.FileType.Directory) {
                     log.warn('Path is not a directory', { path: pathInfo.absolute, type: stat.type });
-                    return errorResponse(`Path is not a directory: ${pathInfo.normalized}`);
+                    return createResponse(null, `Path is not a directory: ${pathInfo.normalized}`);
                 }
             } catch (err) {
                 log.error('Directory does not exist or cannot be accessed', err, { path: pathInfo.absolute });
-                return errorResponse(`Directory does not exist or cannot be accessed: ${pathInfo.normalized}`);
+                return createResponse(null, `Directory does not exist or cannot be accessed: ${pathInfo.normalized}`);
             }
 
             // Read directory contents
@@ -269,15 +269,15 @@ export async function listFilesInFolder(params: { pathInProject: string }): Prom
 
             log.info(`Successfully processed directory contents`, { path: pathInfo.normalized, entryCount: result.length });
 
-            return successResponse(result);
+            return createResponse(result);
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : String(err);
             log.error('Failed to read directory contents', err, { path: pathInfo.normalized });
-            return errorResponse(`Cannot access path: ${pathInfo.normalized} (${errorMessage})`);
+            return createResponse(null, `Cannot access path: ${pathInfo.normalized} (${errorMessage})`);
         }
     } catch (error) {
         log.error('Unexpected error occurred during processing', error);
-        return errorResponse(`Error listing folder contents: ${formatError(error)}`);
+        return createResponse(null, `Error listing folder contents: ${formatError(error)}`);
     }
 }
 
@@ -290,14 +290,14 @@ export async function searchInFilesContent(params: { searchText: string }): Prom
 
         if (!searchText) {
             log.warn('Search text is empty');
-            return errorResponse('Search text cannot be empty');
+            return createResponse(null, 'Search text cannot be empty');
         }
 
         // Get current working directory
         const currentDir = getCurrentDirectory();
         if (!currentDir) {
             log.warn('Cannot determine search scope');
-            return errorResponse('Cannot determine search scope');
+            return createResponse(null, 'Cannot determine search scope');
         }
 
         log.debug('Starting content search', { searchText, directory: currentDir });
@@ -331,16 +331,16 @@ export async function searchInFilesContent(params: { searchText: string }): Prom
             }
 
             log.info(`Search completed, found matches in ${foundFiles.length} files`);
-            return successResponse({
+            return createResponse({
                 results: foundFiles,
                 searchDirectory: currentDir
             });
         } catch (err) {
             log.error('Error executing search', err);
-            return errorResponse(`Error executing search: ${err instanceof Error ? err.message : String(err)}`);
+            return createResponse(null, `Error executing search: ${err instanceof Error ? err.message : String(err)}`);
         }
     } catch (error) {
         log.error('Error searching file content', error);
-        return errorResponse(`Error searching file content: ${formatError(error)}`);
+        return createResponse(null, `Error searching file content: ${formatError(error)}`);
     }
 }

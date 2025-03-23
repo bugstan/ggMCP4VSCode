@@ -34,6 +34,7 @@ export interface ToolParams {
     
     // Terminal tool parameters
     executeTerminalCommand: { command: string };
+    executeCommandWithOutput: { command: string };
     wait: { milliseconds: number };
     
     // Git basic tool parameters

@@ -1,7 +1,11 @@
 import * as vscode from 'vscode';
 import {AbstractMcpTool} from '../types/tool';
 import {Response, ToolParams} from '../types';
-import {successResponse, errorResponse, formatError} from '../utils/response';
+import {createResponse, formatError} from '../utils/response';
+import {Logger} from '../utils/logger';
+
+// Create module-specific logger
+const log = Logger.forModule('ActionTools');
 
 /**
  * List available actions
@@ -17,6 +21,8 @@ export class ListAvailableActionsTool extends AbstractMcpTool<Record<string, nev
 
     async handle(_args: Record<string, never>): Promise<Response> {
         try {
+            log.debug('Listing available actions');
+            
             // Note: VS Code API doesn't have a method to directly get all available actions
             // Here we return a set of most commonly used commands
             const commonCommands = [
@@ -31,10 +37,12 @@ export class ListAvailableActionsTool extends AbstractMcpTool<Record<string, nev
                 {id: 'editor.action.goToReferences', text: 'Find All References'},
                 {id: 'workbench.action.terminal.toggleTerminal', text: 'Toggle Terminal'}
             ];
-
-            return successResponse(commonCommands);
+            
+            log.info(`Returning ${commonCommands.length} common IDE actions`);
+            return createResponse(commonCommands);
         } catch (error) {
-            return errorResponse(`Error listing actions: ${formatError(error)}`);
+            log.error('Error listing actions', error);
+            return createResponse(null, `Error listing actions: ${formatError(error)}`);
         }
     }
 }
@@ -60,16 +68,20 @@ export class ExecuteActionByIdTool extends AbstractMcpTool<ToolParams['executeAc
     async handle(args: ToolParams['executeActionById']): Promise<Response> {
         try {
             const {actionId} = args;
+            log.debug(`Executing action by ID: ${actionId}`);
 
             // Execute command
             try {
                 await vscode.commands.executeCommand(actionId);
-                return successResponse('ok');
+                log.info(`Successfully executed action: ${actionId}`);
+                return createResponse('ok');
             } catch (err) {
-                return errorResponse('action not found');
+                log.warn(`Action not found: ${actionId}`, err);
+                return createResponse(null, 'action not found');
             }
         } catch (error) {
-            return errorResponse(`Error executing action: ${formatError(error)}`);
+            log.error('Error executing action', error);
+            return createResponse(null, `Error executing action: ${formatError(error)}`);
         }
     }
 }
@@ -88,11 +100,15 @@ export class GetProgressIndicatorsTool extends AbstractMcpTool<Record<string, ne
 
     async handle(_args: Record<string, never>): Promise<Response> {
         try {
+            log.debug('Getting progress indicators');
+            
             // Note: VS Code API doesn't provide direct access to progress indicators
             // Return an empty array
-            return successResponse([]);
+            log.info('No progress indicators available through VS Code API');
+            return createResponse([]);
         } catch (error) {
-            return errorResponse(`Error getting progress indicators: ${formatError(error)}`);
+            log.error('Error getting progress indicators', error);
+            return createResponse(null, `Error getting progress indicators: ${formatError(error)}`);
         }
     }
 }

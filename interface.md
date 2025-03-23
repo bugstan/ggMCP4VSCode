@@ -1,37 +1,37 @@
-# VSCode MCP 服务器插件接口文档
+# VSCode MCP Server Plugin Interface Documentation
 
-## 介绍
+## Introduction
 
-VSCode MCP 服务器插件是一个为Visual Studio Code提供MCP（Model Context Protocol）协议支持的扩展。它允许MCP客户端（如AI助手）通过HTTP协议与VSCode进行通信，执行各种VSCode操作，如文件读写、代码编辑、调试控制等。
+The VSCode MCP Server Plugin is an extension for Visual Studio Code that provides Model Context Protocol (MCP) support. It allows MCP clients (such as AI assistants) to communicate with VSCode through HTTP protocol, executing various VSCode operations like file reading/writing, code editing, debugging control, etc.
 
-## 通信架构
+## Communication Architecture
 
 ```
  +---------------------+       +---------------+
  |                     |       |               |
- | MCP客户端            | <---> | VSCode插件    |
- | (如AI助手)           |       | (MCP服务器)   |
+ | MCP Client          | <---> | VSCode Plugin |
+ | (e.g. AI Assistant) |       | (MCP Server)  |
  |                     |       |               |
  +---------------------+       +---------------+
-                        HTTP协议
-                      (端口通信)
+                        HTTP Protocol
+                       (Port Communication)
 ```
 
-### 通信方式
+### Communication Method
 
-- **协议**: HTTP
-- **连接类型**: 短连接，请求-响应模式
-- **端点格式**: `http://${HOST}:${PORT}/mcp/*`（标准MCP格式）
-- **端口范围**: 默认9960-9990（可在VSCode设置中配置）
+- **Protocol**: HTTP
+- **Connection Type**: Short connection, request-response model
+- **Endpoint Format**: `http://${HOST}:${PORT}/mcp/*` (Standard MCP format)
+- **Port Range**: Default 9960-9990 (Configurable in VSCode settings)
 
-## 接口定义
+## Interface Definition
 
-### 1. 初始化连接
+### 1. Initialize Connection
 
 - **URL**: `http://${HOST}:${PORT}/mcp/initialize`
-- **方法**: GET/POST
-- **功能**: 获取VSCode服务器信息和环境信息
-- **响应格式**: JSON对象（JSON-RPC 2.0格式）
+- **Method**: GET/POST
+- **Function**: Get VSCode server information and environment details
+- **Response Format**: JSON object (JSON-RPC 2.0 format)
   ```json
   {
     "jsonrpc": "2.0",
@@ -49,20 +49,20 @@ VSCode MCP 服务器插件是一个为Visual Studio Code提供MCP（Model Contex
         "version": "1.0.0"
       },
       "environment": {
-        "workspaceRoot": "项目根目录路径",
-        "activeFile": "当前活动文件路径",
-        "currentDirectory": "当前目录路径"
+        "workspaceRoot": "Project root directory path",
+        "activeFile": "Current active file path",
+        "currentDirectory": "Current directory path"
       }
     }
   }
   ```
 
-### 2. 获取服务器状态
+### 2. Get Server Status
 
 - **URL**: `http://${HOST}:${PORT}/mcp/status`
-- **方法**: GET/POST
-- **功能**: 获取VSCode MCP服务器运行状态和环境信息
-- **响应格式**: JSON对象（JSON-RPC 2.0格式）
+- **Method**: GET/POST
+- **Function**: Get VSCode MCP server running status and environment information
+- **Response Format**: JSON object (JSON-RPC 2.0 format)
   ```json
   {
     "jsonrpc": "2.0",
@@ -70,21 +70,21 @@ VSCode MCP 服务器插件是一个为Visual Studio Code提供MCP（Model Contex
     "result": {
       "status": "running",
       "environment": {
-        "workspaceRoot": "项目根目录路径",
-        "activeFile": "当前活动文件路径",
-        "currentDirectory": "当前目录路径",
-        "openFiles": ["文件路径1", "文件路径2"]
+        "workspaceRoot": "Project root directory path",
+        "activeFile": "Current active file path",
+        "currentDirectory": "Current directory path",
+        "openFiles": ["File path 1", "File path 2"]
       }
     }
   }
   ```
 
-### 3. 获取工具列表
+### 3. Get Tools List
 
 - **URL**: `http://${HOST}:${PORT}/mcp/list_tools`
-- **方法**: GET
-- **功能**: 获取VSCode插件支持的所有工具列表
-- **响应格式**: JSON数组，直接返回工具定义对象数组
+- **Method**: GET
+- **Function**: Get a list of all tools supported by the VSCode plugin
+- **Response Format**: JSON array, directly returns an array of tool definition objects
   ```json
   [
     {
@@ -102,17 +102,17 @@ VSCode MCP 服务器插件是一个为Visual Studio Code提供MCP（Model Contex
   ]
   ```
 
-### 4. 工具调用
+### 4. Tool Invocation
 
 - **URL**: `http://${HOST}:${PORT}/mcp/${toolName}`
-- **方法**: POST
-- **请求头**: 
+- **Method**: POST
+- **Request Headers**: 
   ```
   Content-Type: application/json
   ```
-- **请求体**: JSON对象，可以是以下两种格式之一：
+- **Request Body**: JSON object, can be one of two formats:
   
-  1. 直接参数格式：
+  1. Direct parameter format:
   ```json
   {
     "param1": "value1",
@@ -120,7 +120,7 @@ VSCode MCP 服务器插件是一个为Visual Studio Code提供MCP（Model Contex
   }
   ```
   
-  2. JSON-RPC 2.0格式：
+  2. JSON-RPC 2.0 format:
   ```json
   {
     "jsonrpc": "2.0",
@@ -134,72 +134,72 @@ VSCode MCP 服务器插件是一个为Visual Studio Code提供MCP（Model Contex
   }
   ```
   
-- **功能**: 执行特定VSCode工具调用
-- **响应格式**: MCP 标准格式
+- **Function**: Execute a specific VSCode tool invocation
+- **Response Format**: MCP standard format
   ```json
   {
-    "status": "操作结果",
+    "status": "Operation result",
     "error": null
   }
   ```
   
-  错误响应:
+  Error response:
   ```json
   {
     "status": null,
-    "error": "错误消息"
+    "error": "Error message"
   }
   ```
 
-## MCP 协议兼容性说明
+## MCP Protocol Compatibility Notes
 
-VSCode MCP 服务器插件采用标准 MCP 协议:
+VSCode MCP Server Plugin adopts standard MCP protocol:
 
-1. **接口路径**: 使用标准的 MCP 路径格式 `/mcp/*`
+1. **Interface Path**: Uses standard MCP path format `/mcp/*`
 
-2. **响应格式**: 使用标准 MCP 响应格式
-   - 成功响应: `{"status": "结果内容", "error": null}`
-   - 错误响应: `{"status": null, "error": "错误消息"}`
+2. **Response Format**: Uses standard MCP response format
+   - Success response: `{"status": "Result content", "error": null}`
+   - Error response: `{"status": null, "error": "Error message"}`
 
-3. **工具描述**: 提供标准的工具描述格式
+3. **Tool Description**: Provides standard tool description format
 
-4. **端口范围**: 使用VSCode特定的端口范围(9960-9990)
+4. **Port Range**: Uses VSCode-specific port range (9960-9990)
 
-## 可用VSCode工具
+## Available VSCode Tools
 
-插件提供了多种工具用于操作VSCode环境，包括但不限于：
+The plugin provides various tools for operating the VSCode environment, including but not limited to:
 
-- **VSCode文件操作**：读取、创建、修改文件
-- **VSCode编辑器操作**：获取选中内容、替换文本
-- **VSCode项目操作**：列出文件、搜索内容、获取版本控制状态
-- **VSCode调试操作**：设置断点、获取断点列表
-- **VSCode终端操作**：获取终端内容、执行命令
+- **VSCode File Operations**: Read, create, modify files
+- **VSCode Editor Operations**: Get selected content, replace text
+- **VSCode Project Operations**: List files, search content, get version control status
+- **VSCode Debugging Operations**: Set breakpoints, get breakpoint list
+- **VSCode Terminal Operations**: Get terminal content, execute commands
 
-详细工具列表和参数请通过`list_tools`接口获取。
+For a detailed list of tools and parameters, please retrieve via the `list_tools` interface.
 
-## 数据结构
+## Data Structures
 
-### 内部响应接口
+### Internal Response Interface
 
 ```typescript
 interface IDEResponseOk {
-    /** 操作成功状态消息 */
+    /** Operation success status message */
     status: string;
-    /** 错误信息为空 */
+    /** Error information is empty */
     error: null;
 }
 
 interface IDEResponseErr {
-    /** 状态为空 */
+    /** Status is empty */
     status: null;
-    /** 错误信息 */
+    /** Error information */
     error: string;
 }
 
 type IDEResponse = IDEResponseOk | IDEResponseErr;
 ```
 
-### 工具定义
+### Tool Definition
 
 ```typescript
 interface Tool {
@@ -213,12 +213,12 @@ interface Tool {
 }
 ```
 
-### VSCode配置项
+### VSCode Configuration Options
 
-VSCode MCP服务器插件提供以下配置选项：
+VSCode MCP Server Plugin provides the following configuration options:
 
-- `ggMCP.portStart`: MCP服务器端口范围起始值（默认：9960）
-- `ggMCP.portEnd`: MCP服务器端口范围结束值（默认：9990）
-- `ggMCP.terminalTimeout`: 终端命令执行超时时间（默认：15000毫秒）
-- `ggMCP.enableLogging`: 启用日志记录（默认：true）
-- `ggMCP.autoReloadModifiedFiles`: 远程修改文件后自动重新加载（默认：true）
+- `ggMCP.portStart`: MCP server port range start value (default: 9960)
+- `ggMCP.portEnd`: MCP server port range end value (default: 9990)
+- `ggMCP.terminalTimeout`: Terminal command execution timeout (default: 15000 milliseconds)
+- `ggMCP.enableLogging`: Enable logging (default: true)
+- `ggMCP.autoReloadModifiedFiles`: Automatically reload files modified remotely (default: true)

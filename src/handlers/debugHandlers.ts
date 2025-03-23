@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import {Response} from '../types';
-import {errorResponse, formatError, successResponse} from '../utils/response';
+import {createResponse, formatError} from '../utils/response';
 import {analyzePath} from '../utils/pathUtils';
 import {Logger} from '../utils/logger';
 
@@ -26,7 +26,7 @@ export async function toggleDebuggerBreakpoint(
 
         if (!pathInfo.isSafe || !pathInfo.absolute) {
             log.warn('Invalid file path for breakpoint', {path: filePathInProject});
-            return errorResponse("can't find project dir or path is invalid");
+            return createResponse(null, "can't find project dir or path is invalid");
         }
 
         // Create a breakpoint location
@@ -72,10 +72,10 @@ export async function toggleDebuggerBreakpoint(
         );
 
         log.info('Breakpoint toggled successfully', {file: pathInfo.normalized, line});
-        return successResponse('ok');
+        return createResponse('ok');
     } catch (error) {
         log.error('Error toggling breakpoint', error);
-        return errorResponse(`Error toggling breakpoint: ${formatError(error)}`);
+        return createResponse(null, `Error toggling breakpoint: ${formatError(error)}`);
     }
 }
 
@@ -100,10 +100,10 @@ export async function getDebuggerBreakpoints(): Promise<Response> {
             });
 
         log.info(`Found ${result.length} breakpoints`);
-        return successResponse(JSON.stringify(result));
+        return createResponse(JSON.stringify(result));
     } catch (error) {
         log.error('Error getting breakpoints', error);
-        return errorResponse(`Error getting breakpoints: ${formatError(error)}`);
+        return createResponse(null, `Error getting breakpoints: ${formatError(error)}`);
     }
 }
 
@@ -125,7 +125,7 @@ export async function runConfiguration(params: { configName: string }): Promise<
 
         if (!config) {
             log.warn('Configuration not found', {configName});
-            return errorResponse(`Could not find run configuration named "${configName}"`);
+            return createResponse(null, `Could not find run configuration named "${configName}"`);
         }
 
         // Start debugging session
@@ -133,10 +133,10 @@ export async function runConfiguration(params: { configName: string }): Promise<
         await vscode.debug.startDebugging(undefined, config);
 
         log.info('Debug session started', {configName});
-        return successResponse('ok');
+        return createResponse('ok');
     } catch (error) {
         log.error('Error running configuration', error, {configName: params.configName});
-        return errorResponse(`error ${formatError(error)}`);
+        return createResponse(null, `error ${formatError(error)}`);
     }
 }
 
@@ -156,9 +156,9 @@ export async function getRunConfigurations(): Promise<Response> {
         const configNames = launchConfigs.map((c) => c.name);
 
         log.info(`Found ${configNames.length} run configurations`);
-        return successResponse(JSON.stringify(configNames));
+        return createResponse(JSON.stringify(configNames));
     } catch (error) {
         log.error('Error getting run configurations', error);
-        return errorResponse(`Error getting run configurations: ${formatError(error)}`);
+        return createResponse(null, `Error getting run configurations: ${formatError(error)}`);
     }
 }

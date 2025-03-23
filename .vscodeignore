@@ -1,4 +1,4 @@
-# ------------------- 标准排除项 -------------------
+# ------------------- Standard Exclusions -------------------
 .vscode/**
 .vscode-test/**
 node_modules/**
@@ -13,9 +13,9 @@ CONTRIBUTING*
 README-zh.md
 .idea/**
 
-# ------------------- 源码可以被排除，但保留编译后的文件 -------------------
+# ------------------- Source code can be excluded, but keep compiled files -------------------
 src/**
 
-# ------------------- 特别确保以下文件/目录不被排除 -------------------
+# ------------------- Ensure these files/directories are not excluded -------------------
 !dist/**
 !dist/extension.js

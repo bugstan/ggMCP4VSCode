@@ -5,29 +5,51 @@ import { Logger } from './logger';
 const log = Logger.forModule('Response');
 
 /**
- * Create success response
- * @param data Success data (any type)
+ * Create response object
+ * @param status Success data (any type), null for error response
+ * @param error Error message, null for success response
+ * @returns Response object
  */
-export function successResponse(data: any): Response {
-    // If data is not a string, convert it to JSON string
-    const status = typeof data === 'string' ? data : JSON.stringify(data);
-    log.debug('Created success response', { status: status.substring(0, 100) + (status.length > 100 ? '...' : '') });
-    return {
-        status,
-        error: null
-    };
+export function createResponse(status: any = null, error: string | null = null): Response {
+    if (error) {
+        // 错误响应
+        log.debug(`Created error response: ${error}`);
+        return {
+            status: null,
+            error
+        };
+    } else {
+        // 成功响应
+        // 如果 status 不是字符串，将其转换为 JSON 字符串
+        const statusStr = typeof status === 'string' ? status : JSON.stringify(status);
+        log.debug('Created success response', { 
+            status: statusStr ? 
+                statusStr.substring(0, 100) + (statusStr.length > 100 ? '...' : '') : 
+                'null' 
+        });
+        return {
+            status,
+            error: null
+        };
+    }
 }
 
 /**
- * Create error response
+ * Create success response (保留向后兼容性)
+ * @param data Success data (any type)
+ * @deprecated 使用 createResponse(data) 代替
+ */
+export function successResponse(data: any): Response {
+    return createResponse(data);
+}
+
+/**
+ * Create error response (保留向后兼容性)
  * @param message Error message
+ * @deprecated 使用 createResponse(null, message) 代替
  */
 export function errorResponse(message: string): Response {
-    log.debug(`Created error response: ${message}`);
-    return {
-        status: null,
-        error: message
-    };
+    return createResponse(null, message);
 }
 
 /**

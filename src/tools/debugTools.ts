@@ -1,10 +1,13 @@
 import * as vscode from 'vscode';
 import {AbstractMcpTool} from '../types/tool';
 import {Response, ToolParams} from '../types';
-import {errorResponse, formatError, successResponse} from '../utils/response';
+import {createResponse, formatError} from '../utils/response';
 import {toAbsolutePathSafe} from '../utils/pathUtils';
+import { Logger } from '../utils/logger';
 
-// Declaration for Breakpoint type
+// Create module-specific logger
+const log = Logger.forModule('DebugTools');
+
 /**
  * Set or remove debug breakpoint
  */
@@ -31,7 +34,7 @@ export class ToggleDebuggerBreakpointTool extends AbstractMcpTool<ToolParams['to
             // Convert project relative path to absolute path
             const absolutePath = toAbsolutePathSafe(filePathInProject);
             if (!absolutePath) {
-                return errorResponse('Project directory not found or path is invalid');
+                return createResponse(null, 'Project directory not found or path is invalid');
             }
 
             // Convert path to URI
@@ -54,7 +57,7 @@ export class ToggleDebuggerBreakpointTool extends AbstractMcpTool<ToolParams['to
             if (existingBreakpoints.length > 0) {
                 // Remove existing breakpoint
                 vscode.debug.removeBreakpoints(existingBreakpoints);
-                return successResponse('Breakpoint removed');
+                return createResponse('Breakpoint removed');
             } else {
                 // Add new breakpoint
                 const breakpoint = new vscode.SourceBreakpoint(
@@ -77,14 +80,14 @@ export class ToggleDebuggerBreakpointTool extends AbstractMcpTool<ToolParams['to
                     }
                 } catch (e) {
                     // Failed to open file, but breakpoint is set, so still return success
-                    console.warn('Failed to open file, but breakpoint is set:', e);
+                    log.warn('Failed to open file, but breakpoint is set:', e);
                 }
 
-                return successResponse('Breakpoint added');
+                return createResponse('Breakpoint added');
             }
         } catch (error) {
-            console.error('Toggle breakpoint error:', error);
-            return errorResponse(formatError(error));
+            log.error('Toggle breakpoint error:', error);
+            return createResponse(null, formatError(error));
         }
     }
 }
@@ -119,10 +122,10 @@ export class GetDebuggerBreakpointsTool extends AbstractMcpTool<{}> {
                     };
                 });
 
-            return successResponse(breakpointInfo);
+            return createResponse(breakpointInfo);
         } catch (error) {
-            console.error('Get breakpoints error:', error);
-            return errorResponse(formatError(error));
+            log.error('Get breakpoints error:', error);
+            return createResponse(null, formatError(error));
         }
     }
 }
@@ -150,10 +153,10 @@ export class GetRunConfigurationsTool extends AbstractMcpTool<{}> {
             // Extract configuration names
             const configNames = launchConfigs.map(config => config.name).filter(Boolean);
 
-            return successResponse(configNames);
+            return createResponse(configNames);
         } catch (error) {
-            console.error('Get run configurations error:', error);
-            return errorResponse(formatError(error));
+            log.error('Get run configurations error:', error);
+            return createResponse(null, formatError(error));
         }
     }
 }
@@ -186,7 +189,7 @@ export class RunConfigurationTool extends AbstractMcpTool<ToolParams['runConfigu
             // Find configuration with specified name
             const targetConfig = launchConfigs.find(config => config.name === configName);
             if (!targetConfig) {
-                return errorResponse(`Could not find run configuration named "${configName}"`);
+                return createResponse(null, `Could not find run configuration named "${configName}"`);
             }
 
             // Execute launch debug session
@@ -196,13 +199,13 @@ export class RunConfigurationTool extends AbstractMcpTool<ToolParams['runConfigu
             );
 
             if (success) {
-                return successResponse('Run configuration started');
+                return createResponse('Run configuration started');
             } else {
-                return errorResponse('Failed to start run configuration');
+                return createResponse(null, 'Failed to start run configuration');
             }
         } catch (error) {
-            console.error('Run configuration error:', error);
-            return errorResponse(formatError(error));
+            log.error('Run configuration error:', error);
+            return createResponse(null, formatError(error));
         }
     }
 }

@@ -290,6 +290,28 @@ export const tools = {
             required: ['command']
         }
     },
+    
+    // New methods to execute command and get output
+    execute_command_with_output: {
+        name: 'execute_command_with_output',
+        description: 'Execute a command and store the output in a dedicated output channel. The output can be retrieved later with get_command_output.',
+        inputSchema: {
+            type: 'object',
+            properties: {
+                command: {type: 'string'}
+            },
+            required: ['command']
+        }
+    },
+    
+    get_command_output: {
+        name: 'get_command_output',
+        description: 'Get the output of the last command executed with execute_command_with_output. Returns the command status and output text.',
+        inputSchema: {
+            type: 'object',
+            properties: {}
+        }
+    },
 
     find_commit_by_message: {
         name: 'find_commit_by_message',

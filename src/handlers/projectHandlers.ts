@@ -1,20 +1,27 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import { Response } from '../types';
-import { successResponse, errorResponse, formatError } from '../utils/response';
+import { createResponse, formatError } from '../utils/response';
 import { getProjectRoot } from '../utils/project';
+import { Logger } from '../utils/logger';
+
+// Create module-specific logger
+const log = Logger.forModule('ProjectHandlers');
 
 /**
  * Get project modules
  */
 export async function getProjectModules(): Promise<Response> {
     try {
+        log.debug('Getting project modules');
+        
         // In VSCode, this operation is usually specific to the project type
         // Here we provide a simple implementation which can be extended based on project type
         const projectRoot = getProjectRoot();
         
         if (!projectRoot) {
-            return errorResponse('project dir not found');
+            log.warn('Project directory not found');
+            return createResponse(null, 'project dir not found');
         }
         
         // Check if it's a Node.js project
@@ -30,13 +37,16 @@ export async function getProjectModules(): Promise<Response> {
             const modules = Object.keys(dependencies)
                 .concat(Object.keys(devDependencies));
             
-            return successResponse(JSON.stringify(modules));
+            log.info(`Found ${modules.length} project modules`);
+            return createResponse(JSON.stringify(modules));
         } catch (err) {
             // Might not be a Node.js project, return empty array
-            return successResponse(JSON.stringify([]));
+            log.info('No Node.js package.json found, returning empty modules list');
+            return createResponse(JSON.stringify([]));
         }
     } catch (error) {
-        return errorResponse(`Error getting project modules: ${formatError(error)}`);
+        log.error('Error getting project modules', error);
+        return createResponse(null, `Error getting project modules: ${formatError(error)}`);
     }
 }
 
@@ -45,10 +55,13 @@ export async function getProjectModules(): Promise<Response> {
  */
 export async function getProjectDependencies(): Promise<Response> {
     try {
+        log.debug('Getting project dependencies');
+        
         const projectRoot = getProjectRoot();
         
         if (!projectRoot) {
-            return errorResponse('project dir not found');
+            log.warn('Project directory not found');
+            return createResponse(null, 'project dir not found');
         }
         
         // Check if it's a Node.js project
@@ -71,12 +84,15 @@ export async function getProjectDependencies(): Promise<Response> {
                 version
             }));
             
-            return successResponse(JSON.stringify(result));
+            log.info(`Found ${result.length} project dependencies`);
+            return createResponse(JSON.stringify(result));
         } catch (err) {
             // Might not be a Node.js project, return empty array
-            return successResponse(JSON.stringify([]));
+            log.info('No Node.js package.json found, returning empty dependencies list');
+            return createResponse(JSON.stringify([]));
         }
     } catch (error) {
-        return errorResponse(`Error getting project dependencies: ${formatError(error)}`);
+        log.error('Error getting project dependencies', error);
+        return createResponse(null, `Error getting project dependencies: ${formatError(error)}`);
     }
 }

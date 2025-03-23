@@ -1,8 +1,12 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { Response } from '../types';
-import { successResponse, errorResponse, formatError } from '../utils/response';
+import { createResponse, formatError } from '../utils/response';
 import { isPathWithinProject } from '../utils/pathUtils';
+import { Logger } from '../utils/logger';
+
+// Create module-specific logger
+const log = Logger.forModule('CodeAnalysisHandlers');
 
 /**
  * Symbol information interface definition
@@ -33,11 +37,13 @@ interface SymbolInfo {
 export async function getSymbolsInFile(params: { pathInProject: string }): Promise<Response> {
     try {
         const { pathInProject } = params;
+        log.debug('Getting symbols in file', { path: pathInProject });
         
         // Get project root path
         const projectRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
         if (!projectRoot) {
-            return errorResponse("project dir not found");
+            log.warn('Project directory not found');
+            return createResponse(null, "project dir not found");
         }
         
         // Build complete file path
@@ -47,7 +53,8 @@ export async function getSymbolsInFile(params: { pathInProject: string }): Promi
         
         // Safety check: ensure path is within the project directory
         if (!isPathWithinProject(filePath, projectRoot)) {
-            return errorResponse("path is outside project directory");
+            log.warn('Path is outside project directory', { path: filePath });
+            return createResponse(null, "path is outside project directory");
         }
         
         const fileUri = vscode.Uri.file(filePath);
@@ -66,18 +73,22 @@ export async function getSymbolsInFile(params: { pathInProject: string }): Promi
             );
             
             if (!symbols || symbols.length === 0) {
-                return successResponse(JSON.stringify({ symbols: [] }));
+                log.info('No symbols found in file', { path: filePath });
+                return createResponse(JSON.stringify({ symbols: [] }));
             }
             
             // Convert symbols to a more usable format
             const formattedSymbols = formatSymbols(symbols, document);
+            log.info(`Found ${formattedSymbols.length} symbols in file`, { path: filePath });
             
-            return successResponse(JSON.stringify({ symbols: formattedSymbols }));
+            return createResponse(JSON.stringify({ symbols: formattedSymbols }));
         } catch (err) {
-            return errorResponse(`file not found or cannot be read: ${err}`);
+            log.error('File not found or cannot be read', err, { path: filePath });
+            return createResponse(null, `file not found or cannot be read: ${err}`);
         }
     } catch (error) {
-        return errorResponse(`Error getting file symbols: ${formatError(error)}`);
+        log.error('Error getting file symbols', error);
+        return createResponse(null, `Error getting file symbols: ${formatError(error)}`);
     }
 }
 
@@ -91,11 +102,13 @@ export async function findReferences(params: {
 }): Promise<Response> {
     try {
         const { pathInProject, line, character } = params;
+        log.debug('Finding references', { path: pathInProject, line, character });
         
         // Get project root path
         const projectRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
         if (!projectRoot) {
-            return errorResponse("project dir not found");
+            log.warn('Project directory not found');
+            return createResponse(null, "project dir not found");
         }
         
         // Build complete file path
@@ -105,7 +118,8 @@ export async function findReferences(params: {
         
         // Safety check: ensure path is within the project directory
         if (!isPathWithinProject(filePath, projectRoot)) {
-            return errorResponse("path is outside project directory");
+            log.warn('Path is outside project directory', { path: filePath });
+            return createResponse(null, "path is outside project directory");
         }
         
         const fileUri = vscode.Uri.file(filePath);
@@ -128,7 +142,8 @@ export async function findReferences(params: {
             );
             
             if (!locations || locations.length === 0) {
-                return successResponse(JSON.stringify({ references: [] }));
+                log.info('No references found', { path: filePath, line, character });
+                return createResponse(JSON.stringify({ references: [] }));
             }
             
             // Convert locations to a more usable format
@@ -146,12 +161,15 @@ export async function findReferences(params: {
                 };
             });
             
-            return successResponse(JSON.stringify({ references }));
+            log.info(`Found ${references.length} references`, { path: filePath, line, character });
+            return createResponse(JSON.stringify({ references }));
         } catch (err) {
-            return errorResponse(`file not found or cannot be read: ${err}`);
+            log.error('File not found or cannot be read', err, { path: filePath });
+            return createResponse(null, `file not found or cannot be read: ${err}`);
         }
     } catch (error) {
-        return errorResponse(`Error finding references: ${formatError(error)}`);
+        log.error('Error finding references', error);
+        return createResponse(null, `Error finding references: ${formatError(error)}`);
     }
 }
 
@@ -167,11 +185,13 @@ export async function refactorCodeAtLocation(params: {
 }): Promise<Response> {
     try {
         const { pathInProject, line, character, refactorType, options } = params;
+        log.debug('Refactoring code', { path: pathInProject, line, character, type: refactorType });
         
         // Get project root path
         const projectRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
         if (!projectRoot) {
-            return errorResponse("project dir not found");
+            log.warn('Project directory not found');
+            return createResponse(null, "project dir not found");
         }
         
         // Build complete file path
@@ -181,7 +201,8 @@ export async function refactorCodeAtLocation(params: {
         
         // Safety check: ensure path is within the project directory
         if (!isPathWithinProject(filePath, projectRoot)) {
-            return errorResponse("path is outside project directory");
+            log.warn('Path is outside project directory', { path: filePath });
+            return createResponse(null, "path is outside project directory");
         }
         
         const fileUri = vscode.Uri.file(filePath);
@@ -207,7 +228,8 @@ export async function refactorCodeAtLocation(params: {
             );
             
             if (!actions || actions.length === 0) {
-                return errorResponse("no refactoring actions available at this location");
+                log.warn('No refactoring actions available', { path: filePath, line, character });
+                return createResponse(null, "no refactoring actions available at this location");
             }
             
             // Find matching refactoring action
@@ -217,7 +239,8 @@ export async function refactorCodeAtLocation(params: {
                 case 'rename':
                     // Renaming a symbol is a special case, using a dedicated API
                     if (!options.newName) {
-                        return errorResponse("newName is required for rename refactoring");
+                        log.warn('newName is required for rename refactoring');
+                        return createResponse(null, "newName is required for rename refactoring");
                     }
                     
                     // Use RenameProvider to get edits
@@ -229,17 +252,20 @@ export async function refactorCodeAtLocation(params: {
                     );
                     
                     if (!workspaceEdit) {
-                        return errorResponse("Failed to generate rename edits");
+                        log.error('Failed to generate rename edits');
+                        return createResponse(null, "Failed to generate rename edits");
                     }
                     
                     // Apply edits directly, without relying on UI commands
                     const success = await vscode.workspace.applyEdit(workspaceEdit);
                     
                     if (!success) {
-                        return errorResponse("Failed to apply rename edits");
+                        log.error('Failed to apply rename edits');
+                        return createResponse(null, "Failed to apply rename edits");
                     }
                     
-                    return successResponse(JSON.stringify({ 
+                    log.info('Successfully renamed symbol', { newName: options.newName });
+                    return createResponse(JSON.stringify({ 
                         success: true, 
                         message: `Successfully renamed to ${options.newName}`
                     }));
@@ -272,7 +298,8 @@ export async function refactorCodeAtLocation(params: {
             if (!matchedAction) {
                 // Return available refactoring types as part of the error message
                 const availableRefactorings = actions.map(action => action.title).join(', ');
-                return errorResponse(`refactoring type '${refactorType}' not available at this location. Available types: ${availableRefactorings}`);
+                log.warn('Refactoring type not available', { type: refactorType, available: availableRefactorings });
+                return createResponse(null, `refactoring type '${refactorType}' not available at this location. Available types: ${availableRefactorings}`);
             }
             
             // Execute refactoring operation
@@ -287,15 +314,18 @@ export async function refactorCodeAtLocation(params: {
                 );
             }
             
-            return successResponse(JSON.stringify({ 
+            log.info('Refactoring applied successfully', { type: matchedAction.title });
+            return createResponse(JSON.stringify({ 
                 success: true, 
                 message: `Successfully applied '${matchedAction.title}' refactoring` 
             }));
         } catch (err) {
-            return errorResponse(`file not found or refactoring failed: ${err}`);
+            log.error('File not found or refactoring failed', err, { path: filePath });
+            return createResponse(null, `file not found or refactoring failed: ${err}`);
         }
     } catch (error) {
-        return errorResponse(`Error refactoring code: ${formatError(error)}`);
+        log.error('Error refactoring code', error);
+        return createResponse(null, `Error refactoring code: ${formatError(error)}`);
     }
 }
 

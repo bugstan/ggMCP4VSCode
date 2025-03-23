@@ -1,7 +1,7 @@
 import {AbstractMcpTool} from '../types/tool';
 import {Response, ToolParams} from '../types';
 import {escapeShellArg, executeGitCommand, getBranches, withGitRepository} from '../utils/gitUtils';
-import {errorResponse, successResponse} from '../utils/response';
+import {createResponse} from '../utils/response';
 import {Logger} from '../utils/logger';
 
 // Create module-specific logger
@@ -54,14 +54,14 @@ export class GetFileHistoryTool extends AbstractMcpTool<ToolParams['getFileHisto
                     });
 
                 log.info(`Found ${commits.length} history entries for file: ${pathInProject}`);
-                return successResponse({
+                return createResponse({
                     file: pathInProject,
                     commits: commits
                 });
             });
         } catch (error) {
             log.error('Error getting file history', error);
-            return errorResponse(`Error getting file history: ${error}`);
+            return createResponse(null, `Error getting file history: ${error}`);
         }
     }
 }
@@ -111,14 +111,14 @@ export class GetFileDiffTool extends AbstractMcpTool<ToolParams['getFileDiff']> 
                 }
 
                 log.info(`Successfully retrieved diff for file: ${pathInProject}`);
-                return successResponse({
+                return createResponse({
                     file: pathInProject,
                     diff: result.stdout
                 });
             });
         } catch (error) {
             log.error('Error getting file diff', error);
-            return errorResponse(`Error getting file diff: ${error}`);
+            return createResponse(null, `Error getting file diff: ${error}`);
         }
     }
 }
@@ -162,14 +162,14 @@ export class GetBranchInfoTool extends AbstractMcpTool<{}> {
                 }));
                 
                 log.info(`Found ${formattedBranches.length} branches, current branch: ${currentBranch}`);
-                return successResponse({
+                return createResponse({
                     currentBranch,
                     branches: formattedBranches
                 });
             });
         } catch (error) {
             log.error('Error getting branch info', error);
-            return errorResponse(`Error getting branch info: ${error}`);
+            return createResponse(null, `Error getting branch info: ${error}`);
         }
     }
 }
@@ -199,7 +199,7 @@ export class GetCommitDetailsTool extends AbstractMcpTool<ToolParams['getCommitD
 
             if (!hash) {
                 log.warn('Empty commit hash provided');
-                return errorResponse('Commit hash cannot be empty');
+                return createResponse(null, 'Commit hash cannot be empty');
             }
 
             return withGitRepository(async () => {
@@ -245,7 +245,7 @@ export class GetCommitDetailsTool extends AbstractMcpTool<ToolParams['getCommitD
                     .filter(change => change !== null);
 
                 log.info(`Successfully retrieved details for commit: ${hash}`);
-                return successResponse({
+                return createResponse({
                     hash: commitHash,
                     author,
                     email,
@@ -257,7 +257,7 @@ export class GetCommitDetailsTool extends AbstractMcpTool<ToolParams['getCommitD
             });
         } catch (error) {
             log.error('Error getting commit details', error);
-            return errorResponse(`Error getting commit details: ${error}`);
+            return createResponse(null, `Error getting commit details: ${error}`);
         }
     }
 }
@@ -288,7 +288,7 @@ export class CommitChangesTool extends AbstractMcpTool<ToolParams['commitChanges
 
             if (!message && !amend) {
                 log.warn('Empty commit message provided');
-                return errorResponse('Commit message cannot be empty');
+                return createResponse(null, 'Commit message cannot be empty');
             }
 
             return withGitRepository(async () => {
@@ -338,14 +338,14 @@ export class CommitChangesTool extends AbstractMcpTool<ToolParams['commitChanges
                 }
 
                 log.info(`Successfully ${amend ? 'amended' : 'committed'} changes`);
-                return successResponse({
+                return createResponse({
                     success: true,
                     message: amend ? 'Modified previous commit' : 'Successfully committed changes'
                 });
             });
         } catch (error) {
             log.error('Error committing changes', error);
-            return errorResponse(`Error committing changes: ${error}`);
+            return createResponse(null, `Error committing changes: ${error}`);
         }
     }
 }
@@ -390,14 +390,14 @@ export class PullChangesTool extends AbstractMcpTool<ToolParams['pullChanges']> 
                 }
 
                 log.info('Successfully pulled changes');
-                return successResponse({
+                return createResponse({
                     success: true,
                     message: pullResult.stdout || 'Successfully pulled changes'
                 });
             });
         } catch (error) {
             log.error('Error pulling changes', error);
-            return errorResponse(`Error pulling changes: ${error}`);
+            return createResponse(null, `Error pulling changes: ${error}`);
         }
     }
 }
@@ -427,7 +427,7 @@ export class SwitchBranchTool extends AbstractMcpTool<ToolParams['switchBranch']
 
             if (!branch) {
                 log.warn('Empty branch name provided');
-                return errorResponse('Branch name cannot be empty');
+                return createResponse(null, 'Branch name cannot be empty');
             }
 
             return withGitRepository(async () => {
@@ -442,14 +442,14 @@ export class SwitchBranchTool extends AbstractMcpTool<ToolParams['switchBranch']
                 }
 
                 log.info(`Successfully switched to branch: ${branch}`);
-                return successResponse({
+                return createResponse({
                     success: true,
                     message: `Switched to branch '${branch}'`
                 });
             });
         } catch (error) {
             log.error('Error switching branch', error);
-            return errorResponse(`Error switching branch: ${error}`);
+            return createResponse(null, `Error switching branch: ${error}`);
         }
     }
 }
@@ -480,7 +480,7 @@ export class CreateBranchTool extends AbstractMcpTool<ToolParams['createBranch']
 
             if (!branch) {
                 log.warn('Empty branch name provided');
-                return errorResponse('Branch name cannot be empty');
+                return createResponse(null, 'Branch name cannot be empty');
             }
 
             return withGitRepository(async () => {
@@ -499,14 +499,14 @@ export class CreateBranchTool extends AbstractMcpTool<ToolParams['createBranch']
                 }
 
                 log.info(`Successfully created branch: ${branch}`);
-                return successResponse({
+                return createResponse({
                     success: true,
                     message: `Created and switched to new branch '${branch}'`
                 });
             });
         } catch (error) {
             log.error('Error creating branch', error);
-            return errorResponse(`Error creating branch: ${error}`);
+            return createResponse(null, `Error creating branch: ${error}`);
         }
     }
 }

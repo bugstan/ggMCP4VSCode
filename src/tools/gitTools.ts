@@ -1,6 +1,6 @@
 import {AbstractMcpTool} from '../types/tool';
 import {Response, ToolParams} from '../types';
-import {errorResponse, formatError, successResponse} from '../utils/response';
+import {createResponse, formatError} from '../utils/response';
 import {toRelativePath} from '../utils/pathUtils';
 import {escapeShellArg, executeGitCommand, getChangeStatusDescription, withGitRepository} from '../utils/gitUtils';
 import {Logger} from '../utils/logger';
@@ -71,10 +71,10 @@ export class GetProjectVcsStatusTool extends AbstractMcpTool<{}> {
                 });
 
                 log.info(`Found ${result.length} changed files in VCS`);
-                return successResponse(result);
+                return createResponse(result);
             } catch (error) {
                 log.error('Error getting version control status:', error);
-                return errorResponse(formatError(error));
+                return createResponse(null, formatError(error));
             }
         });
     }
@@ -114,7 +114,7 @@ export class FindCommitByMessageTool extends AbstractMcpTool<ToolParams['findCom
             if (!result || result.exitCode !== 0) {
                 log.warn(`Git command failed with exit code: ${result?.exitCode || 'N/A'}`);
                 log.debug(`Error output: ${result?.stderr || 'N/A'}`);
-                return successResponse([]);
+                return createResponse([]);
             }
 
             // Parse commit hashes
@@ -123,10 +123,10 @@ export class FindCommitByMessageTool extends AbstractMcpTool<ToolParams['findCom
                 .filter((line: string) => line.trim() !== '');
 
             log.info(`Found ${commits.length} matching commits`);
-            return successResponse(commits);
+            return createResponse(commits);
         } catch (error) {
             log.error('Error finding commits:', error);
-            return errorResponse(formatError(error));
+            return createResponse(null, formatError(error));
         }
     }
 }

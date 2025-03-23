@@ -1,5 +1,5 @@
-import { AbstractMcpTool } from './types/tool';
-import { 
+import {AbstractMcpTool} from './types/tool';
+import {
     GetOpenInEditorFileTextTool,
     GetOpenInEditorFilePathTool,
     ReplaceSelectedTextTool,
@@ -23,6 +23,7 @@ import {
 import {
     GetTerminalTextTool,
     ExecuteTerminalCommandTool,
+    ExecuteCommandWithOutputTool,
     WaitTool
 } from './tools/terminalTools';
 import {
@@ -53,7 +54,7 @@ import {
     FindReferencesTool,
     RefactorCodeAtLocationTool
 } from './tools/codeAnalysisTools';
-import { Logger } from './utils/logger';
+import {Logger} from './utils/logger';
 
 // Create module-specific logger
 const log = Logger.forModule('ToolManager');
@@ -111,7 +112,7 @@ export class McpToolManager {
      */
     private registerBuiltInTools(): void {
         log.info('Registering built-in tools');
-        
+
         const builtInTools = [
             // Editor tools
             new GetOpenInEditorFileTextTool(),
@@ -137,12 +138,13 @@ export class McpToolManager {
             // Terminal tools
             new GetTerminalTextTool(),
             new ExecuteTerminalCommandTool(),
+            new ExecuteCommandWithOutputTool(),
             new WaitTool(),
 
             // Git basic tools
             new GetProjectVcsStatusTool(),
             new FindCommitByMessageTool(),
-            
+
             // Git advanced tools
             new GetFileHistoryTool(),
             new GetFileDiffTool(),
@@ -161,7 +163,7 @@ export class McpToolManager {
             // Project tools
             new GetProjectModulesTool(),
             new GetProjectDependenciesTool(),
-            
+
             // Code analysis tools
             new GetSymbolsInFileTool(),
             new FindReferencesTool(),

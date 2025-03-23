@@ -1,12 +1,18 @@
 import * as vscode from 'vscode';
 import { Response } from '../types';
-import { successResponse, errorResponse, formatError } from '../utils/response';
+import { createResponse, formatError } from '../utils/response';
+import { Logger } from '../utils/logger';
+
+// Create module-specific logger
+const log = Logger.forModule('ActionHandlers');
 
 /**
  * List available actions
  */
 export async function listAvailableActions(): Promise<Response> {
     try {
+        log.debug('Listing available actions');
+        
         // Get all commands
         const commands = await vscode.commands.getCommands(true);
         
@@ -16,9 +22,11 @@ export async function listAvailableActions(): Promise<Response> {
             text: cmd.replace(/\./g, ' ').replace(/([A-Z])/g, ' $1').trim()
         }));
         
-        return successResponse(JSON.stringify(actions));
+        log.info(`Found ${actions.length} available actions`);
+        return createResponse(JSON.stringify(actions));
     } catch (error) {
-        return errorResponse(`Error listing actions: ${formatError(error)}`);
+        log.error('Error listing actions', error);
+        return createResponse(null, `Error listing actions: ${formatError(error)}`);
     }
 }
 
@@ -28,23 +36,29 @@ export async function listAvailableActions(): Promise<Response> {
 export async function executeActionById(params: { actionId: string }): Promise<Response> {
     try {
         const { actionId } = params;
+        log.debug('Executing action by ID', { actionId });
         
         if (!actionId) {
-            return errorResponse('Action ID cannot be empty');
+            log.warn('Empty action ID provided');
+            return createResponse(null, 'Action ID cannot be empty');
         }
         
         // Check if command exists
         const commands = await vscode.commands.getCommands(true);
         if (!commands.includes(actionId)) {
-            return errorResponse('action not found');
+            log.warn('Action not found', { actionId });
+            return createResponse(null, 'action not found');
         }
         
         // Execute command
+        log.debug('Executing command', { actionId });
         await vscode.commands.executeCommand(actionId);
         
-        return successResponse('ok');
+        log.info('Action executed successfully', { actionId });
+        return createResponse('ok');
     } catch (error) {
-        return errorResponse(`Error executing action: ${formatError(error)}`);
+        log.error('Error executing action', error, { actionId: params.actionId });
+        return createResponse(null, `Error executing action: ${formatError(error)}`);
     }
 }
 
@@ -55,6 +69,8 @@ export async function executeActionById(params: { actionId: string }): Promise<R
  */
 export async function getProgressIndicators(): Promise<Response> {
     try {
+        log.debug('Getting progress indicators');
+        
         // VSCode API does not provide direct access to progress indicators
         // Cannot directly get the list of active notifications because this API is not available in this version
         
@@ -64,8 +80,10 @@ export async function getProgressIndicators(): Promise<Response> {
             note: "VSCode API in the current version does not provide access to progress indicators or active notifications"
         };
         
-        return successResponse(JSON.stringify(result));
+        log.info('Returning empty progress indicators list due to API limitations');
+        return createResponse(JSON.stringify(result));
     } catch (error) {
-        return errorResponse(`Error getting progress indicators: ${formatError(error)}`);
+        log.error('Error getting progress indicators', error);
+        return createResponse(null, `Error getting progress indicators: ${formatError(error)}`);
     }
 }

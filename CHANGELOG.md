@@ -2,6 +2,28 @@
 
 All notable changes to the ggMCP4VSCode extension will be documented in this file.
 
+## [1.0.4] - 2025-03-24
+
+### Added
+- Added support for VS Code 1.93+ Terminal Shell Integration API
+- Added `execute_command_with_output` tool for capturing command line output
+- Enhanced `get_terminal_text` tool to use Shell Integration API for retrieving terminal content
+- Added terminal output related configuration options
+
+### Changed
+- Improved terminal command execution with timeout handling
+- Optimized output capture mechanism with maximum output line limit
+
+## [1.0.3] - 2025-03-23
+
+### Added
+- Added more support for VSCode extension development
+- Enhanced tool type definitions and error handling
+
+### Changed
+- Optimized server startup process
+- Improved code stability and performance
+
 ## [1.0.0] - 2025-03-22
 
 ### Added

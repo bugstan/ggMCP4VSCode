@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { AbstractMcpTool, JsonSchemaObject } from '../types/tool';
 import { Response, ToolParams } from '../types';
-import { successResponse, errorResponse, formatError } from '../utils/response';
+import { createResponse, formatError } from '../utils/response';
 import { normalizePath } from '../utils/pathUtils';
 import { Logger } from '../utils/logger';
 
@@ -31,17 +31,17 @@ export class GetOpenInEditorFileTextTool extends AbstractMcpTool {
             const editor = vscode.window.activeTextEditor;
             if (!editor) {
                 log.debug('No active editor found');
-                return successResponse('');
+                return createResponse('');
             }
             
             const document = editor.document;
             const text = document.getText();
             
             log.debug(`Retrieved file content, size: ${text.length} characters`);
-            return successResponse(text);
+            return createResponse(text);
         } catch (error) {
             log.error('Error getting file content', error);
-            return errorResponse(`Error getting file content: ${formatError(error)}`);
+            return createResponse(null, `Error getting file content: ${formatError(error)}`);
         }
     }
 }
@@ -63,16 +63,16 @@ export class GetOpenInEditorFilePathTool extends AbstractMcpTool {
             const editor = vscode.window.activeTextEditor;
             if (!editor) {
                 log.debug('No active editor found');
-                return successResponse('');
+                return createResponse('');
             }
             
             const filePath = editor.document.uri.fsPath;
             log.debug(`Retrieved file path: ${filePath}`);
             
-            return successResponse(filePath);
+            return createResponse(filePath);
         } catch (error) {
             log.error('Error getting file path', error);
-            return errorResponse(`Error getting file path: ${formatError(error)}`);
+            return createResponse(null, `Error getting file path: ${formatError(error)}`);
         }
     }
 }
@@ -102,13 +102,13 @@ export class ReplaceSelectedTextTool extends AbstractMcpTool<ToolParams['replace
             
             if (!editor) {
                 log.warn('No active editor found');
-                return errorResponse('no active editor');
+                return createResponse(null, 'no active editor');
             }
             
             // Check if there is selected text
             if (editor.selections.every((selection: vscode.Selection) => selection.isEmpty)) {
                 log.warn('No text selected');
-                return errorResponse('no text selected');
+                return createResponse(null, 'no text selected');
             }
             
             // Replace all selected text
@@ -119,10 +119,10 @@ export class ReplaceSelectedTextTool extends AbstractMcpTool<ToolParams['replace
             });
             
             log.info('Selected text replaced successfully');
-            return successResponse('ok');
+            return createResponse('ok');
         } catch (error) {
             log.error('Error replacing selected text', error);
-            return errorResponse(`Error replacing selected text: ${formatError(error)}`);
+            return createResponse(null, `Error replacing selected text: ${formatError(error)}`);
         }
     }
 }
@@ -152,7 +152,7 @@ export class ReplaceCurrentFileTextTool extends AbstractMcpTool<ToolParams['repl
             
             if (!editor) {
                 log.warn('No file open');
-                return errorResponse('no file open');
+                return createResponse(null, 'no file open');
             }
             
             // Create a selection covering the entire file content
@@ -168,10 +168,10 @@ export class ReplaceCurrentFileTextTool extends AbstractMcpTool<ToolParams['repl
             });
             
             log.info('File content replaced successfully');
-            return successResponse('ok');
+            return createResponse('ok');
         } catch (error) {
             log.error('Error replacing file content', error);
-            return errorResponse(`Error replacing file content: ${formatError(error)}`);
+            return createResponse(null, `Error replacing file content: ${formatError(error)}`);
         }
     }
 }
@@ -206,14 +206,14 @@ export class OpenFileInEditorTool extends AbstractMcpTool<ToolParams['openFileIn
                 await vscode.window.showTextDocument(document);
                 
                 log.info(`File opened successfully: ${normalizedPath}`);
-                return successResponse('file is opened');
+                return createResponse('file is opened');
             } catch (err) {
                 log.warn(`File doesn't exist or can't be opened: ${normalizedPath}`, err);
-                return errorResponse('file doesn\'t exist or can\'t be opened');
+                return createResponse(null, 'file doesn\'t exist or can\'t be opened');
             }
         } catch (error) {
             log.error('Error opening file', error);
-            return errorResponse(`Error opening file: ${formatError(error)}`);
+            return createResponse(null, `Error opening file: ${formatError(error)}`);
         }
     }
 }

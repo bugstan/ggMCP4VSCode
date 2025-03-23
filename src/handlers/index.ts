@@ -7,6 +7,10 @@ import * as gitHandlers from './gitHandlers';
 import * as actionHandlers from './actionHandlers';
 import * as projectHandlers from './projectHandlers';
 import * as codeAnalysisHandlers from './codeAnalysisHandlers';
+// import { Logger } from '../utils/logger';
+
+// Create module-specific logger
+// const log = Logger.forModule('Handlers');
 
 /**
  * Tool handler type definition
@@ -44,6 +48,8 @@ export const toolHandlers: Record<string, ToolHandler> = {
     // Terminal handlers
     get_terminal_text: terminalHandlers.getTerminalText,
     execute_terminal_command: terminalHandlers.executeTerminalCommand,
+    execute_command_with_output: terminalHandlers.executeCommandWithOutput,
+    get_command_output: terminalHandlers.getCommandOutput,
     wait: terminalHandlers.wait,
 
     // Git handlers (basic and advanced operations)

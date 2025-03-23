@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import {Response} from '../types';
-import {errorResponse, formatError, successResponse} from '../utils/response';
+import {createResponse, formatError} from '../utils/response';
 import {FileReloader} from '../utils/fileReloader';
 import {analyzePath} from '../utils/pathUtils';
 import {Logger} from '../utils/logger';
@@ -18,17 +18,17 @@ export async function getOpenInEditorFileText(): Promise<Response> {
         const editor = vscode.window.activeTextEditor;
         if (!editor) {
             log.info('No active editor found');
-            return successResponse(''); // No open file, return empty string
+            return createResponse(''); // No open file, return empty string
         }
         
         const document = editor.document;
         const fileSize = document.getText().length;
         log.info('Retrieved open file text', { path: document.uri.fsPath, size: fileSize });
         
-        return successResponse(document.getText());
+        return createResponse(document.getText());
     } catch (error) {
         log.error('Error getting file text', error);
-        return errorResponse(`Error getting file text: ${formatError(error)}`);
+        return createResponse(null, `Error getting file text: ${formatError(error)}`);
     }
 }
 
@@ -42,16 +42,16 @@ export async function getOpenInEditorFilePath(): Promise<Response> {
         const editor = vscode.window.activeTextEditor;
         if (!editor) {
             log.info('No active editor found');
-            return successResponse(''); // No open file, return empty string
+            return createResponse(''); // No open file, return empty string
         }
         
         const document = editor.document;
         log.info('Retrieved open file path', { path: document.uri.fsPath });
         
-        return successResponse(document.uri.fsPath);
+        return createResponse(document.uri.fsPath);
     } catch (error) {
         log.error('Error getting file path', error);
-        return errorResponse(`Error getting file path: ${formatError(error)}`);
+        return createResponse(null, `Error getting file path: ${formatError(error)}`);
     }
 }
 
@@ -65,7 +65,7 @@ export async function getSelectedInEditorText(): Promise<Response> {
         const editor = vscode.window.activeTextEditor;
         if (!editor) {
             log.info('No active editor found');
-            return successResponse(''); // No open editor, return empty string
+            return createResponse(''); // No open editor, return empty string
         }
         
         // Get text from all selection ranges
@@ -81,10 +81,10 @@ export async function getSelectedInEditorText(): Promise<Response> {
             file: editor.document.uri.fsPath
         });
             
-        return successResponse(selectedText);
+        return createResponse(selectedText);
     } catch (error) {
         log.error('Error getting selected text', error);
-        return errorResponse(`Error getting selected text: ${formatError(error)}`);
+        return createResponse(null, `Error getting selected text: ${formatError(error)}`);
     }
 }
 
@@ -100,13 +100,13 @@ export async function replaceSelectedText(params: { text: string }): Promise<Res
         
         if (!editor) {
             log.warn('No active editor found');
-            return errorResponse('no text selected');
+            return createResponse(null, 'no text selected');
         }
         
         // Check if there is selected text
         if (editor.selections.every((selection: vscode.Selection) => selection.isEmpty)) {
             log.warn('No text selected in editor');
-            return errorResponse('no text selected');
+            return createResponse(null, 'no text selected');
         }
         
         // Check if the document has unsaved changes
@@ -114,7 +114,7 @@ export async function replaceSelectedText(params: { text: string }): Promise<Res
             log.warn('Document has unsaved changes', { file: editor.document.uri.fsPath });
             // Can choose to auto-save or return an error
             // Here we choose to return an error, requiring the user to explicitly save changes
-            return errorResponse('Document has unsaved changes, please save document first');
+            return createResponse(null, 'Document has unsaved changes, please save document first');
         }
         
         // Replace all selected text
@@ -132,10 +132,10 @@ export async function replaceSelectedText(params: { text: string }): Promise<Res
             selectionCount: editor.selections.length 
         });
         
-        return successResponse('ok');
+        return createResponse('ok');
     } catch (error) {
         log.error('Error replacing selected text', error);
-        return errorResponse(`Error replacing selected text: ${formatError(error)}`);
+        return createResponse(null, `Error replacing selected text: ${formatError(error)}`);
     }
 }
 
@@ -151,7 +151,7 @@ export async function replaceCurrentFileText(params: { text: string }): Promise<
         
         if (!editor) {
             log.warn('No active editor found');
-            return errorResponse('no file open');
+            return createResponse(null, 'no file open');
         }
         
         // Check if the document has unsaved changes
@@ -159,7 +159,7 @@ export async function replaceCurrentFileText(params: { text: string }): Promise<
             log.warn('Document has unsaved changes', { file: editor.document.uri.fsPath });
             // Can choose to auto-save or return an error
             // Here we choose to return an error, requiring the user to explicitly save changes
-            return errorResponse('Document has unsaved changes, please save document first');
+            return createResponse(null, 'Document has unsaved changes, please save document first');
         }
         
         // Create a selection that covers the entire content of the file
@@ -182,10 +182,10 @@ export async function replaceCurrentFileText(params: { text: string }): Promise<
             newSize: text.length 
         });
         
-        return successResponse('ok');
+        return createResponse('ok');
     } catch (error) {
         log.error('Error replacing file content', error);
-        return errorResponse(`Error replacing file content: ${formatError(error)}`);
+        return createResponse(null, `Error replacing file content: ${formatError(error)}`);
     }
 }
 
@@ -201,7 +201,7 @@ export async function getAllOpenFileTexts(): Promise<Response> {
         
         if (editors.length === 0) {
             log.info('No open editors found');
-            return successResponse(JSON.stringify([]));
+            return createResponse(JSON.stringify([]));
         }
         
         // Extract text content
@@ -219,10 +219,10 @@ export async function getAllOpenFileTexts(): Promise<Response> {
         });
         
         log.info(`Retrieved text from ${filesData.length} open files`);
-        return successResponse(JSON.stringify(filesData));
+        return createResponse(JSON.stringify(filesData));
     } catch (error) {
         log.error('Error getting open file texts', error);
-        return errorResponse(`Error getting open file texts: ${formatError(error)}`);
+        return createResponse(null, `Error getting open file texts: ${formatError(error)}`);
     }
 }
 
@@ -243,7 +243,7 @@ export async function getAllOpenFilePaths(): Promise<Response> {
         
         if (editors.length === 0) {
             log.info('No open editors found');
-            return successResponse('');
+            return createResponse('');
         }
         
         // Extract file paths
@@ -256,10 +256,10 @@ export async function getAllOpenFilePaths(): Promise<Response> {
         });
         
         log.info(`Retrieved paths for ${paths.length} open files`);
-        return successResponse(paths.join('\n'));
+        return createResponse(paths.join('\n'));
     } catch (error) {
         log.error('Error getting open file paths', error);
-        return errorResponse(`Error getting open file paths: ${formatError(error)}`);
+        return createResponse(null, `Error getting open file paths: ${formatError(error)}`);
     }
 }
 
@@ -276,7 +276,7 @@ export async function openFileInEditor(params: { filePath: string }): Promise<Re
         
         if (!pathInfo.isSafe || !pathInfo.absolute) {
             log.warn('Invalid file path', { path: filePath });
-            return errorResponse("file path is invalid or can't find project dir");
+            return createResponse(null, "file path is invalid or can't find project dir");
         }
         
         const fileUri = vscode.Uri.file(pathInfo.absolute);
@@ -301,13 +301,13 @@ export async function openFileInEditor(params: { filePath: string }): Promise<Re
             await vscode.window.showTextDocument(document);
             
             log.info('File opened successfully', { path: pathInfo.normalized });
-            return successResponse('file is opened');
+            return createResponse('file is opened');
         } catch (err) {
             log.error('File does not exist or cannot be opened', err, { path: pathInfo.normalized });
-            return errorResponse("file doesn't exist or can't be opened");
+            return createResponse(null, "file doesn't exist or can't be opened");
         }
     } catch (error) {
         log.error('Error opening file', error);
-        return errorResponse(`Error opening file: ${formatError(error)}`);
+        return createResponse(null, `Error opening file: ${formatError(error)}`);
     }
 }

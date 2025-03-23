@@ -1,5 +1,5 @@
 import {Response} from '../types';
-import {errorResponse, formatError, successResponse} from '../utils/response';
+import {createResponse, formatError} from '../utils/response';
 import {
     escapeShellArg,
     executeGitCommand,
@@ -69,10 +69,10 @@ export async function getProjectVcsStatus(): Promise<Response> {
             });
 
             log.info(`Found ${result.length} changed files`);
-            return successResponse(JSON.stringify(result));
+            return createResponse(JSON.stringify(result));
         } catch (error) {
             log.error('Error getting version control status:', error);
-            return errorResponse(`Error getting version control status: ${formatError(error)}`);
+            return createResponse(null, `Error getting version control status: ${formatError(error)}`);
         }
     });
 }
@@ -86,7 +86,7 @@ export async function findCommitByMessage(params: { text: string }): Promise<Res
 
     if (!text) {
         log.warn('Empty search text provided');
-        return errorResponse('Search text cannot be empty');
+        return createResponse(null, 'Search text cannot be empty');
     }
 
     return withGitRepository(async () => {
@@ -111,7 +111,7 @@ export async function findCommitByMessage(params: { text: string }): Promise<Res
             .filter((line: string) => line.trim() !== '');
 
         log.info(`Found ${commits.length} matching commits`);
-        return successResponse(JSON.stringify(commits));
+        return createResponse(JSON.stringify(commits));
     });
 }
 
@@ -152,7 +152,7 @@ export async function getFileHistory(params: { pathInProject: string, maxCount?:
             });
 
         log.info(`Found ${commits.length} history entries for file: ${pathInProject}`);
-        return successResponse({
+        return createResponse({
             file: pathInProject,
             commits: commits
         });
@@ -194,7 +194,7 @@ export async function getFileDiff(params: {
         }
 
         log.info(`Successfully retrieved diff for file: ${pathInProject}`);
-        return successResponse({
+        return createResponse({
             file: pathInProject,
             diff: result.stdout
         });
@@ -228,7 +228,7 @@ export async function getBranchInfo(): Promise<Response> {
         }));
         
         log.info(`Found ${formattedBranches.length} branches, current branch: ${currentBranch}`);
-        return successResponse({
+        return createResponse({
             currentBranch,
             branches: formattedBranches
         });
@@ -246,7 +246,7 @@ export async function getCommitDetails(params: { hash: string }): Promise<Respon
 
     if (!hash) {
         log.warn('Empty commit hash provided');
-        return errorResponse('Commit hash cannot be empty');
+        return createResponse(null, 'Commit hash cannot be empty');
     }
 
     return withGitRepository(async () => {
@@ -293,7 +293,7 @@ export async function getCommitDetails(params: { hash: string }): Promise<Respon
             .filter(change => change !== null);
 
         log.info(`Successfully retrieved details for commit: ${hash}`);
-        return successResponse({
+        return createResponse({
             hash: commitHash,
             author,
             email,
@@ -317,7 +317,7 @@ export async function commitChanges(params: { message: string, amend?: boolean }
 
     if (!message && !amend) {
         log.warn('Empty commit message provided');
-        return errorResponse('Commit message cannot be empty');
+        return createResponse(null, 'Commit message cannot be empty');
     }
 
     return withGitRepository(async () => {
@@ -367,7 +367,7 @@ export async function commitChanges(params: { message: string, amend?: boolean }
         }
 
         log.info(`Successfully ${amend ? 'amended' : 'committed'} changes`);
-        return successResponse({
+        return createResponse({
             success: true,
             message: amend ? 'Modified previous commit' : 'Successfully committed changes'
         });
@@ -401,7 +401,7 @@ export async function pullChanges(params: { remote?: string, branch?: string }):
         }
 
         log.info('Successfully pulled changes');
-        return successResponse({
+        return createResponse({
             success: true,
             message: pullResult.stdout || 'Successfully pulled changes'
         });
@@ -419,7 +419,7 @@ export async function switchBranch(params: { branch: string }): Promise<Response
 
     if (!branch) {
         log.warn('Empty branch name provided');
-        return errorResponse('Branch name cannot be empty');
+        return createResponse(null, 'Branch name cannot be empty');
     }
 
     return withGitRepository(async () => {
@@ -434,7 +434,7 @@ export async function switchBranch(params: { branch: string }): Promise<Response
         }
 
         log.info(`Successfully switched to branch: ${branch}`);
-        return successResponse({
+        return createResponse({
             success: true,
             message: `Switched to branch '${branch}'`
         });
@@ -453,7 +453,7 @@ export async function createBranch(params: { branch: string, startPoint?: string
 
     if (!branch) {
         log.warn('Empty branch name provided');
-        return errorResponse('Branch name cannot be empty');
+        return createResponse(null, 'Branch name cannot be empty');
     }
 
     return withGitRepository(async () => {
@@ -472,7 +472,7 @@ export async function createBranch(params: { branch: string, startPoint?: string
         }
 
         log.info(`Successfully created branch: ${branch}`);
-        return successResponse({
+        return createResponse({
             success: true,
             message: `Created and switched to new branch '${branch}'`
         });

@@ -1,5 +1,9 @@
 import { AbstractMcpTool } from '../types/tool';
 import * as codeAnalysisHandlers from '../handlers/codeAnalysisHandlers';
+import { Logger } from '../utils/logger';
+
+// Create module-specific logger
+const log = Logger.forModule('CodeAnalysisTools');
 
 /**
  * Get symbols in file tool
@@ -20,6 +24,7 @@ export class GetSymbolsInFileTool extends AbstractMcpTool {
     }
 
     async handle(args: { pathInProject: string }): Promise<import('../types').Response> {
+        log.debug(`Delegating get_symbols_in_file request to handler`, { path: args.pathInProject });
         return await codeAnalysisHandlers.getSymbolsInFile(args);
     }
 }
@@ -45,6 +50,11 @@ export class FindReferencesTool extends AbstractMcpTool {
     }
 
     async handle(args: { pathInProject: string, line: number, character: number }): Promise<import('../types').Response> {
+        log.debug(`Delegating find_references request to handler`, { 
+            path: args.pathInProject, 
+            line: args.line, 
+            character: args.character 
+        });
         return await codeAnalysisHandlers.findReferences(args);
     }
 }
@@ -83,6 +93,12 @@ export class RefactorCodeAtLocationTool extends AbstractMcpTool {
         refactorType: string,
         options: any
     }): Promise<import('../types').Response> {
+        log.debug(`Delegating refactor_code_at_location request to handler`, { 
+            path: args.pathInProject, 
+            line: args.line, 
+            character: args.character,
+            type: args.refactorType
+        });
         return await codeAnalysisHandlers.refactorCodeAtLocation(args);
     }
 }
