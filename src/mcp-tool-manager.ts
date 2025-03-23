@@ -27,6 +27,10 @@ import {
     WaitTool
 } from './tools/terminalTools';
 import {
+    GetTerminalInfoTool,
+    ExecuteOSSpecificCommandTool
+} from './tools/terminalInfoTools';
+import {
     GetProjectVcsStatusTool,
     FindCommitByMessageTool
 } from './tools/gitTools';
@@ -140,6 +144,10 @@ export class McpToolManager {
             new ExecuteTerminalCommandTool(),
             new ExecuteCommandWithOutputTool(),
             new WaitTool(),
+            
+            // Terminal info tools
+            new GetTerminalInfoTool(),
+            new ExecuteOSSpecificCommandTool(),
 
             // Git basic tools
             new GetProjectVcsStatusTool(),
