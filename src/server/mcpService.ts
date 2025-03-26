@@ -2,7 +2,8 @@ import * as http from 'http';
 import * as url from 'url';
 import { NoArgs } from '../types/tool';
 import { Logger } from '../utils/logger';
-import { RequestHandler } from './requestHandler';
+import { requestHandler } from './requestHandler';
+import { responseHandler } from './responseHandler';
 
 // Create module-specific logger
 const log = Logger.forModule('MCPService');
@@ -12,7 +13,6 @@ const log = Logger.forModule('MCPService');
  */
 export class MCPService {
     private static readonly serviceName = 'mcp';
-    private static readonly requestHandler = new RequestHandler();
 
     /**
      * Set CORS headers for cross-origin requests
@@ -37,6 +37,7 @@ export class MCPService {
     private static extractPathValue(pathname: string | null): string {
         if (!pathname) return '';
         const parts = pathname.split(`/${this.serviceName}/`);
+        // return parts[1]?.replace(/^\\/+/, '') ?? '';
         return parts[1]?.replace(/^\/+/, '') ?? '';
     }
 
@@ -55,51 +56,106 @@ export class MCPService {
             const { pathname, query } = url.parse(req.url || '', true);
             const pathValue = this.extractPathValue(pathname);
 
-            log.debug('Request received', { path: pathValue, method: req.method });
+            log.info('Request received', { path: pathValue, method: req.method });
 
             // Route the request based on the path value
             switch (pathValue) {
                 case 'list_tools':
-                    await this.requestHandler.handleListTools(res);
+                    await requestHandler.handleListTools(res);
                     break;
                 case 'initialize':
                 case 'status':
-                    await this.requestHandler.handleStatusRequest(res, pathValue, query.id);
+                    await requestHandler.handleStatusRequest(res, pathValue, query.id);
                     break;
                 default:
+                    const startTime = performance.now();
                     const args = await this.parseRequestBody(req);
-                    await this.requestHandler.handleToolExecution(pathValue, args, res);
+                    const parseTime = performance.now() - startTime;
+                    
+                    // Log large request body parsing time
+                    if (parseTime > 100) {
+                        log.info(`Request body parsing took ${parseTime.toFixed(2)}ms`);
+                    }
+                    
+                    await requestHandler.handleToolExecution(
+                        pathValue, 
+                        args, 
+                        req.method || 'GET', 
+                        pathname || '/',
+                        res
+                    );
             }
         } catch (error) {
-            this.requestHandler.handleServerError(res, error);
+            log.error('Error handling request', error);
+            responseHandler.handleServerError(res, error, 'Error handling request');
         }
     }
 
     /**
-     * Parse request body
+     * Parse request body with optimized performance
      */
     private static async parseRequestBody(req: http.IncomingMessage): Promise<any> {
         return new Promise((resolve, reject) => {
-            let body = '';
+            // Check content type
+            const contentType = req.headers['content-type'] || '';
+            // Log content type but don't use it in subsequent logic
+            if (contentType) {
+                log.info(`Request content type: ${contentType}`);
+            }
+            
+            // Use array to collect text chunks, avoid performance issues from string concatenation
+            const chunks: string[] = [];
+            let totalLength = 0;
             
             req.on('data', (chunk: Buffer) => {
-                body += chunk.toString();
+                // Always use UTF-8 decoding
+                const textChunk = chunk.toString('utf8');
+                chunks.push(textChunk);
+                totalLength += textChunk.length;
+                
+                // Log large request reception progress
+                if (totalLength > 1024 * 1024 && chunks.length % 10 === 0) {
+                    log.info(`Received ${Math.floor(totalLength / (1024 * 1024))}MB of data so far`);
+                }
             });
             
             req.on('end', () => {
+                // Return empty parameters if no content
+                if (chunks.length === 0) {
+                    resolve(NoArgs);
+                    return;
+                }
+                
+                // Join all text chunks at once
+                const body = chunks.join('');
+                
                 if (!body || body.trim() === '') {
                     resolve(NoArgs);
                     return;
                 }
                 
+                // Log large request body size
+                if (totalLength > 100 * 1024) { // Only log if larger than 100KB
+                    log.info(`Received large request: ${totalLength} characters`);
+                }
+                
                 try {
+                    // Measure JSON parsing performance
+                    const parseStartTime = performance.now();
                     const parsed = JSON.parse(body);
+                    const parseTime = performance.now() - parseStartTime;
+                    
+                    if (parseTime > 100) { // Log warning if parsing takes more than 100ms
+                        log.warn(`Slow JSON parsing: ${parseTime.toFixed(2)}ms for ${totalLength} chars`);
+                    }
+                    
                     resolve(
                         parsed.jsonrpc && parsed.params 
                             ? parsed.params.arguments || {} 
                             : parsed
                     );
                 } catch (error) {
+                    log.error(`JSON parse error for ${totalLength} character request`, error);
                     reject(error);
                 }
             });

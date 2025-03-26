@@ -1,18 +1,14 @@
 import * as vscode from 'vscode';
-import { AbstractMcpTool } from '../types/tool';
+import * as path from 'path';
+import { AbstractFileTools } from '../types/absFileTools';
 import { Response, ToolParams } from '../types';
-import { createResponse, formatError } from '../utils/response';
-import { normalizePath, toAbsolutePathSafe, toRelativePath } from '../utils/pathUtils';
-import { FileReloader } from '../utils/fileReloader';
-import { Logger } from '../utils/logger';
-
-// Create module-specific logger
-const log = Logger.forModule('FileReadWriteTools');
+import { responseHandler } from '../server/responseHandler';
 
 /**
- * Get file content by path
+ * Get file content tool
+ * Inherits from AbstractFileTools base class to utilize common file operation functionality
  */
-export class GetFileTextByPathTool extends AbstractMcpTool<ToolParams['getFileTextByPath']> {
+export class GetFileTextByPathTool extends AbstractFileTools<ToolParams['getFileTextByPath']> {
     constructor() {
         super(
             'get_file_text_by_path',
@@ -27,47 +23,32 @@ export class GetFileTextByPathTool extends AbstractMcpTool<ToolParams['getFileTe
         );
     }
 
-    async handle(args: ToolParams['getFileTextByPath']): Promise<Response> {
+    /**
+     * Execute file read operation (implementing base class abstract method)
+     */
+    protected async execute(absolutePath: string, _args: ToolParams['getFileTextByPath']): Promise<Response> {
         try {
-            const { pathInProject } = args;
-            log.debug(`Getting text content for file: ${pathInProject}`);
-            
-            const normalizedPath = normalizePath(pathInProject);
-            const absolutePath = toAbsolutePathSafe(normalizedPath);
+            // Use base class cached file read method
+            const text = await this.getFileContent(absolutePath, true);
+            this.log.info(`Successfully read file content: ${absolutePath}, size: ${text.length} characters`);
 
-            if (!absolutePath) {
-                log.warn('Project directory not found');
-                return createResponse(null, 'project dir not found');
-            }
-
-            try {
-                // Create URI and read file content
-                const fileUri = vscode.Uri.file(absolutePath);
-                const content = await vscode.workspace.fs.readFile(fileUri);
-                const text = new TextDecoder().decode(content);
-                
-                log.debug(`Successfully read file content: ${absolutePath}, size: ${text.length} characters`);
-
-                return createResponse({
-                    content: text,
-                    path: absolutePath,
-                    relativePath: toRelativePath(absolutePath)
-                });
-            } catch (err) {
-                log.warn(`File not found: ${absolutePath}`, err);
-                return createResponse(null, 'file not found');
-            }
-        } catch (error) {
-            log.error('Error getting file content', error);
-            return createResponse(null, `Error getting file content: ${formatError(error)}`);
+            return responseHandler.success({
+                content: text,
+                path: absolutePath,
+                relativePath: this.getRelativePath(absolutePath)
+            });
+        } catch (err) {
+            this.log.warn(`File not found: ${absolutePath}`, err);
+            return responseHandler.failure('file not found');
         }
     }
 }
 
 /**
- * Replace file content by path
+ * Replace file content tool
+ * Inherits from AbstractFileTools base class to utilize common file operation functionality
  */
-export class ReplaceFileTextByPathTool extends AbstractMcpTool<ToolParams['replaceFileTextByPath']> {
+export class ReplaceFileTextByPathTool extends AbstractFileTools<ToolParams['replaceFileTextByPath']> {
     constructor() {
         super(
             'replace_file_text_by_path',
@@ -83,54 +64,162 @@ export class ReplaceFileTextByPathTool extends AbstractMcpTool<ToolParams['repla
         );
     }
 
-    async handle(args: ToolParams['replaceFileTextByPath']): Promise<Response> {
+    /**
+     * Execute file replace operation (implementing base class abstract method)
+     */
+    protected async execute(absolutePath: string, args: ToolParams['replaceFileTextByPath']): Promise<Response> {
+        const { text } = args;
+
         try {
-            const { pathInProject, text } = args;
-            log.debug(`Replacing content for file: ${pathInProject}`);
-            
-            const normalizedPath = normalizePath(pathInProject);
-            const absolutePath = toAbsolutePathSafe(normalizedPath);
+            // Use optimized file write method
+            const { writeTimeMs, size } = await this.writeFileWithPerformanceTracking(
+                absolutePath, 
+                text, 
+                { reloadAfterWrite: true }
+            );
 
-            if (!absolutePath) {
-                log.warn('Project directory not found');
-                return createResponse(null, 'project dir not found');
+            return responseHandler.success({
+                path: absolutePath,
+                relativePath: this.getRelativePath(absolutePath),
+                size,
+                operationTimeMs: writeTimeMs
+            });
+        } catch (err) {
+            this.log.error(`Error writing file: ${absolutePath}`, err);
+            return responseHandler.failure(`Error writing file: ${err instanceof Error ? err.message : String(err)}`);
+        }
+    }
+}
+
+/**
+ * Create new file tool
+ * Inherits from AbstractFileTools base class to utilize common file operation functionality
+ */
+export class CreateNewFileWithTextTool extends AbstractFileTools<ToolParams['createNewFileWithText']> {
+    constructor() {
+        super(
+            'create_new_file_with_text',
+            'Create a new file at the specified path in the project directory and populate it with content. Returns an error if project directory cannot be determined.',
+            {
+                type: 'object',
+                properties: {
+                    pathInProject: { type: 'string' },
+                    text: { type: 'string' }
+                },
+                required: ['pathInProject', 'text']
             }
+        );
+    }
 
-            try {
-                // Create URI
-                const fileUri = vscode.Uri.file(absolutePath);
+    /**
+     * Execute file creation operation (implementing base class abstract method)
+     */
+    protected async execute(absolutePath: string, args: ToolParams['createNewFileWithText']): Promise<Response> {
+        const { text } = args;
 
-                // Check if file exists
-                try {
-                    await vscode.workspace.fs.stat(fileUri);
-                    log.debug(`File exists: ${absolutePath}`);
-                } catch (err) {
-                    log.warn(`File not found: ${absolutePath}`, err);
-                    return createResponse(null, 'file not found');
+        try {
+            // Create directory
+            await this.measurePerformance(
+                'Directory creation',
+                async () => {
+                    const dirUri = vscode.Uri.file(path.dirname(absolutePath));
+                    await vscode.workspace.fs.createDirectory(dirUri);
+                    return true;
                 }
+            );
 
-                // Write file content
-                log.debug(`Writing new content to file: ${absolutePath}, size: ${text.length} characters`);
-                const encoder = new TextEncoder();
-                const bytes = encoder.encode(text);
-                await vscode.workspace.fs.writeFile(fileUri, bytes);
+            // Use optimized file write method
+            const { writeTimeMs, size } = await this.writeFileWithPerformanceTracking(
+                absolutePath, 
+                text, 
+                { reloadAfterWrite: false }
+            );
 
-                // Reload open file if needed
-                log.debug(`Reloading file if open: ${absolutePath}`);
-                await FileReloader.reloadFile(absolutePath);
+            this.log.info(`Successfully created file: ${absolutePath} in ${writeTimeMs}ms of size ${size}`);
+            return responseHandler.success({
+                path: absolutePath,
+                relativePath: this.getRelativePath(absolutePath),
+                operationTimeMs: writeTimeMs
+            });
+        } catch (err) {
+            this.log.error(`Failed to create file: ${absolutePath}`, err);
+            return responseHandler.failure(`Failed to create file: ${err instanceof Error ? err.message : String(err)}`);
+        }
+    }
+}
 
-                log.info(`Successfully replaced file content: ${absolutePath}`);
-                return createResponse({
-                    path: absolutePath,
-                    relativePath: toRelativePath(absolutePath)
-                });
-            } catch (err) {
-                log.error(`Could not get document: ${absolutePath}`, err);
-                return createResponse(null, 'could not get document');
+/**
+ * List folder contents tool
+ * Inherits from AbstractFileTools base class to utilize common file operation functionality
+ */
+export class ListFilesInFolderTool extends AbstractFileTools<ToolParams['listFilesInFolder']> {
+    constructor() {
+        super(
+            'list_files_in_folder',
+            'List all files and directories in the specified project folder. Returns an array of entry information.',
+            {
+                type: 'object',
+                properties: {
+                    pathInProject: { type: 'string' }
+                },
+                required: ['pathInProject']
             }
-        } catch (error) {
-            log.error('Error replacing file content', error);
-            return createResponse(null, `Error replacing file content: ${formatError(error)}`);
+        );
+    }
+
+    /**
+     * Execute directory list operation (implementing base class abstract method)
+     */
+    protected async execute(absolutePath: string, _args: ToolParams['listFilesInFolder']): Promise<Response> {
+        try {
+            // Check if path is a directory
+            const dirUri = vscode.Uri.file(absolutePath);
+            const stat = await vscode.workspace.fs.stat(dirUri);
+            
+            if (stat.type !== vscode.FileType.Directory) {
+                this.log.warn(`Path is not a directory: ${absolutePath}`);
+                return responseHandler.failure(`Path is not a directory: ${absolutePath}`);
+            }
+
+            // Use performance measurement method to read directory contents
+            const { result: entries, timeMs } = await this.measurePerformance(
+                'Directory read',
+                async () => vscode.workspace.fs.readDirectory(dirUri)
+            );
+
+            // Format results
+            const result = [];
+            for (const [name, fileType] of entries) {
+                try {
+                    // Calculate path for each entry
+                    const entryAbsPath = path.join(absolutePath, name);
+                    const entryRelPath = this.getRelativePath(entryAbsPath);
+
+                    result.push({
+                        name: name,
+                        type: fileType === vscode.FileType.Directory ? 'directory' : 'file',
+                        path: entryRelPath
+                    });
+                } catch (entryErr) {
+                    // Skip entries that cannot be processed
+                    this.log.warn(`Error processing entry: ${name}`, entryErr);
+                }
+            }
+
+            // Sort: directories first, then files, same type sorted by name
+            result.sort((a, b) => {
+                if (a.type !== b.type) {
+                    return a.type === 'directory' ? -1 : 1;
+                }
+                return a.name.localeCompare(b.name);
+            });
+
+            this.log.info(`Found ${result.length} items in directory: ${absolutePath}, time: ${timeMs.toFixed(2)}ms`);
+            return responseHandler.success(result);
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : String(err);
+            this.log.error(`Cannot access path: ${absolutePath}`, err);
+            return responseHandler.failure(`Cannot access path: ${absolutePath} (${errorMessage})`);
         }
     }
 }

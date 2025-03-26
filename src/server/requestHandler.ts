@@ -1,21 +1,36 @@
 import * as vscode from 'vscode';
 import * as http from 'http';
 import * as path from 'path';
-import { McpToolManager } from '../mcp-tool-manager';
+import { ToolManager } from '../toolManager';
 import { getProjectRoot } from '../utils/project';
 import { Logger } from '../utils/logger';
+import { responseHandler } from './responseHandler';
+import { RequestContext, ResponseContext } from './interceptors/types';
+import { InterceptorChain, initializeInterceptors } from './interceptors';
 
 // Create module-specific logger
 const log = Logger.forModule('RequestHandler');
 
 /**
- * Request Handler - Processes different types of MCP requests
+ * Request Handler Class - Processes various types of MCP HTTP requests
+ * Responsible for routing requests to appropriate processing logic and invoking interceptor chain
  */
 export class RequestHandler {
-    private readonly toolManager = McpToolManager.getInstance();
+    private readonly toolManager = ToolManager.getInstance();
+    private readonly interceptorChain: InterceptorChain;
+    
+    constructor() {
+        // Initialize interceptor chain
+        this.interceptorChain = InterceptorChain.getInstance();
+        // Register default interceptors
+        initializeInterceptors();
+        
+        log.info('RequestHandler initialized with interceptor chain');
+    }
 
     /**
      * Handle tools list request
+     * @param res HTTP response object
      */
     public async handleListTools(res: http.ServerResponse): Promise<void> {
         try {
@@ -25,19 +40,22 @@ export class RequestHandler {
                 inputSchema: tool.inputSchema
             }));
 
-            log.debug('Tools list requested', { count: toolsList.length });
-            this.sendJsonResponse(res, 200, toolsList);
+            log.info('Tools list requested', { count: toolsList.length });
+            responseHandler.sendJsonResponse(res, 200, toolsList);
         } catch (error) {
-            this.handleServerError(res, error, 'Error processing tools list request');
+            responseHandler.handleServerError(res, error, 'Error processing tools list request');
         }
     }
 
     /**
      * Handle status and initialization requests
+     * @param res HTTP response object
+     * @param type Request type ('initialize' or 'status')
+     * @param requestId Request ID
      */
     public async handleStatusRequest(
         res: http.ServerResponse, 
-        type: string, 
+        type: 'initialize' | 'status', 
         requestId: string | string[] | undefined
     ): Promise<void> {
         try {
@@ -48,15 +66,18 @@ export class RequestHandler {
                 ? this.createInitializeResponse(rootPath, activeFile, requestId)
                 : this.createStatusResponse(rootPath, activeFile, requestId);
 
-            log.debug(`Processing ${type} request`, { requestId });
-            this.sendJsonResponse(res, 200, response);
+            log.info(`Processing ${type} request`, { requestId });
+            responseHandler.sendJsonResponse(res, 200, response);
         } catch (error) {
-            this.handleServerError(res, error, `Error processing ${type} request`);
+            responseHandler.handleServerError(res, error, `Error processing ${type} request`);
         }
     }
 
     /**
      * Create initialization response
+     * @param rootPath Project root path
+     * @param activeFile Current active file
+     * @param requestId Request ID
      */
     private createInitializeResponse(
         rootPath: string, 
@@ -67,30 +88,29 @@ export class RequestHandler {
             ? path.dirname(activeFile) 
             : rootPath;
 
-        return {
-            jsonrpc: "2.0",
-            id: requestId,
-            result: {
-                protocolVersion: "2024-11-05",
-                capabilities: {
-                    tools: { listChanged: true },
-                    resources: {}
-                },
-                serverInfo: {
-                    name: "vscode-mcp-server",
-                    version: "1.0.0"
-                },
-                environment: {
-                    workspaceRoot: rootPath,
-                    activeFile: activeFile,
-                    currentDirectory: currentDirectory
-                }
+        return responseHandler.createJsonRpcResponse({
+            protocolVersion: "2024-11-05",
+            capabilities: {
+                tools: { listChanged: true },
+                resources: {}
+            },
+            serverInfo: {
+                name: "vscode-mcp-server",
+                version: "1.0.0"
+            },
+            environment: {
+                workspaceRoot: rootPath,
+                activeFile: activeFile,
+                currentDirectory: currentDirectory
             }
-        };
+        }, requestId);
     }
 
     /**
      * Create status response
+     * @param rootPath Project root path
+     * @param activeFile Current active file
+     * @param requestId Request ID
      */
     private createStatusResponse(
         rootPath: string, 
@@ -101,82 +121,107 @@ export class RequestHandler {
             ? path.dirname(activeFile) 
             : rootPath;
 
-        return {
-            jsonrpc: "2.0",
-            id: requestId,
-            result: {
-                status: "running",
-                environment: {
-                    workspaceRoot: rootPath,
-                    activeFile: activeFile,
-                    currentDirectory: currentDirectory,
-                    openFiles: vscode.workspace.textDocuments
-                        .filter(doc => doc.uri.scheme === 'file')
-                        .map(doc => doc.uri.fsPath)
-                }
+        return responseHandler.createJsonRpcResponse({
+            status: "running",
+            environment: {
+                workspaceRoot: rootPath,
+                activeFile: activeFile,
+                currentDirectory: currentDirectory,
+                openFiles: vscode.workspace.textDocuments
+                    .filter(doc => doc.uri.scheme === 'file')
+                    .map(doc => doc.uri.fsPath)
             }
-        };
+        }, requestId);
     }
 
     /**
-     * Handle tool execution requests
+     * Handle tool execution request
+     * @param toolName Tool name
+     * @param params Tool parameters
+     * @param method HTTP method
+     * @param path Request path
+     * @param res HTTP response object
      */
     public async handleToolExecution(
         toolName: string, 
-        args: any,
+        params: any,
+        method: string,
+        path: string,
         res: http.ServerResponse
     ): Promise<void> {
         try {
             const tool = this.toolManager.getToolByName(toolName);
             if (!tool) {
                 log.warn(`Unknown tool requested: ${toolName}`);
-                this.sendJsonResponse(res, 404, { 
-                    status: 'error', 
-                    error: `Unknown tool: ${toolName}` 
-                });
+                responseHandler.sendJsonResponse(
+                    res, 
+                    404, 
+                    responseHandler.failure(`Unknown tool: ${toolName}`)
+                );
                 return;
             }
 
-            log.debug(`Executing tool: ${toolName}`);
-            const result = await tool.handle(args);
+            // Create request context
+            let requestContext: RequestContext = {
+                toolName,
+                params,
+                method,
+                path
+            };
 
-            this.sendJsonResponse(res, 200, result);
+            // Execute before request interceptor chain
+            const startTime = performance.now();
+            const processedContext = await this.interceptorChain.processBeforeRequest(requestContext);
+            const beforeTime = performance.now() - startTime;
+            
+            // If interceptor returns null, terminate request processing
+            if (processedContext === null) {
+                log.info(`Request processing terminated by interceptor for tool: ${toolName}`);
+                responseHandler.sendJsonResponse(res, 200, responseHandler.failure('Request cancelled by interceptor'));
+                return;
+            }
+            
+            // Update request context
+            requestContext = processedContext;
+            
+            // If cached response exists, return directly
+            if (requestContext.cachedResponse) {
+                log.info(`Using cached response for tool: ${toolName}`);
+                responseHandler.sendJsonResponse(res, 200, requestContext.cachedResponse);
+                
+                // Log interceptor performance
+                const totalTime = performance.now() - startTime;
+                log.info(`Interceptor chain completed in ${totalTime.toFixed(2)}ms (cache hit)`);
+                return;
+            }
+
+            log.info(`Executing tool: ${toolName}`);
+            const result = await tool.handle(params);
+
+            // Create response context
+            let responseContext: ResponseContext = {
+                response: result,
+                statusCode: 200
+            };
+
+            // Execute after response interceptor chain
+            const afterStartTime = performance.now();
+            responseContext = await this.interceptorChain.processAfterResponse(requestContext, responseContext);
+            const afterTime = performance.now() - afterStartTime;
+            
+            // Log interceptor performance
+            const totalTime = performance.now() - startTime;
+            if (totalTime > 50) {
+                log.info(`Interceptor chain processing: before=${beforeTime.toFixed(2)}ms, after=${afterTime.toFixed(2)}ms, total=${totalTime.toFixed(2)}ms`);
+            }
+
+            // Send response using responseHandler
+            responseHandler.sendResponse(res, responseContext);
         } catch (error) {
-            this.handleServerError(res, error, `Error executing tool ${toolName}`);
+            responseHandler.handleServerError(res, error, `Error executing tool ${toolName}`);
         }
     }
-
-    /**
-     * Send JSON response
-     */
-    public sendJsonResponse(
-        res: http.ServerResponse, 
-        statusCode: number, 
-        data: any
-    ): void {
-        res.writeHead(statusCode, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(data));
-    }
-
-    /**
-     * Handle server errors
-     */
-    public handleServerError(
-        res: http.ServerResponse, 
-        error: unknown, 
-        defaultMessage = 'Error processing request'
-    ): void {
-        log.error(defaultMessage, error);
-        
-        // Report error to status bar
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        vscode.commands.executeCommand('ggMCP.reportError', `${defaultMessage}: ${errorMessage}`);
-        
-        this.sendJsonResponse(res, 500, { 
-            status: 'error', 
-            error: error instanceof Error 
-                ? error.message 
-                : String(error) 
-        });
-    }
 }
+
+// Export singleton instance
+export const requestHandler = new RequestHandler();

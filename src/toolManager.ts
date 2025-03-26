@@ -7,13 +7,15 @@ import {
     OpenFileInEditorTool
 } from './tools/editorTools';
 import {
-    CreateNewFileWithTextTool,
-    FindFilesByNameSubstringTool,
-    GetFileTextByPathTool,
+    GetFileTextByPathTool, 
     ReplaceFileTextByPathTool,
-    ListFilesInFolderTool,
-    SearchInFilesContentTool
-} from './tools/fileTools';
+    CreateNewFileWithTextTool, 
+    ListFilesInFolderTool
+} from './tools/fileReadWriteTools';
+import {
+    SearchInFilesContentTool,
+    FindFilesByNameSubstringTool
+} from './tools/fileSearchTools';
 import {
     ToggleDebuggerBreakpointTool,
     GetDebuggerBreakpointsTool,
@@ -24,6 +26,7 @@ import {
     GetTerminalTextTool,
     ExecuteTerminalCommandTool,
     ExecuteCommandWithOutputTool,
+    GetCommandOutputTool,
     WaitTool
 } from './tools/terminalTools';
 import {
@@ -64,11 +67,11 @@ import {Logger} from './utils/logger';
 const log = Logger.forModule('ToolManager');
 
 /**
- * MCP Tool Manager
+ * Tool Manager
  * Responsible for managing and providing all available tools
  */
-export class McpToolManager {
-    private static instance: McpToolManager;
+export class ToolManager {
+    private static instance: ToolManager;
     private tools: Map<string, AbstractMcpTool> = new Map();
 
     private constructor() {
@@ -78,11 +81,11 @@ export class McpToolManager {
     /**
      * Get singleton instance
      */
-    public static getInstance(): McpToolManager {
-        if (!McpToolManager.instance) {
-            McpToolManager.instance = new McpToolManager();
+    public static getInstance(): ToolManager {
+        if (!ToolManager.instance) {
+            ToolManager.instance = new ToolManager();
         }
-        return McpToolManager.instance;
+        return ToolManager.instance;
     }
 
     /**
@@ -108,7 +111,7 @@ export class McpToolManager {
      */
     public registerTool(tool: AbstractMcpTool): void {
         this.tools.set(tool.name, tool);
-        log.debug(`Registered tool: ${tool.name}`);
+        log.info(`Registered tool: ${tool.name}`);
     }
 
     /**
@@ -143,6 +146,7 @@ export class McpToolManager {
             new GetTerminalTextTool(),
             new ExecuteTerminalCommandTool(),
             new ExecuteCommandWithOutputTool(),
+            new GetCommandOutputTool(),
             new WaitTool(),
             
             // Terminal info tools

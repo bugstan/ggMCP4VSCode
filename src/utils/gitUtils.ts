@@ -1,6 +1,4 @@
 import * as vscode from 'vscode';
-import {Response} from '../types';
-import {errorResponse} from './response';
 import {Logger} from './logger';
 import {getProjectRoot, toRelativePath} from './pathUtils';
 
@@ -21,7 +19,7 @@ export async function getGitAPI() {
 
     // Ensure Git extension is activated
     if (!gitExtension.isActive) {
-        log.debug('Activating Git extension');
+        log.info('Activating Git extension');
         await gitExtension.activate();
     }
 
@@ -31,7 +29,7 @@ export async function getGitAPI() {
         return null;
     }
 
-    log.debug('Git API retrieved successfully');
+    log.info('Git API retrieved successfully');
     return api;
 }
 
@@ -56,9 +54,9 @@ export async function getCurrentRepository() {
     // Get the first repository
     const repo = repositories[0];
     if (repo && repo.rootUri) {
-        log.debug(`Found Git repository: ${repo.rootUri.fsPath}`);
+        log.info(`Found Git repository: ${repo.rootUri.fsPath}`);
     } else {
-        log.debug(`Found Git repository but root URI is not available`);
+        log.info(`Found Git repository but root URI is not available`);
     }
     return repo;
 }
@@ -83,7 +81,7 @@ export async function executeGitCommand(command: string): Promise<{
     try {
         log.info(`Executing Git command: ${command}`);
         const result = await repository.exec(command);
-        log.debug(`Git command result: exitCode=${result.exitCode}`);
+        log.info(`Git command result: exitCode=${result.exitCode}`);
         return result;
     } catch (error) {
         log.error(`Failed to execute Git command: ${command}`, error);
@@ -97,7 +95,7 @@ export async function executeGitCommand(command: string): Promise<{
  * @returns Escaped argument
  */
 export function escapeShellArg(arg: string): string {
-    return arg.replace(/["'\\\n\r]/g, '\\$&');
+    return arg.replace(/[\"'\\\\\\n\\r]/g, '\\\\$&');
 }
 
 /**
@@ -129,7 +127,7 @@ export function getChangeStatusDescription(status: string): string {
  * @param error Any error object or value
  * @returns Formatted error string, never undefined
  */
-function formatErrorSafe(error: unknown): string {
+export function formatErrorSafe(error: unknown): string {
     if (error === undefined || error === null) {
         return 'Unknown error';
     }
@@ -146,32 +144,34 @@ function formatErrorSafe(error: unknown): string {
 }
 
 /**
- * Execute Git repository operations with error handling
+ * Execute Git repository operations with proper error handling
+ * This is a generic utility that wraps Git operations and handles common errors
+ * 
  * @param action Function to execute with repository context
- * @returns Standardized response
+ * @returns Result of the action or throws an error
  */
-export async function withGitRepository(action: (repository: any) => Promise<Response>): Promise<Response> {
+export async function withGitRepository<T>(action: (repository: any) => Promise<T>): Promise<T> {
     try {
-        log.debug('Starting Git repository operation');
+        log.info('Starting Git repository operation');
 
         const projectRoot = getProjectRoot();
         if (!projectRoot) {
             log.warn('No project root found');
-            return errorResponse('project dir not found');
+            throw new Error('project dir not found');
         }
 
         const repository = await getCurrentRepository();
         if (!repository) {
             log.warn('No Git repository found for operation');
-            return errorResponse('No Git repository found');
+            throw new Error('No Git repository found');
         }
 
         return await action(repository);
     } catch (error) {
         log.error('Git operation failed', error);
-        // Use our safe error formatter to avoid type issues
+        // Format error but throw it to let the caller handle it
         const errorMsg: string = formatErrorSafe(error);
-        return errorResponse(`Git operation failed: ${errorMsg}`);
+        throw new Error(`Git operation failed: ${errorMsg}`);
     }
 }
 
@@ -234,8 +234,8 @@ export async function getRepoInfo(): Promise<{
         if (remoteResult && remoteResult.exitCode === 0) {
             const remotesLines = remoteResult.stdout.split('\n');
             if (remotesLines.length > 0) {
-                // const match = remotesLines[0].match(/^(\S+)\s+(\S+)/);
-                const match = (remotesLines[0]!).match(/^(\S+)\s+(\S+)/);
+                // const match = remotesLines[0].match(/^(\\S+)\\s+(\\S+)/);
+                const match = (remotesLines[0]!).match(/^(\\S+)\\s+(\\S+)/);
                 if (match && match.length >= 3 && match[2]) {
                     remote = match[2];
                 }
@@ -268,7 +268,7 @@ export async function getFileStatus(filePath: string): Promise<{
             return null;
         }
 
-        const result = await executeGitCommand(`git status --porcelain "${escapeShellArg(relativePath)}"`);
+        const result = await executeGitCommand(`git status --porcelain \"${escapeShellArg(relativePath)}\"`);
         if (!result || result.exitCode !== 0) {
             return null;
         }

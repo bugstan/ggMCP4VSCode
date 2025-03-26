@@ -54,7 +54,7 @@ export function getProjectRoot(): string | null {
         // Ensure safe access
         const firstFolder = workspaceFolders[0];
         if (firstFolder) {
-            log.debug(`Project root from workspace: ${firstFolder.uri.fsPath}`);
+            log.info(`Project root from workspace: ${firstFolder.uri.fsPath}`);
             cachedProjectRoot = firstFolder.uri.fsPath;
             cachedProjectRootTimestamp = now;
             return cachedProjectRoot;
@@ -66,7 +66,7 @@ export function getProjectRoot(): string | null {
     if (activeEditor) {
         const filePath = activeEditor.document.uri.fsPath;
         const directory = path.dirname(filePath);
-        log.debug(`Project root from active file: ${directory}`);
+        log.info(`Project root from active file: ${directory}`);
         cachedProjectRoot = directory;
         cachedProjectRootTimestamp = now;
         return cachedProjectRoot;
@@ -86,11 +86,11 @@ export function getProjectRoot(): string | null {
 export function getActiveFile(): string | null {
     const activeEditor = vscode.window.activeTextEditor;
     if (activeEditor) {
-        log.debug(`Active file: ${activeEditor.document.uri.fsPath}`);
+        log.info(`Active file: ${activeEditor.document.uri.fsPath}`);
         return activeEditor.document.uri.fsPath;
     }
     
-    log.debug('No active file found');
+    log.info('No active file found');
     return null;
 }
 
@@ -110,7 +110,7 @@ export function getCurrentDirectory(): string | null {
     const activeFile = getActiveFile();
     if (activeFile) {
         const directory = path.dirname(activeFile);
-        log.debug(`Current directory from active file: ${directory}`);
+        log.info(`Current directory from active file: ${directory}`);
         return directory;
     }
     
@@ -129,7 +129,7 @@ export function uuid(): string {
         return v.toString(16);
     });
     
-    log.debug(`Generated UUID: ${generatedUuid}`);
+    log.info(`Generated UUID: ${generatedUuid}`);
     return generatedUuid;
 }
 
@@ -141,7 +141,7 @@ export function clearPathCache(): void {
     // Also clear project root cache
     cachedProjectRoot = null;
     cachedProjectRootTimestamp = 0;
-    log.debug('Path cache cleared');
+    log.info('Path cache cleared');
 }
 
 /**
@@ -295,7 +295,7 @@ export function analyzePath(inputPath: string, forceNoCache = false): PathResult
         if (!forceNoCache && pathCache.has(inputPath)) {
             const cachedResult = pathCache.get(inputPath);
             if (cachedResult) {
-                log.debug('Using path cache', { path: inputPath });
+                log.info('Using path cache', { path: inputPath });
                 return cachedResult;
             }
         }
@@ -314,7 +314,7 @@ export function analyzePath(inputPath: string, forceNoCache = false): PathResult
         
         // Normalize path
         result.normalized = normalizePath(inputPath);
-        log.debug('Normalized path', { original: inputPath, normalized: result.normalized });
+        log.info('Normalized path', { original: inputPath, normalized: result.normalized });
         
         // Safety check
         result.isSafe = isPathSafe(result.normalized);
@@ -332,7 +332,7 @@ export function analyzePath(inputPath: string, forceNoCache = false): PathResult
                 result.relative = '/';
                 result.isWithinProject = true;
                 result.isDirectory = true;
-                log.debug('Resolved root path "/"', { absolute: result.absolute });
+                log.info('Resolved root path "/"', { absolute: result.absolute });
                 return updateCache(result);
             } else {
                 result.error = 'Cannot resolve root path, missing project context';
@@ -392,7 +392,7 @@ export function analyzePath(inputPath: string, forceNoCache = false): PathResult
 function updateCache(result: PathResult): PathResult {
     // Simple cache eviction strategy: clear entire cache when size exceeds limit
     if (pathCache.size >= CACHE_SIZE_LIMIT) {
-        log.debug('Path cache reached limit, clearing cache');
+        log.info('Path cache reached limit, clearing cache');
         pathCache.clear();
     }
     

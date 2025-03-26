@@ -5,12 +5,21 @@ import {Logger} from './logger';
 const log = Logger.forModule('TerminalManager');
 
 /**
+ * Command output status type definition
+ */
+export type CommandStatus = 'idle' | 'running' | 'completed' | 'error';
+
+/**
  * Global terminal manager for reusing terminals to avoid accumulation
  * Implemented as a singleton to ensure the same terminal instances are used across the application
  */
 export class TerminalManager {
     private static instance: TerminalManager;
     private outputTerminal: vscode.Terminal | null = null;
+    
+    // Add command output storage
+    private lastCommandOutput: string = '';
+    private commandStatus: CommandStatus = 'idle';
     
     private constructor() {}
     
@@ -33,7 +42,7 @@ export class TerminalManager {
     public getOutputTerminal(): vscode.Terminal {
         if (!this.outputTerminal || this.isTerminalClosed(this.outputTerminal)) {
             this.outputTerminal = vscode.window.createTerminal('MCP Output Terminal');
-            log.debug('Created new MCP Output Terminal');
+            log.info('Created new MCP Output Terminal');
         }
         return this.outputTerminal;
     }
@@ -56,12 +65,34 @@ export class TerminalManager {
         if (this.outputTerminal) {
             try {
                 this.outputTerminal.dispose();
-                log.debug('Disposed MCP Output Terminal');
+                log.info('Disposed MCP Output Terminal');
             } catch (e) {
                 log.error('Error disposing terminal', e);
             } finally {
                 this.outputTerminal = null;
             }
         }
+    }
+    
+    /**
+     * Set last command output and status
+     * @param output Command output
+     * @param status Command status
+     */
+    public setCommandOutput(output: string, status: CommandStatus): void {
+        this.lastCommandOutput = output;
+        this.commandStatus = status;
+        log.info(`Updated command output. Status: ${status}`);
+    }
+    
+    /**
+     * Get last command output and status
+     * @returns Object containing output and status
+     */
+    public getCommandOutput(): { output: string; status: CommandStatus } {
+        return {
+            output: this.lastCommandOutput,
+            status: this.commandStatus
+        };
     }
 }

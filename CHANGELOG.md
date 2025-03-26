@@ -2,6 +2,25 @@
 
 All notable changes to the ggMCP4VSCode extension will be documented in this file.
 
+## [1.0.5] - 2025-03-25
+
+### Added
+- Implemented comprehensive tool base class system for better tool organization
+- Created specialized base classes for each tool category (File, Editor, Terminal, Code, Debug, Git)
+- Added unified error handling and logging across all tools
+- Introduced `toolBases.ts` for simplified tool base class imports
+
+### Changed
+- Refactored and standardized naming conventions for base classes
+- Fixed TypeScript type errors related to Logger usage
+- Improved type safety in base class implementations
+- Updated interface documentation to reflect new tool organization
+
+### Fixed
+- Resolved property access TypeScript errors in logger usage
+- Fixed potential undefined property access errors
+- Improved error isolation in tool execution
+
 ## [1.0.4] - 2025-03-24
 
 ### Added

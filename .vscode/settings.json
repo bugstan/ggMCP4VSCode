@@ -1,0 +1,17 @@
+{
+    "files.watcherExclude": {
+      "**/node_modules/**": true,
+      "**/.github": true
+    },
+    "search.exclude": {
+      "**/node_modules": true,
+      "**/.github": true
+    },
+    "files.exclude": {
+      "**/node_modules": true,
+      "**/.github": true,
+      ".vscode": true
+    },
+    "console.message.level": "verbose"
+  }
+  

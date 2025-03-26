@@ -1,33 +1,14 @@
 import * as vscode from 'vscode';
-import {AbstractMcpTool} from '../types/tool';
-import {Response, ToolParams} from '../types';
-import {createResponse, formatError} from '../utils/response';
-import {Logger} from '../utils/logger';
-import {ShellIntegrationHelper} from '../utils/shellIntegrationHelper';
-import {TerminalManager} from '../utils/terminalManager';
-
-// Create module-specific logger
-const log = Logger.forModule('TerminalTools');
+import { AbstractTerminalTools } from '../types/absTerminalTools';
+import { Response, ToolParams } from '../types';
+import { responseHandler } from '../server/responseHandler';
+import { ShellIntegrationHelper } from '../utils/shellIntegrationHelper';
 
 /**
- * Helper function: Process command output, limit lines
- * @param output Command output text
- * @param maxLines Maximum number of lines
- * @returns Processed output text
+ * Get terminal text content tool
+ * Inherits from AbstractTerminalTools base class to utilize common terminal operation functionality
  */
-function limitOutputLines(output: string, maxLines: number = 2000): string {
-    const lines = output.split('\n');
-    if (lines.length > maxLines) {
-        const truncatedOutput = lines.slice(0, maxLines).join('\n');
-        return `${truncatedOutput}\n\n[Output truncated, showing first ${maxLines} lines]`;
-    }
-    return output;
-}
-
-/**
- * Get terminal text content
- */
-export class GetTerminalTextTool extends AbstractMcpTool {
+export class GetTerminalTextTool extends AbstractTerminalTools {
     constructor() {
         super(
             'get_terminal_text',
@@ -36,58 +17,63 @@ export class GetTerminalTextTool extends AbstractMcpTool {
         );
     }
 
-    async handle(_args: Record<string, never>): Promise<Response> {
-        try {
-            // Get the current active terminal
-            if (vscode.window.terminals.length === 0) {
-                log.debug('No terminals are open');
-                return createResponse('');
-            }
+    /**
+     * This tool does not require terminal display
+     */
+    protected shouldShowTerminal(): boolean {
+        return false;
+    }
 
-            const terminal = vscode.window.activeTerminal || vscode.window.terminals[0];
+    /**
+     * Execute get terminal text operation (implementing base class abstract method)
+     */
+    protected async executeCommand(terminal: vscode.Terminal | null, _args: any): Promise<Response> {
+        try {
+            // Check if terminal exists
             if (!terminal) {
-                log.debug('No active terminal');
-                return createResponse('');
+                this.log.info('No terminals are open');
+                return responseHandler.success('');
             }
 
             // Use VS Code 1.93+ Shell Integration API to get terminal content
             try {
                 if ('onDidWriteData' in terminal) {
-                    // This feature is not available in older VS Code versions, log a warning
-                    log.warn('Terminal content request using legacy method, modern API not available');
-                    return createResponse('Terminal content not directly accessible in current VS Code version. Please upgrade to VS Code 1.93+ for this functionality.');
+                    // This feature is not available in older VS Code versions, log warning
+                    this.log.warn('Terminal content request using legacy method, modern API not available');
+                    return responseHandler.success('Terminal content not directly accessible in current VS Code version. Please upgrade to VS Code 1.93+ for this functionality.');
                 }
 
                 // Use ShellIntegrationHelper to check Shell Integration API support
                 if (ShellIntegrationHelper.hasShellIntegration(terminal)) {
                     const output = ShellIntegrationHelper.getCurrentCommandOutput(terminal);
                     if (output) {
-                        log.info('Retrieved terminal output using Shell Integration API');
-                        return createResponse(output);
+                        this.log.info('Retrieved terminal output using Shell Integration API');
+                        return responseHandler.success(output);
                     } else {
-                        log.debug('No current command output available');
-                        return createResponse('No current command output available');
+                        this.log.info('No current command output available');
+                        return responseHandler.success('No current command output available');
                     }
                 }
 
                 // If Shell Integration API is not available
-                log.info('Terminal Shell Integration API not available in current VS Code version');
-                return createResponse('Terminal content not directly accessible. Please upgrade to VS Code 1.93+ for Shell Integration API support.');
+                this.log.info('Terminal Shell Integration API not available in current VS Code version');
+                return responseHandler.success('Terminal content not directly accessible. Please upgrade to VS Code 1.93+ for Shell Integration API support.');
             } catch (shellError) {
-                log.error('Error using Shell Integration API', shellError);
-                return createResponse('Error retrieving terminal content using Shell Integration API');
+                this.log.error('Error using Shell Integration API', shellError);
+                return responseHandler.success('Error retrieving terminal content using Shell Integration API');
             }
         } catch (error) {
-            log.error('Error getting terminal content', error);
-            return createResponse(null, `Error getting terminal content: ${formatError(error)}`);
+            this.log.error('Error getting terminal content', error);
+            return responseHandler.failure(`Error getting terminal content: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
 }
 
 /**
- * Execute terminal command
+ * Execute terminal command tool
+ * Inherits from AbstractTerminalTools base class to utilize common terminal operation functionality
  */
-export class ExecuteTerminalCommandTool extends AbstractMcpTool<ToolParams['executeTerminalCommand']> {
+export class ExecuteTerminalCommandTool extends AbstractTerminalTools<ToolParams['executeTerminalCommand']> {
     constructor() {
         super(
             'execute_terminal_command',
@@ -102,106 +88,51 @@ export class ExecuteTerminalCommandTool extends AbstractMcpTool<ToolParams['exec
         );
     }
 
-    async handle(args: ToolParams['executeTerminalCommand']): Promise<Response> {
+    /**
+     * Execute terminal command operation (implementing base class abstract method)
+     */
+    protected async executeCommand(terminal: vscode.Terminal | null, args: ToolParams['executeTerminalCommand']): Promise<Response> {
         try {
             const {command} = args;
-            log.debug(`Executing terminal command: ${command}`);
+            this.log.info(`Executing terminal command: ${command}`);
 
-            // Get configured timeout
-            const config = vscode.workspace.getConfiguration('ggMCP');
-            const timeoutMs = config.get<number>('terminalTimeout', 15000);
+            // Get timeout configuration
+            const timeoutMs = this.getTimeoutMs();
 
-            // Get or create terminal
-            let terminal = vscode.window.activeTerminal;
+            // Ensure terminal exists
             if (!terminal) {
-                terminal = vscode.window.createTerminal('MCP Command Terminal');
-                log.debug('Created new terminal: MCP Command Terminal');
+                return responseHandler.failure('No terminal available');
             }
-
-            // Activate terminal
-            terminal.show();
 
             // Use ShellIntegrationHelper to check Shell Integration API
             if (ShellIntegrationHelper.hasShellIntegration(terminal)) {
-                log.info('Using Shell Integration API to capture command output');
+                this.log.info('Using Shell Integration API to capture command output');
 
-                // Create a Promise to capture command output
-                const outputPromise = new Promise<string>((resolve, reject) => {
-                    try {
-                        // Create timeout timer
-                        const timer = setTimeout(() => {
-                            log.warn(`Command execution timed out after ${timeoutMs}ms: ${command}`);
-                            resolve(`Command execution timed out after ${timeoutMs}ms. Partial output may follow:\n[Output unavailable or command still running]`);
-                        }, timeoutMs);
-
-                        // Use ShellIntegrationHelper to register command finished event
-                        if (ShellIntegrationHelper.hasCommandDetection(terminal)) {
-                            // Register command finished event handler
-                            const disposable = ShellIntegrationHelper.registerCommandFinishedHandler(
-                                terminal, 
-                                (finishedCmd: any) => {
-                                    clearTimeout(timer);
-                                    disposable?.dispose();
-
-                                    if (finishedCmd && finishedCmd.command === command) {
-                                        log.debug('Command finished with output');
-                                        // Use helper function to limit output lines
-                                        const output = finishedCmd.output || '';
-                                        resolve(limitOutputLines(output));
-                                    } else {
-                                        log.debug('Command finished but no matching command found');
-                                        resolve('Command executed, but output could not be captured');
-                                    }
-                                }
-                            );
-
-                            if (!disposable) {
-                                clearTimeout(timer);
-                                log.warn('Command detection registration failed');
-                                terminal.sendText(command);
-                                resolve('Command executed, but command detection registration failed');
-                                return;
-                            }
-
-                            // Send command to terminal
-                            terminal.sendText(command);
-                        } else {
-                            clearTimeout(timer);
-                            log.warn('Shell integration available but command detection not supported');
-                            terminal.sendText(command);
-                            resolve('Command executed, but shell integration command detection not available');
-                        }
-                    } catch (shellError) {
-                        log.error('Error using Shell Integration API', shellError);
-                        terminal.sendText(command);
-                        reject(new Error(`Failed to use Shell Integration API: ${formatError(shellError)}`));
-                    }
-                });
-
-                // Wait for output result
-                const output = await outputPromise;
-                return createResponse(output);
+                // Send command and wait for output
+                const output = await this.executeCommandWithOutput(terminal, command, timeoutMs);
+                return responseHandler.success(output);
             } else {
                 // If Shell Integration API is not supported, use traditional method
-                log.info('Shell Integration API not available, executing command without output capture');
+                this.log.info('Shell Integration API not available, executing command without output capture');
                 terminal.sendText(command);
 
-                // Wait a moment to ensure command has been sent
+                // Wait a bit to ensure command is sent
                 await new Promise(resolve => setTimeout(resolve, 500));
 
-                return createResponse(`Command executed: ${command}\n\nOutput cannot be captured in current VS Code version. Please upgrade to VS Code 1.93+ for output capture support.`);
+                return responseHandler.success(`Command executed: ${command}\n\nOutput cannot be captured in current VS Code version. Please upgrade to VS Code 1.93+ for output capture support.`);
             }
         } catch (error) {
-            log.error('Error executing terminal command', error);
-            return createResponse(null, `Error executing terminal command: ${formatError(error)}`);
+            this.log.error('Error executing terminal command', error);
+            return responseHandler.failure(`Error executing terminal command: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
 }
 
 /**
- * Execute terminal command with output capture
+ * Execute command and capture output tool
+ * Inherits from AbstractTerminalTools base class to utilize common terminal operation functionality
  */
-export class ExecuteCommandWithOutputTool extends AbstractMcpTool<ToolParams['executeCommandWithOutput']> {
+export class ExecuteCommandWithOutputTool extends AbstractTerminalTools<ToolParams['executeCommandWithOutput']> {
     constructor() {
         super(
             'execute_command_with_output',
@@ -216,117 +147,106 @@ export class ExecuteCommandWithOutputTool extends AbstractMcpTool<ToolParams['ex
         );
     }
 
-    async handle(args: ToolParams['executeCommandWithOutput']): Promise<Response> {
+    /**
+     * Execute command and capture output operation (implementing base class abstract method)
+     */
+    protected async executeCommand(terminal: vscode.Terminal | null, args: ToolParams['executeCommandWithOutput']): Promise<Response> {
         try {
             const {command} = args;
-            log.debug(`Executing command with output capture: ${command}`);
+            this.log.info(`Executing command with output capture: ${command}`);
 
-            // Get configured timeout
-            const config = vscode.workspace.getConfiguration('ggMCP');
-            const timeoutMs = config.get<number>('terminalTimeout', 15000);
+            // Update command status to "running"
+            this.terminalManager.setCommandOutput('', 'running');
 
-            // Use terminal manager to get or create terminal, instead of creating a new terminal each time
-            const terminalManager = TerminalManager.getInstance();
-            let terminal: vscode.Terminal;
-            
-            try {
-                terminal = terminalManager.getOutputTerminal();
-                log.debug('Using managed terminal for output capture');
-            } catch (error) {
-                log.error('Failed to get terminal from manager', error);
-                return createResponse(null, `Failed to get terminal: ${formatError(error)}`);
+            // Get timeout configuration
+            const timeoutMs = this.getTimeoutMs();
+
+            // Ensure terminal exists
+            if (!terminal) {
+                const errorMessage = 'Failed to get terminal';
+                this.terminalManager.setCommandOutput(errorMessage, 'error');
+                return responseHandler.failure(errorMessage);
             }
-
-            // Show terminal
-            terminal.show();
 
             // Check if Shell Integration API is supported
             if (!ShellIntegrationHelper.hasShellIntegration(terminal)) {
-                log.warn('Shell Integration API not available, cannot capture output');
+                this.log.warn('Shell Integration API not available, cannot capture output');
                 terminal.sendText(command);
                 await new Promise(resolve => setTimeout(resolve, 500));
 
-                return createResponse(`Command executed: ${command}\n\nOutput cannot be captured in current VS Code version. Please upgrade to VS Code 1.93+ for output capture support.`);
+                const outputText = `Command executed: ${command}\n\nOutput cannot be captured in current VS Code version. Please upgrade to VS Code 1.93+ for output capture support.`;
+                this.terminalManager.setCommandOutput(outputText, 'completed');
+                return responseHandler.success(outputText);
             }
 
             // Use VS Code 1.93+ Shell Integration API to capture output
             try {
-                // Create Promise to wait for command completion and capture output
-                const outputPromise = new Promise<string>((resolve, reject) => {
-                    try {
-                        // Create timeout timer
-                        const timer = setTimeout(() => {
-                            log.warn(`Command execution timed out after ${timeoutMs}ms: ${command}`);
-                            resolve(`Command execution timed out after ${timeoutMs}ms. Partial output may follow:\n[Output unavailable or command still running]`);
-                        }, timeoutMs);
-
-                        // Use ShellIntegrationHelper to check command detection support
-                        if (ShellIntegrationHelper.hasCommandDetection(terminal)) {
-                            // Register command finished event handler
-                            const disposable = ShellIntegrationHelper.registerCommandFinishedHandler(
-                                terminal,
-                                (finishedCmd: any) => {
-                                    clearTimeout(timer);
-                                    disposable?.dispose();
-
-                                    if (finishedCmd && finishedCmd.output) {
-                                        log.debug('Command finished with output');
-                                        // Use helper function to limit output lines
-                                        resolve(limitOutputLines(finishedCmd.output));
-                                    } else {
-                                        log.debug('Command finished but no output captured');
-                                        resolve('Command executed, but no output was captured');
-                                    }
-                                }
-                            );
-
-                            if (!disposable) {
-                                clearTimeout(timer);
-                                log.warn('Command detection registration failed');
-                                terminal.sendText(command);
-                                resolve('Command executed, but command detection registration failed');
-                                return;
-                            }
-
-                            // Send command
-                            terminal.sendText(command);
-                        } else {
-                            clearTimeout(timer);
-                            terminal.sendText(command);
-                            log.warn('Shell integration available but command detection not supported');
-                            resolve('Command executed, but shell integration command detection not available');
-                        }
-                    } catch (shellError) {
-                        log.error('Error using Shell Integration API', shellError);
-                        reject(new Error(`Failed to use Shell Integration API: ${formatError(shellError)}`));
-
-                        // Try to send command
-                        try {
-                            terminal.sendText(command);
-                        } catch (e) {
-                            // Ignore terminal operation failure
-                        }
-                    }
-                });
-
-                // Wait for command execution to complete
-                const output = await outputPromise;
-                return createResponse(output);
+                // Use base class method to execute command and capture output
+                const output = await this.executeCommandWithOutput(terminal, command, timeoutMs);
+                
+                // Set command output status
+                this.terminalManager.setCommandOutput(output, 'completed');
+                
+                return responseHandler.success(output);
             } catch (shellError) {
-                log.error('Error capturing command output', shellError);
-                return createResponse(null, `Error capturing command output: ${formatError(shellError)}`);
+                this.log.error('Error capturing command output', shellError);
+                const errorMessage = `Error capturing command output: ${shellError instanceof Error ? shellError.message : String(shellError)}`;
+                this.terminalManager.setCommandOutput(errorMessage, 'error');
+                return responseHandler.failure(errorMessage);
             }
         } catch (error) {
-            log.error('Error executing command with output', error);
-            return createResponse(null, `Error executing command with output: ${formatError(error)}`);
+            this.log.error('Error executing command with output', error);
+            const errorMessage = `Error executing command with output: ${error instanceof Error ? error.message : String(error)}`;
+            this.terminalManager.setCommandOutput(errorMessage, 'error');
+            return responseHandler.failure(errorMessage);
         }
     }
 }
 
 /**
- * Wait for specified milliseconds
+ * Get command output tool
+ * Inherits from AbstractTerminalTools base class to utilize common terminal operation functionality
  */
-export class WaitTool extends AbstractMcpTool<ToolParams['wait']> {
+export class GetCommandOutputTool extends AbstractTerminalTools {
+    constructor() {
+        super(
+            'get_command_output',
+            'Gets the output from the last command executed with execute_command_with_output.\nReturns the command output and status.',
+            {type: 'object', properties: {}}
+        );
+    }
+
+    /**
+     * This tool does not require terminal
+     */
+    protected requiresTerminal(): boolean {
+        return false;
+    }
+
+    /**
+     * Execute get command output operation (implementing base class abstract method)
+     */
+    protected async executeCommand(_terminal: vscode.Terminal | null, _args: any): Promise<Response> {
+        try {
+            const {output, status} = this.terminalManager.getCommandOutput();
+
+            this.log.info(`Getting command output. Status: ${status}`);
+            return responseHandler.success({
+                status,
+                output
+            });
+        } catch (error) {
+            this.log.error('Error getting command output', error);
+            return responseHandler.failure(`Error getting command output: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    }
+}
+
+/**
+ * Wait for specified milliseconds tool
+ * Inherits from AbstractTerminalTools base class to utilize common terminal operation functionality
+ */
+export class WaitTool extends AbstractTerminalTools<ToolParams['wait']> {
     constructor() {
         super(
             'wait',
@@ -341,19 +261,29 @@ export class WaitTool extends AbstractMcpTool<ToolParams['wait']> {
         );
     }
 
-    async handle(args: ToolParams['wait']): Promise<Response> {
+    /**
+     * This tool does not require terminal
+     */
+    protected requiresTerminal(): boolean {
+        return false;
+    }
+
+    /**
+     * Execute wait operation (implementing base class abstract method)
+     */
+    protected async executeCommand(_terminal: vscode.Terminal | null, args: ToolParams['wait']): Promise<Response> {
         try {
             const {milliseconds} = args;
-            log.debug(`Waiting for ${milliseconds} milliseconds`);
+            this.log.info(`Waiting for ${milliseconds} milliseconds`);
 
-            // Create wait using Promise
+            // Use Promise to implement wait
             await new Promise(resolve => setTimeout(resolve, milliseconds));
 
-            log.debug(`Wait complete: ${milliseconds} milliseconds`);
-            return createResponse('ok');
+            this.log.info(`Wait complete: ${milliseconds} milliseconds`);
+            return responseHandler.success('ok');
         } catch (error) {
-            log.error('Error during wait', error);
-            return createResponse(null, `Error during wait: ${formatError(error)}`);
+            this.log.error('Error during wait', error);
+            return responseHandler.failure(`Error during wait: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
 }

@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
-import { startMCPServer } from './server';
-import { Logger } from './utils/logger';
+import {startMCPServer} from './server';
+import {Logger} from './utils/logger';
+import {getConfig} from './config';
 
 // Create module-specific logger
 const log = Logger.forModule('Extension');
@@ -37,10 +38,10 @@ export function getCurrentServerPort(): number | null {
  * @param error Error message (if any)
  */
 export function updateServerStatus(status: 'starting' | 'running' | 'error' | 'stopped', error: string | null = null): void {
-    log.info(`Updating server status from ${serverStatus} to ${status}`, error ? { error } : undefined);
+    log.info(`Updating server status from ${serverStatus} to ${status}`, error ? {error} : undefined);
     serverStatus = status;
     serverError = error;
-    
+
     // If status bar item is initialized, update it
     if (statusBarItem) {
         updateStatusBar();
@@ -54,37 +55,37 @@ export function updateServerStatus(status: 'starting' | 'running' | 'error' | 's
  */
 function updateStatusBar(): void {
     log.info(`Updating status bar with status: ${serverStatus}`);
-    
+
     switch (serverStatus) {
         case 'starting':
-            statusBarItem.text = '$(sync-spin) VSCode MCP Server';
-            statusBarItem.tooltip = 'Starting VSCode MCP Server...';
+            statusBarItem.text = '$(sync-spin) MCP Server';
+            statusBarItem.tooltip = 'Starting MCP Server...';
             statusBarItem.backgroundColor = undefined;
             break;
         case 'running':
-            statusBarItem.text = '$(zap) VSCode MCP Server';
-            statusBarItem.tooltip = currentServerPort 
-                ? `VSCode MCP Server running on port ${currentServerPort}, using /mcp/ path` 
-                : 'VSCode MCP Server is running';
+            statusBarItem.text = '$(zap) MCP Server';
+            statusBarItem.tooltip = currentServerPort
+                ? `MCP Server running on port ${currentServerPort}, using /mcp/ path`
+                : 'MCP Server is running';
             statusBarItem.backgroundColor = undefined;
             break;
         case 'error':
-            statusBarItem.text = '$(error) VSCode MCP Server';
-            statusBarItem.tooltip = serverError 
-                ? `VSCode MCP Server error: ${serverError}` 
-                : 'VSCode MCP Server error';
+            statusBarItem.text = '$(error) MCP Server';
+            statusBarItem.tooltip = serverError
+                ? `MCP Server error: ${serverError}`
+                : 'MCP Server error';
             statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');
             break;
         case 'stopped':
-            statusBarItem.text = '$(circle-slash) VSCode MCP Server';
-            statusBarItem.tooltip = 'VSCode MCP Server stopped';
+            statusBarItem.text = '$(circle-slash) MCP Server';
+            statusBarItem.tooltip = 'MCP Server stopped';
             statusBarItem.backgroundColor = undefined;
             break;
     }
-    
+
     // Set click command
     statusBarItem.command = 'ggMCP.showStatus';
-    
+
     // Ensure the status bar is refreshed
     statusBarItem.show();
 }
@@ -94,21 +95,21 @@ function updateStatusBar(): void {
  * @param context Plugin context
  */
 export function activate(context: vscode.ExtensionContext) {
-    log.info('VSCode MCP Server plugin activated');
+    log.info('MCP Server plugin activated');
 
     if (!vscode.workspace.workspaceFolders) {
         log.warn("Workspace folders is empty, VSCode may not have opened a project folder!");
     }
 
     // Log basic information
-    log.debug("Visible text editors count:", vscode.window.visibleTextEditors.length);
-    log.debug("Text documents count:", vscode.workspace.textDocuments.length);
-    log.debug("Workspace folders count:", vscode.workspace.workspaceFolders?.length || 0);
+    log.info("Visible text editors count:", vscode.window.visibleTextEditors.length);
+    log.info("Text documents count:", vscode.workspace.textDocuments.length);
+    log.info("Workspace folders count:", vscode.workspace.workspaceFolders?.length || 0);
 
-    // Get port range from configuration, default is 9960-9990
-    const config = vscode.workspace.getConfiguration('ggMCP');
-    const portStart = config.get<number>('portStart', 9960);
-    const portEnd = config.get<number>('portEnd', 9990);
+    // Get configuration using config manager
+    const config = getConfig();
+    const portStart = config.getServerPortStart();
+    const portEnd = config.getServerPortEnd();
     log.info(`Port range configured as: ${portStart}-${portEnd}`);
 
     // Initialize status bar item with higher priority (lower number)
@@ -116,14 +117,14 @@ export function activate(context: vscode.ExtensionContext) {
     statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 10);
     statusBarItem.show();
     updateServerStatus('starting');
-    
+
     // Register commands first, then start the server
-    
+
     // Register command: Show server status
     const showStatusCommand = vscode.commands.registerCommand('ggMCP.showStatus', () => {
         if (serverStatus === 'running' && currentServerPort) {
             vscode.window.showInformationMessage(
-                `VSCode MCP Server is running on port ${currentServerPort}, using standard MCP protocol`,
+                `MCP Server is running on port ${currentServerPort}, using standard MCP protocol`,
                 'Restart', 'More Info'
             ).then(selection => {
                 if (selection === 'Restart') {
@@ -134,7 +135,7 @@ export function activate(context: vscode.ExtensionContext) {
                     const statusInfo = `Status: ${serverStatus}`;
                     const projectRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || 'None';
                     const projectInfo = `Project root: ${projectRoot}`;
-                    
+
                     vscode.window.showInformationMessage(
                         `Server Information:\n${portInfo}\n${statusInfo}\n${projectInfo}`
                     );
@@ -142,7 +143,7 @@ export function activate(context: vscode.ExtensionContext) {
             });
         } else if (serverStatus === 'error') {
             vscode.window.showErrorMessage(
-                `VSCode MCP Server error: ${serverError || 'Unknown error'}`,
+                `MCP Server error: ${serverError || 'Unknown error'}`,
                 'Restart'
             ).then(selection => {
                 if (selection === 'Restart') {
@@ -151,7 +152,7 @@ export function activate(context: vscode.ExtensionContext) {
             });
         } else {
             vscode.window.showInformationMessage(
-                `VSCode MCP Server ${serverStatus === 'starting' ? 'is starting...' : 'is not running or port information is not available'}`,
+                `MCP Server ${serverStatus === 'starting' ? 'is starting...' : 'is not running or port information is not available'}`,
                 'Restart'
             ).then(selection => {
                 if (selection === 'Restart') {
@@ -167,14 +168,20 @@ export function activate(context: vscode.ExtensionContext) {
         if (serverDisposable) {
             serverDisposable.dispose();
         }
-        
+
         // Update status
         updateServerStatus('starting');
         currentServerPort = null;
-        
+
+        // Fetch configuration again
+        const newConfig = getConfig();
+        newConfig.refresh(); // Refresh configuration
+        const newPortStart = newConfig.getServerPortStart();
+        const newPortEnd = newConfig.getServerPortEnd();
+
         // Start new server and save reference
-        serverDisposable = startMCPServer(portStart, portEnd);
-        vscode.window.showInformationMessage('VSCode MCP Server has been restarted');
+        serverDisposable = startMCPServer(newPortStart, newPortEnd);
+        vscode.window.showInformationMessage('MCP Server has been restarted');
         log.info('Server has been restarted');
     });
 
@@ -182,13 +189,13 @@ export function activate(context: vscode.ExtensionContext) {
     const errorCommand = vscode.commands.registerCommand('ggMCP.reportError', (error: string) => {
         log.error('Server reported error:', error);
         updateServerStatus('error', error);
-        vscode.window.showErrorMessage(`VSCode MCP Server error: ${error}`);
+        vscode.window.showErrorMessage(`MCP Server error: ${error}`);
     });
 
     // Register command: Server status update
-    const updateStatusCommand = vscode.commands.registerCommand('ggMCP.updateServerStatus', 
+    const updateStatusCommand = vscode.commands.registerCommand('ggMCP.updateServerStatus',
         (status: 'starting' | 'running' | 'error' | 'stopped', error?: string) => {
-            log.info(`Received status update command: ${status}`, error ? { error } : undefined);
+            log.info(`Received status update command: ${status}`, error ? {error} : undefined);
             updateServerStatus(status, error || null);
         }
     );
@@ -203,30 +210,38 @@ export function activate(context: vscode.ExtensionContext) {
     // Listen for configuration changes
     const configChangeSubscription = vscode.workspace.onDidChangeConfiguration(e => {
         // Check if our configuration items have changed
-        const isRelevantChange = e.affectsConfiguration('ggMCP.portStart') || 
-                                e.affectsConfiguration('ggMCP.portEnd') ||
-                                e.affectsConfiguration('ggMCP.logLevel');
-                               
+        const isRelevantChange = e.affectsConfiguration('ggMCP.portStart') ||
+            e.affectsConfiguration('ggMCP.portEnd') ||
+            e.affectsConfiguration('ggMCP.logLevel') ||
+            e.affectsConfiguration('ggMCP.preferredPorts');
+
         if (isRelevantChange) {
-            // Get new configuration
-            const newConfig = vscode.workspace.getConfiguration('ggMCP');
-            const newPortStart = newConfig.get<number>('portStart', 9960);
-            const newPortEnd = newConfig.get<number>('portEnd', 9990);
-            
+            log.info('Configuration changed, refreshing config and checking if restart is needed');
+
+            // Refresh configuration
+            const newConfig = getConfig();
+            newConfig.refresh();
+
+            const newPortStart = newConfig.getServerPortStart();
+            const newPortEnd = newConfig.getServerPortEnd();
+
             // If port range has changed, restart the server
             if (newPortStart !== portStart || newPortEnd !== portEnd) {
-                log.info(`Port configuration changed, restarting server...`, { old: `${portStart}-${portEnd}`, new: `${newPortStart}-${newPortEnd}` });
-                vscode.window.showInformationMessage(`Port configuration has changed, restarting VSCode MCP server...`);
-                
+                log.info(`Port configuration changed, restarting server...`, {
+                    old: `${portStart}-${portEnd}`,
+                    new: `${newPortStart}-${newPortEnd}`
+                });
+                vscode.window.showInformationMessage(`Port configuration has changed, restarting MCP server...`);
+
                 // Restart server
                 if (serverDisposable) {
                     serverDisposable.dispose();
                 }
-                
+
                 // Reset port information
                 updateServerStatus('starting');
                 currentServerPort = null;
-                
+
                 serverDisposable = startMCPServer(newPortStart, newPortEnd);
             }
         }
@@ -242,7 +257,7 @@ export function activate(context: vscode.ExtensionContext) {
     }, 5000);
 
     // Now start the server
-    let serverDisposable = startMCPServer(portStart, portEnd);
+    let serverDisposable = startMCPServer();
 
     // Add disposable objects to context for cleanup when plugin is deactivated
     context.subscriptions.push(serverDisposable);
@@ -256,22 +271,22 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Listen for file changes (modified to only show notifications when enabled in configuration)
     const watcher = vscode.workspace.createFileSystemWatcher("**/*");
-    
-    const shouldNotifyFileChanges = config.get<boolean>('showFileChangeNotifications', false);
-    
+
+    const shouldNotifyFileChanges = config.getShowFileChangeNotifications();
+
     if (shouldNotifyFileChanges) {
         watcher.onDidChange(uri => {
-            log.debug(`File modified: ${uri.fsPath}`);
+            log.info(`File modified: ${uri.fsPath}`);
             vscode.window.showInformationMessage(`File modified: ${uri.fsPath}`);
         });
 
         watcher.onDidCreate(uri => {
-            log.debug(`File created: ${uri.fsPath}`);
+            log.info(`File created: ${uri.fsPath}`);
             vscode.window.showInformationMessage(`File created: ${uri.fsPath}`);
         });
 
         watcher.onDidDelete(uri => {
-            log.debug(`File deleted: ${uri.fsPath}`);
+            log.info(`File deleted: ${uri.fsPath}`);
             vscode.window.showInformationMessage(`File deleted: ${uri.fsPath}`);
         });
     }
@@ -285,5 +300,5 @@ export function activate(context: vscode.ExtensionContext) {
  */
 export function deactivate() {
     updateServerStatus('stopped');
-    log.info('VSCode MCP Server plugin deactivated');
+    log.info('MCP Server plugin deactivated');
 }

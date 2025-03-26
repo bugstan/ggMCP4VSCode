@@ -7,11 +7,11 @@ tsconfig.json
 *.vsix
 update-readme.js
 *.log
-test/**
 .github/**
 CONTRIBUTING*
 README-zh.md
 .idea/**
+test/**
 
 # ------------------- Source code can be excluded, but keep compiled files -------------------
 src/**

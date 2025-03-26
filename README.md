@@ -1,6 +1,6 @@
 # ggMCP4VSCode
 
-[![Version](https://img.shields.io/badge/version-1.0.4-blue.svg)](https://github.com/bugstan/ggMCP4VSCode)
+[![Version](https://img.shields.io/badge/version-1.0.5-blue.svg)](https://github.com/bugstan/ggMCP4VSCode)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/bugstan/ggMCP4VSCode/blob/main/LICENSE)
 
 Supercharge your AI assistants for VSCode! This extension enables a Model Context Protocol (MCP) server that allows AI assistants to directly interact with your VSCode environment.
@@ -38,9 +38,9 @@ Supercharge your AI assistants for VSCode! This extension enables a Model Contex
 
 After installation, the MCP server automatically starts. Check the bottom-right status bar:
 
-- **🔄 VSCode MCP Server** - Server is starting
-- **⚡ VSCode MCP Server** - Server is running
-- **❌ VSCode MCP Server** - Error occurred
+- **🔄 MCP Server** - Server is starting
+- **⚡ MCP Server** - Server is running
+- **❌ MCP Server** - Error occurred
 
 Click on the status bar item to see details or restart the server.
 

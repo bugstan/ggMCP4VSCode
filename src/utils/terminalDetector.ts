@@ -93,20 +93,38 @@ export class TerminalDetector {
      * @param callback Callback function that receives the detected terminal type
      */
     public static detectTerminalType(callback: (terminalType: TerminalType) => void): void {
-        const osType = this.getOSType();
-        
-        switch (osType) {
-            case OSType.Windows:
-                this.detectWindowsTerminal(callback);
-                break;
-            case OSType.macOS:
-                this.detectMacTerminal(callback);
-                break;
-            case OSType.Linux:
-                this.detectLinuxTerminal(callback);
-                break;
-            default:
+        try {
+            const osType = this.getOSType();
+            
+            // Set a default timeout in case detection methods fail
+            const timeout = setTimeout(() => {
+                log.warn('Terminal detection timeout, using fallback');
                 callback(TerminalType.Other);
+            }, 5000);
+            
+            // Create a wrapper that ensures callback is only called once
+            const safeCallback = (terminalType: TerminalType) => {
+                clearTimeout(timeout);
+                callback(terminalType);
+            };
+            
+            switch (osType) {
+                case OSType.Windows:
+                    this.detectWindowsTerminal(safeCallback);
+                    break;
+                case OSType.macOS:
+                    this.detectMacTerminal(safeCallback);
+                    break;
+                case OSType.Linux:
+                    this.detectLinuxTerminal(safeCallback);
+                    break;
+                default:
+                    clearTimeout(timeout);
+                    callback(TerminalType.Other);
+            }
+        } catch (error) {
+            log.error('Error in detectTerminalType', error);
+            callback(TerminalType.Other);
         }
     }
     
@@ -132,30 +150,48 @@ export class TerminalDetector {
     
     /**
      * Get complete terminal information
+     * @param terminal VS Code terminal instance (optional)
      * @param callback Callback function that receives terminal information
      */
     public static getTerminalInfo(terminal?: vscode.Terminal, callback?: (info: TerminalInfo) => void): void {
-        const osType = this.getOSType();
-        const osVersion = this.getOSVersion();
-        
-        // If we don't have a terminal instance, we can't check if it's integrated
-        const isIntegrated = terminal ? this.isIntegratedTerminal(terminal) : false;
-        
-        this.detectTerminalType((terminalType) => {
-            const isDefault = this.isDefaultTerminal(terminalType);
-            
-            const info: TerminalInfo = {
-                osType,
-                osVersion,
-                terminalType,
-                isIntegratedTerminal: isIntegrated,
-                isDefault
-            };
-            
-            if (callback) {
-                callback(info);
+        try {
+            if (!callback) {
+                log.warn('No callback provided to getTerminalInfo');
+                return;
             }
-        });
+            
+            const osType = this.getOSType();
+            const osVersion = this.getOSVersion();
+            
+            // If we don't have a terminal instance, we can't check if it's integrated
+            const isIntegrated = terminal ? this.isIntegratedTerminal(terminal) : false;
+            
+            this.detectTerminalType((terminalType) => {
+                const isDefault = this.isDefaultTerminal(terminalType);
+                
+                const info: TerminalInfo = {
+                    osType,
+                    osVersion,
+                    terminalType,
+                    isIntegratedTerminal: isIntegrated,
+                    isDefault
+                };
+                
+                callback(info);
+            });
+        } catch (error) {
+            log.error('Error in getTerminalInfo', error);
+            
+            // Return basic info in case of error
+            if (callback) {
+                callback({
+                    osType: this.getOSType(),
+                    terminalType: TerminalType.Other,
+                    isIntegratedTerminal: false,
+                    isDefault: false
+                });
+            }
+        }
     }
     
     /**

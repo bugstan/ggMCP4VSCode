@@ -1,18 +1,14 @@
 import * as vscode from 'vscode';
-import { AbstractMcpTool } from '../types/tool';
+import { AbstractTerminalTools } from '../types/absTerminalTools';
 import { Response } from '../types';
-import { createResponse, formatError } from '../utils/response';
-import { Logger } from '../utils/logger';
+import { responseHandler } from '../server/responseHandler';
 import { TerminalDetector, OSType, TerminalInfo } from '../utils/terminalDetector';
 
-// Create module-specific logger
-const log = Logger.forModule('TerminalInfoTools');
-
 /**
- * Get Terminal Information Tool
- * Provides information about the current terminal and operating system environment
+ * Get terminal information tool
+ * Inherits from AbstractTerminalTools base class to utilize common terminal operation functionality
  */
-export class GetTerminalInfoTool extends AbstractMcpTool {
+export class GetTerminalInfoTool extends AbstractTerminalTools {
     constructor() {
         super(
             'get_terminal_info',
@@ -22,31 +18,55 @@ export class GetTerminalInfoTool extends AbstractMcpTool {
         );
     }
 
-    async handle(_args: Record<string, never>): Promise<Response> {
+    /**
+     * This tool does not require terminal display
+     */
+    protected shouldShowTerminal(): boolean {
+        return false;
+    }
+
+    /**
+     * Execute get terminal information operation (implementing base class abstract method)
+     */
+    protected async executeCommand(terminal: vscode.Terminal | null, _args: any): Promise<Response> {
         try {
-            // We need to use a promise here because the terminal detection is asynchronous
+            // Convert callback-based method to Promise
             return new Promise((resolve) => {
-                // Get current active terminal if available
-                const terminal = vscode.window.activeTerminal;
+                // Get basic OS information
+                const osType = TerminalDetector.getOSType();
+                const osVersion = TerminalDetector.getOSVersion();
+                const isIntegrated = terminal ? TerminalDetector.isIntegratedTerminal(terminal) : false;
                 
-                // Call the terminal detector to get information
-                TerminalDetector.getTerminalInfo(terminal, (info: TerminalInfo) => {
-                    log.debug('Terminal information detected', info);
-                    resolve(createResponse(info));
+                this.log.info(`Detecting terminal information (OS: ${osType}, Version: ${osVersion})`);
+                
+                // Call terminal detector to get terminal type information
+                TerminalDetector.detectTerminalType((terminalType) => {
+                    const isDefault = TerminalDetector.isDefaultTerminal(terminalType);
+                    
+                    const info: TerminalInfo = {
+                        osType,
+                        osVersion,
+                        terminalType,
+                        isIntegratedTerminal: isIntegrated,
+                        isDefault
+                    };
+                    
+                    this.log.info('Terminal information detected', info);
+                    resolve(responseHandler.success(info));
                 });
             });
         } catch (error) {
-            log.error('Error getting terminal information', error);
-            return createResponse(null, `Error getting terminal information: ${formatError(error)}`);
+            this.log.error('Error getting terminal information', error);
+            return responseHandler.failure(`Error getting terminal information: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
 }
 
 /**
- * Execute command with OS-specific syntax
- * Automatically adjusts command syntax based on the detected OS and terminal
+ * Execute OS-specific command tool
+ * Inherits from AbstractTerminalTools base class to utilize common terminal operation functionality
  */
-export class ExecuteOSSpecificCommandTool extends AbstractMcpTool<{ 
+export class ExecuteOSSpecificCommandTool extends AbstractTerminalTools<{ 
     windowsCommand?: string; 
     unixCommand?: string; 
     macCommand?: string; 
@@ -69,7 +89,10 @@ export class ExecuteOSSpecificCommandTool extends AbstractMcpTool<{
         );
     }
 
-    async handle(args: { 
+    /**
+     * Execute OS-specific command operation (implementing base class abstract method)
+     */
+    protected async executeCommand(terminal: vscode.Terminal | null, args: { 
         windowsCommand?: string; 
         unixCommand?: string; 
         macCommand?: string; 
@@ -78,9 +101,9 @@ export class ExecuteOSSpecificCommandTool extends AbstractMcpTool<{
         try {
             const { windowsCommand, unixCommand, macCommand, command } = args;
             
-            // If no specific commands are provided, use the generic command
+            // If no specific command provided, use generic command
             if (!windowsCommand && !unixCommand && !macCommand && !command) {
-                return createResponse(null, 'No command specified');
+                return responseHandler.failure('No command specified');
             }
             
             // Get OS type to determine which command to use
@@ -89,7 +112,7 @@ export class ExecuteOSSpecificCommandTool extends AbstractMcpTool<{
             // Default to generic command
             let commandToExecute = command || '';
             
-            // Override with OS-specific command if provided
+            // Override generic command based on OS type
             switch (osType) {
                 case OSType.Windows:
                     if (windowsCommand) {
@@ -111,24 +134,27 @@ export class ExecuteOSSpecificCommandTool extends AbstractMcpTool<{
             }
             
             if (!commandToExecute) {
-                return createResponse(null, `No command specified for ${osType} operating system`);
+                return responseHandler.failure(`No command specified for ${osType} operating system`);
             }
             
-            log.debug(`Executing OS-specific command for ${osType}: ${commandToExecute}`);
+            this.log.info(`Executing OS-specific command for ${osType}: ${commandToExecute}`);
             
-            // We'll use VS Code's built-in terminal execution
-            const terminal = vscode.window.activeTerminal || vscode.window.createTerminal('OS Command Terminal');
-            terminal.show();
+            // Ensure terminal exists
+            if (!terminal) {
+                return responseHandler.failure('No terminal available');
+            }
+            
+            // Send command to terminal
             terminal.sendText(commandToExecute);
             
-            return createResponse({
+            return responseHandler.success({
                 osType,
                 command: commandToExecute,
                 executed: true
             });
         } catch (error) {
-            log.error('Error executing OS-specific command', error);
-            return createResponse(null, `Error executing OS-specific command: ${formatError(error)}`);
+            this.log.error('Error executing OS-specific command', error);
+            return responseHandler.failure(`Error executing OS-specific command: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
 }

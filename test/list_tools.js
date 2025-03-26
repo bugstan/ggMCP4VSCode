@@ -1,45 +1,59 @@
-const { findMCPServerPort, makeRequest, displayResponse, getStandardApiPath, config } = require('./utils');
+const { findMCPServerPort, makeRequest, colors, getStandardApiPath } = require('./utils');
 
 /**
- * 测试获取可用工具列表
- * @param {number} port 端口号
+ * Test get available tools list
+ * @param {number} port Port number
  */
 async function testListTools(port) {
-    console.log(`\n========== 测试获取可用工具列表 ==========`);
+    console.log(`\n========== Test Get Available Tools ==========`);
     
     try {
-        // 获取标准API路径
+        // Get standard API path
         const apiPath = getStandardApiPath('list_tools');
         
-        // 打印请求信息
-        console.log('\n请求信息:');
-        console.log(`URL: http://localhost:${port}${apiPath} (将自动尝试备用路径)`);
-        console.log(`Method: GET`);
-        console.log(`Headers: Accept: application/json`);
+        // Display API endpoint (blue)
+        console.log(`\n${colors.blue}API Endpoint: http://localhost:${port}${apiPath}${colors.reset}`);
         
-        // 发送请求
-        console.log('\n发送请求...');
+        // Show request information
+        console.log(`\nOriginal Request: None`);
+        
+        // Send request
         const response = await makeRequest(port, apiPath, 'GET');
-        console.log('收到响应。');
         
-        // 只显示原始数据和JSON格式化后的输出
-        displayResponse(response);
+        // Add port to response for display purposes
+        response.port = port;
+        
+        // Display response (green for success, red for failure)
+        const isSuccess = response.statusCode >= 200 && response.statusCode < 300;
+        
+        console.log(`\nOriginal Response:`);
+        if (isSuccess) {
+            console.log(`${colors.green}${JSON.stringify(response.parsedResponse, null, 2)}${colors.reset}`);
+        } else {
+            console.log(`${colors.red}${JSON.stringify(response.parsedResponse, null, 2)}${colors.reset}`);
+        }
+        
+        // Display request result at the bottom
+        console.log(`\nRequest Result: ${isSuccess ? colors.green + 'SUCCESS' + colors.reset : colors.red + 'FAILED' + colors.reset}`);
         
         return response.parsedResponse;
     } catch (error) {
-        console.error(config.colors.red + `\n测试获取工具列表时出错: ${error.message}` + config.colors.reset);
+        console.log(`\nOriginal Response:`);
+        console.log(`${colors.red}Error: ${error.message}${colors.reset}`);
+        
+        // Display request result at the bottom
+        console.log(`\nRequest Result: ${colors.red}FAILED${colors.reset}`);
         throw error;
     }
 }
 
-// 如果直接运行此脚本
+// If running directly
 if (require.main === module) {
     (async () => {
         try {
             const port = await findMCPServerPort();
             await testListTools(port);
         } catch (error) {
-            console.error(config.colors.red + `测试失败: ${error.message}` + config.colors.reset);
             process.exit(1);
         }
     })();
