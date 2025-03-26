@@ -7,9 +7,9 @@ import {
     OpenFileInEditorTool
 } from './tools/editorTools';
 import {
-    GetFileTextByPathTool, 
+    GetFileTextByPathTool,
     ReplaceFileTextByPathTool,
-    CreateNewFileWithTextTool, 
+    CreateNewFileWithTextTool,
     ListFilesInFolderTool
 } from './tools/fileReadWriteTools';
 import {
@@ -27,7 +27,8 @@ import {
     ExecuteTerminalCommandTool,
     ExecuteCommandWithOutputTool,
     GetCommandOutputTool,
-    WaitTool
+    WaitTool,
+    RunCommandOnBackgroundTool
 } from './tools/terminalTools';
 import {
     GetTerminalInfoTool,
@@ -148,7 +149,8 @@ export class ToolManager {
             new ExecuteCommandWithOutputTool(),
             new GetCommandOutputTool(),
             new WaitTool(),
-            
+            new RunCommandOnBackgroundTool(),
+
             // Terminal info tools
             new GetTerminalInfoTool(),
             new ExecuteOSSpecificCommandTool(),

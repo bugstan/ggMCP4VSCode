@@ -2,6 +2,11 @@
 
 All notable changes to the ggMCP4VSCode extension will be documented in this file.
 
+## [1.1.0] - 2025-03-26
+
+### Added
+- Project refactoring: introduced base class abstraction, implemented caching mechanism, significantly enhancing performance and efficiency
+
 ## [1.0.5] - 2025-03-25
 
 ### Added

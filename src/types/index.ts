@@ -22,24 +22,24 @@ export interface ToolParams {
     replaceFileTextByPath: { pathInProject: string, text: string };
     listFilesInFolder: { pathInProject: string };
     searchInFilesContent: { searchText: string };
-    
+
     // Editor tool parameters
     replaceSelectedText: { text: string };
     replaceCurrentFileText: { text: string };
     openFileInEditor: { filePath: string };
-    
+
     // Debug tool parameters
     toggleDebuggerBreakpoint: { filePathInProject: string, line: number };
     runConfiguration: { configName: string };
-    
+
     // Terminal tool parameters
     executeTerminalCommand: { command: string };
     executeCommandWithOutput: { command: string };
     wait: { milliseconds: number };
-    
+
     // Git basic tool parameters
     findCommitByMessage: { text: string };
-    
+
     // Git advanced tool parameters
     getFileHistory: { pathInProject: string, maxCount?: number };
     getFileDiff: { pathInProject: string, hash1?: string, hash2?: string };
@@ -48,18 +48,26 @@ export interface ToolParams {
     pullChanges: { remote?: string, branch?: string };
     switchBranch: { branch: string };
     createBranch: { branch: string, startPoint?: string };
-    
+
     // Action tool parameters
     executeActionById: { actionId: string };
-    
+
     // Code analysis tool parameters
     getSymbolsInFile: { pathInProject: string };
     findReferences: { pathInProject: string, line: number, character: number };
-    refactorCodeAtLocation: { 
-        pathInProject: string, 
-        line: number, 
+    refactorCodeAtLocation: {
+        pathInProject: string,
+        line: number,
         character: number,
         refactorType: string,
         options: Record<string, any>
+    };
+
+    // New parameter
+    runCommandOnBackground: {
+        command: string;
+        cwd?: string;
+        env?: NodeJS.ProcessEnv;
+        timeout?: number;
     };
 }

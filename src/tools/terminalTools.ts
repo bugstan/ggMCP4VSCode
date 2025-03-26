@@ -183,10 +183,10 @@ export class ExecuteCommandWithOutputTool extends AbstractTerminalTools<ToolPara
             try {
                 // Use base class method to execute command and capture output
                 const output = await this.executeCommandWithOutput(terminal, command, timeoutMs);
-                
+
                 // Set command output status
                 this.terminalManager.setCommandOutput(output, 'completed');
-                
+
                 return responseHandler.success(output);
             } catch (shellError) {
                 this.log.error('Error capturing command output', shellError);
@@ -284,6 +284,60 @@ export class WaitTool extends AbstractTerminalTools<ToolParams['wait']> {
         } catch (error) {
             this.log.error('Error during wait', error);
             return responseHandler.failure(`Error during wait: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    }
+}
+
+/**
+ * Run command in background tool
+ * Inherits from AbstractTerminalTools base class to utilize common terminal operation functionality
+ */
+export class RunCommandOnBackgroundTool extends AbstractTerminalTools<ToolParams['runCommandOnBackground']> {
+    constructor() {
+        super(
+            'run_command_on_background',
+            'Executes a command in the background using Node.js child_process.\n' +
+            'This tool does not show any terminal window and runs the command silently.\n' +
+            'Returns the command output and exit code.',
+            {
+                type: 'object',
+                properties: {
+                    command: { type: 'string' },
+                    cwd: { type: 'string' },
+                    env: { type: 'object' },
+                    timeout: { type: 'number' }
+                },
+                required: ['command']
+            }
+        );
+    }
+
+    /**
+     * This tool does not require terminal
+     */
+    protected requiresTerminal(): boolean {
+        return false;
+    }
+
+    /**
+     * Execute command in background operation (implementing base class abstract method)
+     */
+    protected async executeCommand(_terminal: vscode.Terminal | null, args: ToolParams['runCommandOnBackground']): Promise<Response> {
+        try {
+            const { command, cwd, env, timeout } = args;
+            this.log.info(`Executing command in background: ${command}`);
+
+            const result = await this.executeCommandInBackground(command, {
+                cwd,
+                env,
+                timeout
+            });
+
+            this.log.info(`Command executed successfully with exit code: ${result.exitCode}`);
+            return responseHandler.success(result);
+        } catch (error) {
+            this.log.error('Error executing command in background', error);
+            return responseHandler.failure(`Error executing command in background: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
 }

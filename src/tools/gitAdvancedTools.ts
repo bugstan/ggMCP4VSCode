@@ -1,7 +1,6 @@
 import {AbstractGitTools} from '../types/absGitTools';
 import {Response, ToolParams} from '../types';
 import {responseHandler} from '../server/responseHandler';
-import {getBranches} from '../utils/gitUtils';
 
 /**
  * Get file modification history tool
@@ -31,10 +30,7 @@ export class GetFileHistoryTool extends AbstractGitTools<ToolParams['getFileHist
             const {pathInProject, maxCount = 10} = args;
             this.log.info(`Getting file history for: ${pathInProject}, max count: ${maxCount}`);
 
-            // Build git log command
             const command = `git log --max-count=${maxCount} --format="%H|%an|%ad|%s" --date=short -- "${this.escapeArg(pathInProject)}"`;
-
-            // Use base class executeGitCommand method to execute Git command
             const result = await this.executeGitCommand(command);
 
             if (result.exitCode !== 0 || !result.stdout) {
@@ -42,25 +38,7 @@ export class GetFileHistoryTool extends AbstractGitTools<ToolParams['getFileHist
                 return responseHandler.failure(`Failed to get file history: ${result.stderr}`);
             }
 
-            // Parse commit records
-            const commits = result.stdout
-                .split('\n')
-                .filter(line => line.trim() !== '')
-                .map(line => {
-                    const parts = line.split('|');
-                    return {
-                        hash: parts[0] || '',
-                        author: parts[1] || '',
-                        date: parts[2] || '',
-                        message: parts.slice(3).join('|') || ''
-                    };
-                });
-
-            this.log.info(`Found ${commits.length} history entries for file: ${pathInProject}`);
-            return responseHandler.success({
-                file: pathInProject,
-                commits: commits
-            });
+            return this.parseCommandOutput(result.stdout, 'Failed to parse git log output');
         } catch (error) {
             this.log.error('Error getting file history', error);
             return responseHandler.failure(`Error getting file history: ${error instanceof Error ? error.message : String(error)}`);
@@ -97,7 +75,6 @@ export class GetFileDiffTool extends AbstractGitTools<ToolParams['getFileDiff']>
             const {pathInProject, hash1, hash2} = args;
             this.log.info(`Getting file diff for: ${pathInProject} between ${hash1 || 'working copy'} and ${hash2 || 'index'}`);
 
-            // Build git diff command
             let command: string;
             const escapedPath = this.escapeArg(pathInProject);
 
@@ -112,16 +89,12 @@ export class GetFileDiffTool extends AbstractGitTools<ToolParams['getFileDiff']>
             this.log.info(`Executing Git command: ${command}`);
             const result = await this.executeGitCommand(command);
 
-            if (result.exitCode !== 0) {
+            if (result.exitCode !== 0 || !result.stdout) {
                 this.log.error(`Failed to get file diff: ${result.stderr || 'Unknown error'}`);
                 return responseHandler.failure(`Failed to get file diff: ${result.stderr}`);
             }
 
-            this.log.info(`Successfully retrieved diff for file: ${pathInProject}`);
-            return responseHandler.success({
-                file: pathInProject,
-                diff: result.stdout
-            });
+            return this.parseCommandOutput(result.stdout, 'Failed to get file diff');
         } catch (error) {
             this.log.error('Error getting file diff', error);
             return responseHandler.failure(`Error getting file diff: ${error instanceof Error ? error.message : String(error)}`);
@@ -148,33 +121,19 @@ export class GetBranchInfoTool extends AbstractGitTools {
     /**
      * Execute Git get branch info operation (implementing base class abstract method)
      */
-    protected async executeGitOperation(repository: any, _args: any): Promise<Response> {
+    protected async executeGitOperation(_repository: any, _args: any): Promise<Response> {
         try {
             this.log.info('Getting branch information');
 
-            // Use base class getCurrentBranch method to get current branch
-            const currentBranch = this.getCurrentBranch(repository) || '';
+            const command = 'git branch -a --format="%(refname:short)|%(upstream:short)|%(objectname:short)"';
+            const result = await this.executeGitCommand(command);
 
-            // Get all branches
-            const branches = await getBranches();
-
-            if (!branches) {
+            if (result.exitCode !== 0 || !result.stdout) {
                 this.log.error('Failed to get branch information');
                 return responseHandler.failure('Failed to get branch information');
             }
 
-            // Format branch information
-            const formattedBranches = branches.map(branch => ({
-                name: branch.name,
-                isCurrent: branch.current,
-                isRemote: branch.name.includes('/')
-            }));
-
-            this.log.info(`Found ${formattedBranches.length} branches, current branch: ${currentBranch}`);
-            return responseHandler.success({
-                currentBranch,
-                branches: formattedBranches
-            });
+            return this.parseCommandOutput(result.stdout, 'Failed to get branch information');
         } catch (error) {
             this.log.error('Error getting branch info', error);
             return responseHandler.failure(`Error getting branch info: ${error instanceof Error ? error.message : String(error)}`);
@@ -214,57 +173,17 @@ export class GetCommitDetailsTool extends AbstractGitTools<ToolParams['getCommit
                 return responseHandler.failure('Commit hash cannot be empty');
             }
 
-            // Build git show command
-            const detailCommand = `git show --name-status --format="%H%n%an%n%ae%n%ad%n%s%n%b" --date=iso ${this.escapeArg(hash)}`;
-            this.log.info(`Executing Git command: ${detailCommand}`);
+            const command = `git show --format="%H|%an|%ae|%ad|%s|%b" --name-status --date=iso ${this.escapeArg(hash)}`;
+            this.log.info(`Executing Git command: ${command}`);
 
-            const detailResult = await this.executeGitCommand(detailCommand);
+            const result = await this.executeGitCommand(command);
 
-            if (detailResult.exitCode !== 0 || !detailResult.stdout) {
-                this.log.error(`Failed to get commit details: ${detailResult.stderr || 'Unknown error'}`);
-                return responseHandler.failure(`Failed to get commit details: ${detailResult.stderr}`);
+            if (result.exitCode !== 0 || !result.stdout) {
+                this.log.error(`Failed to get commit details: ${result.stderr || 'Unknown error'}`);
+                return responseHandler.failure(`Failed to get commit details: ${result.stderr}`);
             }
 
-            const lines = detailResult.stdout.split('\n').filter(line => line.trim() !== '');
-
-            // Ensure sufficient lines for parsing
-            if (lines.length < 6) {
-                this.log.error('Insufficient commit details');
-                return responseHandler.failure('Insufficient commit details');
-            }
-
-            // Extract basic commit information
-            const [commitHash, author, email, date, subject, ...bodyLines] = lines;
-
-            // Separate message body and changed files
-            const bodyEndIndex = bodyLines.findIndex(line => /^[A-Z]\t/.test(line));
-            const body = bodyEndIndex > -1 ? bodyLines.slice(0, bodyEndIndex).join('\n').trim() : '';
-            const fileChanges = bodyEndIndex > -1
-                ? bodyLines.slice(bodyEndIndex)
-                : bodyLines;
-
-            // Parse changed files
-            const changes = fileChanges
-                .map(line => {
-                    const match = line.trim().match(/^([A-Z])\t(.+)$/);
-                    if (!match) return null;
-                    return {
-                        status: match[1] || '',
-                        path: match[2] || ''
-                    };
-                })
-                .filter(change => change !== null);
-
-            this.log.info(`Successfully retrieved details for commit: ${hash}`);
-            return responseHandler.success({
-                hash: commitHash,
-                author,
-                email,
-                date,
-                subject,
-                body,
-                changes
-            });
+            return this.parseCommandOutput(result.stdout, 'Failed to get commit details');
         } catch (error) {
             this.log.error('Error getting commit details', error);
             return responseHandler.failure(`Error getting commit details: ${error instanceof Error ? error.message : String(error)}`);
@@ -350,11 +269,7 @@ export class CommitChangesTool extends AbstractGitTools<ToolParams['commitChange
                 return responseHandler.failure(`Failed to commit changes: ${commitResult.stderr}`);
             }
 
-            this.log.info(`Successfully ${amend ? 'amended' : 'committed'} changes`);
-            return responseHandler.success({
-                success: true,
-                message: amend ? 'Modified previous commit' : 'Successfully committed changes'
-            });
+            return responseHandler.success(commitResult.stdout || (amend ? 'Modified previous commit' : 'Successfully committed changes'));
         } catch (error) {
             this.log.error('Error committing changes', error);
             return responseHandler.failure(`Error committing changes: ${error instanceof Error ? error.message : String(error)}`);
@@ -381,34 +296,25 @@ export class PullChangesTool extends AbstractGitTools<ToolParams['pullChanges']>
         );
     }
 
-    /**
-     * Execute Git pull changes operation (implementing base class abstract method)
-     */
     protected async executeGitOperation(_repository: any, args: ToolParams['pullChanges']): Promise<Response> {
         try {
             const {remote = 'origin', branch} = args;
             this.log.info(`Pulling changes from remote: ${remote}${branch ? `, branch: ${branch}` : ''}`);
 
-            // Build pull command
             const pullCommand = branch
                 ? `git pull ${this.escapeArg(remote)} ${this.escapeArg(branch)}`
                 : `git pull ${this.escapeArg(remote)}`;
 
             this.log.info(`Executing Git command: ${pullCommand}`);
 
-            // Execute pull
-            const pullResult = await this.executeGitCommand(pullCommand);
+            const result = await this.executeGitCommand(pullCommand);
 
-            if (pullResult.exitCode !== 0) {
-                this.log.error(`Failed to pull changes: ${pullResult.stderr || 'Unknown error'}`);
-                return responseHandler.failure(`Failed to pull changes: ${pullResult.stderr}`);
+            if (result.exitCode !== 0) {
+                this.log.error(`Failed to pull changes: ${result.stderr || 'Unknown error'}`);
+                return responseHandler.failure(`Failed to pull changes: ${result.stderr}`);
             }
 
-            this.log.info('Successfully pulled changes');
-            return responseHandler.success({
-                success: true,
-                message: pullResult.stdout || 'Successfully pulled changes'
-            });
+            return responseHandler.success(result.stdout || 'Successfully pulled changes');
         } catch (error) {
             this.log.error('Error pulling changes', error);
             return responseHandler.failure(`Error pulling changes: ${error instanceof Error ? error.message : String(error)}`);
@@ -435,9 +341,6 @@ export class SwitchBranchTool extends AbstractGitTools<ToolParams['switchBranch'
         );
     }
 
-    /**
-     * Execute Git switch branch operation (implementing base class abstract method)
-     */
     protected async executeGitOperation(_repository: any, args: ToolParams['switchBranch']): Promise<Response> {
         try {
             const {branch} = args;
@@ -451,18 +354,14 @@ export class SwitchBranchTool extends AbstractGitTools<ToolParams['switchBranch'
             const checkoutCommand = `git checkout ${this.escapeArg(branch)}`;
             this.log.info(`Executing Git command: ${checkoutCommand}`);
 
-            const checkoutResult = await this.executeGitCommand(checkoutCommand);
+            const result = await this.executeGitCommand(checkoutCommand);
 
-            if (checkoutResult.exitCode !== 0) {
-                this.log.error(`Failed to switch branch: ${checkoutResult.stderr || 'Unknown error'}`);
-                return responseHandler.failure(`Failed to switch branch: ${checkoutResult.stderr}`);
+            if (result.exitCode !== 0) {
+                this.log.error(`Failed to switch branch: ${result.stderr || 'Unknown error'}`);
+                return responseHandler.failure(`Failed to switch branch: ${result.stderr}`);
             }
 
-            this.log.info(`Successfully switched to branch: ${branch}`);
-            return responseHandler.success({
-                success: true,
-                message: `Switched to branch '${branch}'`
-            });
+            return responseHandler.success(result.stdout || `Switched to branch '${branch}'`);
         } catch (error) {
             this.log.error('Error switching branch', error);
             return responseHandler.failure(`Error switching branch: ${error instanceof Error ? error.message : String(error)}`);
@@ -490,9 +389,6 @@ export class CreateBranchTool extends AbstractGitTools<ToolParams['createBranch'
         );
     }
 
-    /**
-     * Execute Git create branch operation (implementing base class abstract method)
-     */
     protected async executeGitOperation(_repository: any, args: ToolParams['createBranch']): Promise<Response> {
         try {
             const {branch, startPoint} = args;
@@ -503,25 +399,20 @@ export class CreateBranchTool extends AbstractGitTools<ToolParams['createBranch'
                 return responseHandler.failure('Branch name cannot be empty');
             }
 
-            // Build create branch command
             const createCommand = startPoint
                 ? `git checkout -b ${this.escapeArg(branch)} ${this.escapeArg(startPoint)}`
                 : `git checkout -b ${this.escapeArg(branch)}`;
 
             this.log.info(`Executing Git command: ${createCommand}`);
 
-            const createResult = await this.executeGitCommand(createCommand);
+            const result = await this.executeGitCommand(createCommand);
 
-            if (createResult.exitCode !== 0) {
-                this.log.error(`Failed to create branch: ${createResult.stderr || 'Unknown error'}`);
-                return responseHandler.failure(`Failed to create branch: ${createResult.stderr}`);
+            if (result.exitCode !== 0) {
+                this.log.error(`Failed to create branch: ${result.stderr || 'Unknown error'}`);
+                return responseHandler.failure(`Failed to create branch: ${result.stderr}`);
             }
 
-            this.log.info(`Successfully created branch: ${branch}`);
-            return responseHandler.success({
-                success: true,
-                message: `Created and switched to new branch '${branch}'`
-            });
+            return responseHandler.success(result.stdout || `Created and switched to new branch '${branch}'`);
         } catch (error) {
             this.log.error('Error creating branch', error);
             return responseHandler.failure(`Error creating branch: ${error instanceof Error ? error.message : String(error)}`);

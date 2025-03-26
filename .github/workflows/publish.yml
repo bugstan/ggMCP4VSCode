@@ -14,14 +14,19 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: '22.14.0'
           
       - name: Install dependencies
         run: npm install
         
+      - name: Build
+        run: npm run compile
+        
+      - name: Package
+        run: npm run package
+        
       - name: Publish to Visual Studio Marketplace
         run: |
-          # 使用发布命令而不是尝试构建
-          npx @vscode/vsce publish -p ${{ secrets.VSCE_PAT }} --no-dependencies
+          npx @vscode/vsce publish -p ${{ secrets.VSCE_PAT }}
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}

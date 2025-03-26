@@ -30,14 +30,14 @@ export class GetProjectModulesTool extends AbstractProjectTools<Record<string, n
         this.log.info(`Analyzing project modules at path: ${rootPath}`);
 
         // Use base class method to detect project types
-        const modules = this.detectProjectTypes(rootPath);
+        const modules = this.detectProjectTypes();
 
         // Additional processing for Node.js project dependencies
         if (modules.includes('node')) {
             try {
                 const packageJson = this.readJsonFile<{
                     dependencies?: Record<string, string>
-                }>(rootPath, 'package.json');
+                }>('package.json');
 
                 if (packageJson?.dependencies) {
                     for (const dep in packageJson.dependencies) {
@@ -57,97 +57,117 @@ export class GetProjectModulesTool extends AbstractProjectTools<Record<string, n
 
 /**
  * Get project dependencies tool
- * Supports dependency detection for multiple project types
+ * Inherits from AbstractProjectTools base class to utilize common project analysis functionality
  */
-export class GetProjectDependenciesTool extends AbstractProjectTools<Record<string, never>> {
+export class GetProjectDependenciesTool extends AbstractProjectTools {
     constructor() {
         super(
             'get_project_dependencies',
-            'Get a list of all dependencies defined in the project. Returns an array of dependency names.',
-            {type: 'object', properties: {}}
+            'Get project dependencies from package.json or other dependency management files.',
+            {
+                type: 'object',
+                properties: {},
+                required: []
+            }
         );
     }
 
     /**
-     * Execute tool core logic
-     * @param _args Empty parameter object
-     * @returns Response object
+     * Execute project dependency analysis operation (implementing base class abstract method)
      */
     protected async executeCore(_args: Record<string, never>): Promise<Response> {
         const rootPath = this.getProjectRootPath();
-
         if (!rootPath) {
-            return responseHandler.failure('Project root directory not found');
+            return responseHandler.failure('Project root not found');
         }
 
-        this.log.info(`Analyzing project dependencies at path: ${rootPath}`);
-
-        // Dependency detection logic
-        const dependencies: string[] = [];
-
-        // Check Node.js dependencies
         try {
+            // Try to read package.json first
             const packageJson = this.readJsonFile<{
-                dependencies?: Record<string, string>,
-                devDependencies?: Record<string, string>
-            }>(rootPath, 'package.json');
+                dependencies?: Record<string, string>;
+                devDependencies?: Record<string, string>;
+            }>('package.json');
 
             if (packageJson) {
-                // Process regular dependencies
-                if (packageJson.dependencies) {
-                    for (const dep in packageJson.dependencies) {
-                        dependencies.push(`${dep}@${packageJson.dependencies[dep]}`);
-                    }
-                }
+                const dependencies = packageJson.dependencies || {};
+                const devDependencies = packageJson.devDependencies || {};
 
-                // Process development dependencies
-                if (packageJson.devDependencies) {
-                    for (const dep in packageJson.devDependencies) {
-                        dependencies.push(`${dep}@${packageJson.devDependencies[dep]} (dev)`);
-                    }
-                }
+                return responseHandler.success({
+                    dependencies: Object.keys(dependencies),
+                    devDependencies: Object.keys(devDependencies)
+                });
             }
-        } catch (err) {
-            // Ignore error
-            this.log.info('Error reading Node.js dependencies', err);
-        }
 
-        // Check Python dependencies
-        try {
-            const content = this.readTextFile(rootPath, 'requirements.txt');
-            if (content) {
-                const lines = content.split('\n');
-
-                for (const line of lines) {
-                    const trimmed = line.trim();
-                    if (trimmed && !trimmed.startsWith('#')) {
-                        dependencies.push(`py:${trimmed}`);
-                    }
-                }
+            // If no package.json, try other dependency files
+            const projectTypes = this.detectProjectTypes();
+            if (projectTypes.length === 0) {
+                // Fallback to VS Code extensions if no other dependencies found
+                const extensions = this.getVSCodeExtensions();
+                return responseHandler.success({
+                    extensions
+                });
             }
-        } catch (err) {
-            // Ignore error
-            this.log.info('Error reading Python dependencies', err);
-        }
 
-        // If no dependencies found, use VS Code extensions as examples
-        if (dependencies.length === 0) {
-            try {
-                this.log.info('No project dependencies found, using VS Code extensions as examples');
-                const extensions = this.getVSCodeExtensions(10);
+            // Try to read package.json for Node.js projects
+            if (projectTypes.includes('node')) {
+                const nodePackageJson = this.readJsonFile<{
+                    dependencies?: Record<string, string>;
+                    devDependencies?: Record<string, string>;
+                }>('package.json');
 
-                if (extensions.length > 0) {
-                    extensions.forEach(ext => {
-                        dependencies.push(`vscode-ext:${ext}`);
+                if (nodePackageJson) {
+                    return responseHandler.success({
+                        dependencies: Object.keys(nodePackageJson.dependencies || {}),
+                        devDependencies: Object.keys(nodePackageJson.devDependencies || {})
                     });
                 }
-            } catch (err) {
-                // Ignore error
-                this.log.info('Error getting VS Code extensions as dependency examples', err);
             }
+
+            // For other project types, return project type info
+            return responseHandler.success({
+                projectTypes
+            });
+        } catch (err) {
+            this.log.error('Error getting project dependencies', err);
+            return responseHandler.failure(`Error getting project dependencies: ${err instanceof Error ? err.message : String(err)}`);
+        }
+    }
+}
+
+/**
+ * Get project type tool
+ * Inherits from AbstractProjectTools base class to utilize common project analysis functionality
+ */
+export class GetProjectTypeTool extends AbstractProjectTools {
+    constructor() {
+        super(
+            'get_project_type',
+            'Detect project type based on presence of specific files (package.json, pom.xml, etc.).',
+            {
+                type: 'object',
+                properties: {},
+                required: []
+            }
+        );
+    }
+
+    /**
+     * Execute project type detection operation (implementing base class abstract method)
+     */
+    protected async executeCore(_args: Record<string, never>): Promise<Response> {
+        const rootPath = this.getProjectRootPath();
+        if (!rootPath) {
+            return responseHandler.failure('Project root not found');
         }
 
-        this.log.info(`Found ${dependencies.length} dependencies in project`);
-        return responseHandler.success(dependencies);
+        try {
+            const projectTypes = this.detectProjectTypes();
+            return responseHandler.success({
+                projectTypes
+            });
+        } catch (err) {
+            this.log.error('Error detecting project type', err);
+            return responseHandler.failure(`Error detecting project type: ${err instanceof Error ? err.message : String(err)}`);
+        }
     }
 }

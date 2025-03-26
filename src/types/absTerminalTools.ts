@@ -4,6 +4,7 @@ import {AbstractTool} from './absTool';
 import {responseHandler} from '../server/responseHandler';
 import {TerminalManager} from '../utils/terminalManager';
 import {ShellIntegrationHelper} from '../utils/shellIntegrationHelper';
+import * as child_process from 'child_process';
 
 /**
  * Base class for terminal operation tools
@@ -43,6 +44,15 @@ export abstract class AbstractTerminalTools<T = any> extends AbstractTool<T> {
             // Show terminal
             if (terminal && this.shouldShowTerminal()) {
                 terminal.show();
+            }
+
+            // Wait for terminal to be ready
+            if (terminal) {
+                const isReady = await ShellIntegrationHelper.waitForTerminalReady(terminal);
+                if (!isReady) {
+                    this.log.warn('Terminal is not ready after waiting');
+                    return null;
+                }
             }
 
             return terminal ?? null;
@@ -151,6 +161,47 @@ export abstract class AbstractTerminalTools<T = any> extends AbstractTool<T> {
                 terminal.sendText(command);
                 resolve(`Failed to use Shell Integration API: ${error}`);
             }
+        });
+    }
+
+    /**
+     * Execute command in background using Node.js child_process
+     * @param command Command to execute
+     * @param options Command execution options
+     * @returns Promise with command execution result
+     */
+    protected async executeCommandInBackground(
+        command: string,
+        options: {
+            timeout?: number;
+            cwd?: string;
+            env?: NodeJS.ProcessEnv;
+        } = {}
+    ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+        return new Promise((resolve, reject) => {
+            const timeout = options.timeout || this.getTimeoutMs();
+            const timer = setTimeout(() => {
+                process.kill(-childProcess.pid!);
+                reject(new Error(`Command execution timed out after ${timeout}ms`));
+            }, timeout);
+
+            const childProcess = child_process.exec(command, {
+                cwd: options.cwd,
+                env: options.env,
+                maxBuffer: 1024 * 1024, // 1MB buffer
+                windowsHide: true // Hide window on Windows
+            }, (error, stdout, stderr) => {
+                clearTimeout(timer);
+                if (error) {
+                    reject(error);
+                } else {
+                    resolve({
+                        stdout: stdout || '',
+                        stderr: stderr || '',
+                        exitCode: childProcess.exitCode || 0
+                    });
+                }
+            });
         });
     }
 }

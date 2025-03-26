@@ -1,34 +1,34 @@
 ---
-name: Bug报告
-about: 创建Bug报告以帮助我们改进
+name: Bug Report
+about: Create a report to help us improve
 title: '[BUG] '
 labels: bug
 assignees: ''
 ---
 
-**Bug描述**
-清晰简洁地描述该Bug。
+**Describe the bug**
+A clear and concise description of what the bug is.
 
-**复现步骤**
-复现此行为的步骤：
-1. 打开 '...'
-2. 点击 '....'
-3. 滚动到 '....'
-4. 查看错误
+**To Reproduce**
+Steps to reproduce the behavior:
+1. Open '...'
+2. Click on '....'
+3. Scroll to '....'
+4. See error
 
-**预期行为**
-清晰简洁地描述您期望发生的情况。
+**Expected behavior**
+A clear and concise description of what you expected to happen.
 
-**截图**
-如果适用，添加截图以帮助解释您的问题。
+**Screenshots**
+If applicable, add screenshots to help explain your problem.
 
-**环境信息：**
- - 操作系统: [例如 Windows 11, macOS 12.0]
- - VSCode版本: [例如 1.85.0]
- - 扩展版本: [例如 0.2.0]
+**Environment:**
+ - OS: [e.g. Windows 11, macOS 12.0]
+ - VSCode Version: [e.g. 1.85.0]
+ - Extension Version: [e.g. 0.2.0]
 
-**其他上下文**
-在此处添加有关问题的任何其他上下文。
+**Additional context**
+Add any other context about the problem here.
 
-**日志**
-如果有可用的错误日志，请在此处粘贴或附加。
+**Logs**
+If applicable, paste or attach any error logs here.

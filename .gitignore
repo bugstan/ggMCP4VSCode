@@ -48,3 +48,4 @@ tmp/
 *.code-workspace
 /test/
 /x-plan/
+/.cursor/

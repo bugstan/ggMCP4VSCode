@@ -1,17 +1,40 @@
 {
-    "files.watcherExclude": {
-      "**/node_modules/**": true,
-      "**/.github": true
-    },
-    "search.exclude": {
-      "**/node_modules": true,
-      "**/.github": true
-    },
-    "files.exclude": {
-      "**/node_modules": true,
-      "**/.github": true,
-      ".vscode": true
-    },
-    "console.message.level": "verbose"
-  }
-  
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/.github": true,
+    "**/dist": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.github": true,
+    "**/dist": true
+  },
+  "files.exclude": {
+    "**/.idea": true,
+    "**/node_modules": true,
+    "**/dist": true
+  },
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.preferences.importModuleSpecifier": "non-relative",
+  "typescript.suggest.enabled": true,
+  "typescript.validate.enable": true,
+  "javascript.validate.enable": true,
+  "files.autoSave": "afterDelay",
+  "files.autoSaveDelay": 1000,
+  "editor.tabSize": 4,
+  "editor.insertSpaces": true,
+  "editor.detectIndentation": true,
+  "editor.rulers": [
+    120
+  ],
+  "editor.wordWrap": "off",
+  "editor.minimap.enabled": true,
+  "editor.renderWhitespace": "boundary",
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true
+}
