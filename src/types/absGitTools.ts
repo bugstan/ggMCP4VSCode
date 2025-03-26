@@ -29,6 +29,23 @@ export abstract class AbstractGitTools<T = any> extends AbstractTool<T> {
     protected abstract executeGitOperation(repository: any, args: T): Promise<Response>;
 
     /**
+     * Execute Git command and parse output
+     */
+    protected async executeGitCommandWithParse(
+        command: string,
+        parseOutput: (stdout: string) => any = this.parseCommandOutput
+    ): Promise<Response> {
+        const result = await executeGitCommand(command);
+
+        if (result.exitCode !== 0) {
+            this.log.error(`Git command failed with exit code ${result.exitCode}: ${result.stderr}`);
+            return responseHandler.failure(`Git command failed: ${result.stderr}`);
+        }
+
+        return parseOutput(result.stdout);
+    }
+
+    /**
      * Safely execute Git command
      */
     protected async executeGitCommand(command: string): Promise<{
@@ -111,7 +128,7 @@ export abstract class AbstractGitTools<T = any> extends AbstractTool<T> {
                 return 'UNKNOWN';
             }
         }
-        
+
         switch (statusCode.toUpperCase()) {
             case 'MODIFIED':
             case 'M':

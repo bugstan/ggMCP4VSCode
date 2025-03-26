@@ -1,5 +1,5 @@
-import * as http from 'http';
-import * as url from 'url';
+import http from 'http';
+import url from 'url';
 import { NoArgs } from '../types/tool';
 import { Logger } from '../utils/logger';
 import { requestHandler } from './requestHandler';
@@ -71,16 +71,16 @@ export class MCPService {
                     const startTime = performance.now();
                     const args = await this.parseRequestBody(req);
                     const parseTime = performance.now() - startTime;
-                    
+
                     // Log large request body parsing time
                     if (parseTime > 100) {
                         log.info(`Request body parsing took ${parseTime.toFixed(2)}ms`);
                     }
-                    
+
                     await requestHandler.handleToolExecution(
-                        pathValue, 
-                        args, 
-                        req.method || 'GET', 
+                        pathValue,
+                        args,
+                        req.method || 'GET',
                         pathname || '/',
                         res
                     );
@@ -102,56 +102,56 @@ export class MCPService {
             if (contentType) {
                 log.info(`Request content type: ${contentType}`);
             }
-            
+
             // Use array to collect text chunks, avoid performance issues from string concatenation
             const chunks: string[] = [];
             let totalLength = 0;
-            
+
             req.on('data', (chunk: Buffer) => {
                 // Always use UTF-8 decoding
                 const textChunk = chunk.toString('utf8');
                 chunks.push(textChunk);
                 totalLength += textChunk.length;
-                
+
                 // Log large request reception progress
                 if (totalLength > 1024 * 1024 && chunks.length % 10 === 0) {
                     log.info(`Received ${Math.floor(totalLength / (1024 * 1024))}MB of data so far`);
                 }
             });
-            
+
             req.on('end', () => {
                 // Return empty parameters if no content
                 if (chunks.length === 0) {
                     resolve(NoArgs);
                     return;
                 }
-                
+
                 // Join all text chunks at once
                 const body = chunks.join('');
-                
+
                 if (!body || body.trim() === '') {
                     resolve(NoArgs);
                     return;
                 }
-                
+
                 // Log large request body size
                 if (totalLength > 100 * 1024) { // Only log if larger than 100KB
                     log.info(`Received large request: ${totalLength} characters`);
                 }
-                
+
                 try {
                     // Measure JSON parsing performance
                     const parseStartTime = performance.now();
                     const parsed = JSON.parse(body);
                     const parseTime = performance.now() - parseStartTime;
-                    
+
                     if (parseTime > 100) { // Log warning if parsing takes more than 100ms
                         log.warn(`Slow JSON parsing: ${parseTime.toFixed(2)}ms for ${totalLength} chars`);
                     }
-                    
+
                     resolve(
-                        parsed.jsonrpc && parsed.params 
-                            ? parsed.params.arguments || {} 
+                        parsed.jsonrpc && parsed.params
+                            ? parsed.params.arguments || {}
                             : parsed
                     );
                 } catch (error) {
@@ -159,7 +159,7 @@ export class MCPService {
                     reject(error);
                 }
             });
-            
+
             req.on('error', reject);
         });
     }

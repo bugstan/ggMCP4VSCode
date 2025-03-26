@@ -1,4 +1,4 @@
-import * as path from 'path';
+import path from 'path';
 import * as vscode from 'vscode';
 import { Logger } from './logger';
 
@@ -60,7 +60,7 @@ export function getProjectRoot(): string | null {
             return cachedProjectRoot;
         }
     }
-    
+
     // If no workspace, try using current open file directory
     const activeEditor = vscode.window.activeTextEditor;
     if (activeEditor) {
@@ -71,7 +71,7 @@ export function getProjectRoot(): string | null {
         cachedProjectRootTimestamp = now;
         return cachedProjectRoot;
     }
-    
+
     // No workspace and no open file
     log.warn('Could not determine project root: no workspace folders or active files');
     cachedProjectRoot = null;
@@ -89,7 +89,7 @@ export function getActiveFile(): string | null {
         log.info(`Active file: ${activeEditor.document.uri.fsPath}`);
         return activeEditor.document.uri.fsPath;
     }
-    
+
     log.info('No active file found');
     return null;
 }
@@ -105,7 +105,7 @@ export function getCurrentDirectory(): string | null {
     if (workspaceRoot) {
         return workspaceRoot;
     }
-    
+
     // If no workspace, use current open file directory
     const activeFile = getActiveFile();
     if (activeFile) {
@@ -113,7 +113,7 @@ export function getCurrentDirectory(): string | null {
         log.info(`Current directory from active file: ${directory}`);
         return directory;
     }
-    
+
     log.warn('Could not determine current directory');
     return null;
 }
@@ -128,7 +128,7 @@ export function uuid(): string {
         const v = c === 'x' ? r : (r & 0x3 | 0x8);
         return v.toString(16);
     });
-    
+
     log.info(`Generated UUID: ${generatedUuid}`);
     return generatedUuid;
 }
@@ -152,10 +152,10 @@ export function clearPathCache(): void {
 export function normalizePath(inputPath: string): string {
     // Safety check
     if (inputPath === undefined || inputPath === null) return '/';
-    
+
     // Convert all backslashes to forward slashes
     let normalizedPath = String(inputPath).replace(/\\/g, '/');
-    
+
     // Use path.normalize to handle ../ and ./ cases, then ensure using / again
     try {
         normalizedPath = path.normalize(normalizedPath).replace(/\\/g, '/');
@@ -163,12 +163,12 @@ export function normalizePath(inputPath: string): string {
         log.error('Path normalization error', e);
         return '/'; // Return root path if error occurs
     }
-    
+
     // Ensure not ending with / (unless it's the root path)
     if (normalizedPath !== '/' && normalizedPath.endsWith('/')) {
         normalizedPath = normalizedPath.slice(0, -1);
     }
-    
+
     return normalizedPath;
 }
 
@@ -196,10 +196,10 @@ export function isPathSafe(normalizedPath: string): boolean {
 export function isPathWithinProject(absolutePath: string, projectRoot: string): boolean {
     try {
         if (!absolutePath || !projectRoot) return false;
-        
+
         const normalizedPath = path.normalize(absolutePath);
         const normalizedRoot = path.normalize(projectRoot);
-        
+
         // Check if normalized path starts with project root directory
         return normalizedPath.startsWith(normalizedRoot);
     } catch (e) {
@@ -219,19 +219,19 @@ export function toAbsolutePath(relativePath: string): string | null {
         if (path.isAbsolute(relativePath)) {
             return relativePath;
         }
-        
+
         // Try to resolve using project root directory
         const projectRoot = getProjectRoot();
         if (projectRoot) {
             return path.join(projectRoot, relativePath);
         }
-        
+
         // Try to resolve using current directory
         const currentDir = getCurrentDirectory();
         if (currentDir) {
             return path.join(currentDir, relativePath);
         }
-        
+
         // Unable to resolve
         log.warn('Unable to resolve path, missing project root and current directory reference', { relativePath });
         return null;
@@ -249,28 +249,28 @@ export function toAbsolutePath(relativePath: string): string | null {
 export function toRelativePath(absolutePath: string): string | null {
     try {
         if (!absolutePath) return null;
-        
+
         // Get project root directory or current directory
         const rootDir = getProjectRoot() || getCurrentDirectory();
         if (!rootDir) {
             // No reference directory, return absolute path (normalized)
             return normalizePath(absolutePath);
         }
-        
+
         // Normalize paths
         const normalizedAbsPath = path.normalize(absolutePath);
         const normalizedRoot = path.normalize(rootDir);
-        
+
         // Check if path is within reference directory
         if (normalizedAbsPath.startsWith(normalizedRoot)) {
             // Calculate relative path
             let relativePath = path.relative(normalizedRoot, normalizedAbsPath).replace(/\\/g, '/');
-            
+
             // Ensure root directory returns /
             if (!relativePath) {
                 return '/';
             }
-            
+
             return relativePath;
         } else {
             // Path not within reference directory, return absolute path (normalized)
@@ -299,7 +299,7 @@ export function analyzePath(inputPath: string, forceNoCache = false): PathResult
                 return cachedResult;
             }
         }
-        
+
         // Initialize result object
         const result: PathResult = {
             original: inputPath,
@@ -311,11 +311,11 @@ export function analyzePath(inputPath: string, forceNoCache = false): PathResult
             isDirectory: false,
             error: null
         };
-        
+
         // Normalize path
         result.normalized = normalizePath(inputPath);
         log.info('Normalized path', { original: inputPath, normalized: result.normalized });
-        
+
         // Safety check
         result.isSafe = isPathSafe(result.normalized);
         if (!result.isSafe) {
@@ -323,7 +323,7 @@ export function analyzePath(inputPath: string, forceNoCache = false): PathResult
             log.warn('Path safety check failed', { path: result.normalized });
             return updateCache(result);
         }
-        
+
         // Special handling for root path "/"
         if (result.normalized === '/') {
             const projectRoot = getProjectRoot();
@@ -340,7 +340,7 @@ export function analyzePath(inputPath: string, forceNoCache = false): PathResult
                 return updateCache(result);
             }
         }
-        
+
         // Resolve absolute path
         result.absolute = toAbsolutePath(result.normalized);
         if (!result.absolute) {
@@ -348,27 +348,27 @@ export function analyzePath(inputPath: string, forceNoCache = false): PathResult
             log.warn('Cannot resolve absolute path', { normalized: result.normalized });
             return updateCache(result);
         }
-        
+
         // Check if path is within project directory
         const projectRoot = getProjectRoot();
         if (projectRoot) {
             result.isWithinProject = isPathWithinProject(result.absolute, projectRoot);
         }
-        
+
         // If path is within project, calculate relative path
         if (result.isWithinProject) {
             result.relative = toRelativePath(result.absolute);
         }
-        
+
         // Simple inference whether it's a directory (based on path ending)
         // Note: More accurate check should use file system API, but this requires async operation
         result.isDirectory = result.normalized.endsWith('/') || result.original.endsWith('/') || result.original.endsWith('\\');
-        
+
         // Cache and return result
         return updateCache(result);
     } catch (e) {
         log.error('Path analysis error', e, { path: inputPath });
-        
+
         // Return result with error
         const errorResult: PathResult = {
             original: inputPath,
@@ -395,7 +395,7 @@ function updateCache(result: PathResult): PathResult {
         log.info('Path cache reached limit, clearing cache');
         pathCache.clear();
     }
-    
+
     // Cache result
     pathCache.set(result.original, result);
     return result;
@@ -409,13 +409,55 @@ function updateCache(result: PathResult): PathResult {
  */
 export function toAbsolutePathSafe(pathInProject: string): string | null {
     const pathResult = analyzePath(pathInProject);
-    
+
     if (pathResult.error || !pathResult.isSafe) {
         log.warn('Path unsafe or resolution error', { path: pathInProject, error: pathResult.error });
         return null;
     }
-    
+
     return pathResult.absolute;
+}
+
+/**
+ * Check if path is absolute
+ * @param inputPath Input path to check
+ * @returns Whether the path is absolute
+ */
+export function isAbsolutePath(inputPath: string): boolean {
+    try {
+        return path.isAbsolute(inputPath);
+    } catch (e) {
+        log.error('Path absolute check error', e);
+        return false;
+    }
+}
+
+/**
+ * Get directory name from path
+ * @param inputPath Input path
+ * @returns Directory name
+ */
+export function getDirName(inputPath: string): string {
+    try {
+        return path.dirname(inputPath);
+    } catch (e) {
+        log.error('Error getting directory name', e);
+        return '';
+    }
+}
+
+/**
+ * Get file name from path
+ * @param inputPath Input path
+ * @returns File name
+ */
+export function getFileName(inputPath: string): string {
+    try {
+        return path.basename(inputPath);
+    } catch (e) {
+        log.error('Error getting file name', e);
+        return '';
+    }
 }
 
 /**
@@ -425,7 +467,7 @@ export function toAbsolutePathSafe(pathInProject: string): string | null {
  */
 export function createPathHelper(inputPath: string) {
     const pathResult = analyzePath(inputPath);
-    
+
     return {
         ...pathResult,
         /**
@@ -434,61 +476,80 @@ export function createPathHelper(inputPath: string) {
         getNormalized(): string {
             return pathResult.normalized;
         },
-        
+
         /**
          * Get absolute path (if available)
          */
         getAbsolute(): string | null {
             return pathResult.absolute;
         },
-        
+
         /**
          * Get relative path (if available)
          */
         getRelative(): string | null {
             return pathResult.relative;
         },
-        
+
         /**
          * Whether path is safe
          */
         isSafe(): boolean {
             return pathResult.isSafe;
         },
-        
+
         /**
          * Whether path is within project directory
          */
         isWithinProject(): boolean {
             return pathResult.isWithinProject;
         },
-        
+
         /**
          * Whether path is valid (safe and can resolve absolute path)
          */
         isValid(): boolean {
             return pathResult.isSafe && pathResult.absolute !== null;
         },
-        
+
         /**
          * Get filename part
          */
         getFileName(): string {
             return pathResult.absolute ? path.basename(pathResult.absolute) : '';
         },
-        
+
         /**
          * Get extension
          */
         getExtension(): string {
             return pathResult.absolute ? path.extname(pathResult.absolute) : '';
         },
-        
+
         /**
          * Get directory name
          */
         getDirName(): string {
-            return pathResult.absolute ? path.dirname(pathResult.absolute) : '';
+            return getDirName(pathResult.absolute || inputPath);
         }
     };
+}
+
+/**
+ * Join multiple paths safely
+ * @param paths Paths to join
+ * @returns Joined path
+ */
+export function joinPaths(...paths: string[]): string {
+    try {
+        // Filter out empty or undefined paths
+        const validPaths = paths.filter(p => p && p !== '');
+        if (validPaths.length === 0) return '';
+
+        // Join paths and normalize
+        return normalizePath(path.join(...validPaths));
+    } catch (e) {
+        log.error('Error joining paths', e);
+        return '';
+    }
 }

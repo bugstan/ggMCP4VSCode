@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
 import {Response} from './index';
 import {AbstractTool} from './absTool';
 import {responseHandler} from '../server/responseHandler';
@@ -7,6 +6,7 @@ import {normalizePath, toAbsolutePathSafe, isPathWithinProject, toRelativePath} 
 import {FileOperationPerformance} from '../utils/performanceMonitor';
 import {FileCache} from '../server/cache/fileCache';
 import {FileReloader} from '../utils/fileReloader';
+import path from 'path';
 
 /**
  * Base class for file operation tools

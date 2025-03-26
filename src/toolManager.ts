@@ -23,12 +23,9 @@ import {
     GetRunConfigurationsTool
 } from './tools/debugTools';
 import {
-    GetTerminalTextTool,
     ExecuteTerminalCommandTool,
-    ExecuteCommandWithOutputTool,
-    GetCommandOutputTool,
+    RunCommandOnBackgroundTool,
     WaitTool,
-    RunCommandOnBackgroundTool
 } from './tools/terminalTools';
 import {
     GetTerminalInfoTool,
@@ -144,12 +141,9 @@ export class ToolManager {
             new GetRunConfigurationsTool(),
 
             // Terminal tools
-            new GetTerminalTextTool(),
             new ExecuteTerminalCommandTool(),
-            new ExecuteCommandWithOutputTool(),
-            new GetCommandOutputTool(),
-            new WaitTool(),
             new RunCommandOnBackgroundTool(),
+            new WaitTool(),
 
             // Terminal info tools
             new GetTerminalInfoTool(),

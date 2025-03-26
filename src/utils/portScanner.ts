@@ -1,4 +1,4 @@
-import * as net from 'net';
+import net from 'net';
 import { Logger } from './logger';
 
 // Create module-specific logger
@@ -44,13 +44,13 @@ const CACHE_TTL = 30000; // 30 seconds
 function getCachedPortStatus(port: number): boolean | null {
     const cached = portStatusCache.get(port);
     if (!cached) return null;
-    
+
     // Check if cache has expired
     if (Date.now() - cached.timestamp > CACHE_TTL) {
         portStatusCache.delete(port);
         return null;
     }
-    
+
     return cached.available;
 }
 
@@ -74,8 +74,8 @@ function cachePortStatus(port: number, available: boolean): void {
  * @returns First available port or null
  */
 export async function findAvailablePort(
-    start: number, 
-    end: number, 
+    start: number,
+    end: number,
     options: PortScanOptions = {}
 ): Promise<number | null> {
     // Verify port range
@@ -83,7 +83,7 @@ export async function findAvailablePort(
         log.error(`Invalid port range: ${start}-${end}`);
         return null;
     }
-    
+
     const {
         timeout = 400,
         concurrency = 8,
@@ -92,14 +92,14 @@ export async function findAvailablePort(
         retries = 1,
         fromHighToLow = false
     } = options;
-    
+
     const startTime = Date.now();
     log.info(`Scanning for available port in range: ${start}-${end}, concurrency: ${concurrency}`);
-    
+
     // Create ports to check list
     let ports = Array.from({ length: end - start + 1 }, (_, i) => start + i)
         .filter(port => !exclude.includes(port));
-    
+
     // First check cached available ports
     for (const port of ports) {
         const cached = getCachedPortStatus(port);
@@ -114,31 +114,31 @@ export async function findAvailablePort(
             }
         }
     }
-    
+
     // Filter out known unavailable ports
     ports = ports.filter(port => {
         const cached = getCachedPortStatus(port);
         return cached !== false;
     });
-    
+
     // Process ports based on options
     if (fromHighToLow) {
         ports.reverse();
     }
-    
+
     if (randomize) {
         ports = shuffleArray(ports);
     }
-    
+
     // Batch parallel check ports
     for (let i = 0; i < ports.length; i += concurrency) {
         const batch = ports.slice(i, i + concurrency);
-        
+
         try {
             // Parallel check multiple ports
             const portCheckPromises = batch.map(port => checkPortWithRetries(port, timeout, retries));
             const results = await Promise.all(portCheckPromises);
-            
+
             // Find first available port
             const availablePortIndex = results.findIndex(available => available);
             if (availablePortIndex !== -1) {
@@ -146,13 +146,13 @@ export async function findAvailablePort(
                 if (port !== undefined) {
                     // Cache result
                     cachePortStatus(port, true);
-                    
+
                     const duration = Date.now() - startTime;
                     log.info(`Found available port: ${port} (took ${duration}ms)`);
                     return port;
                 }
             }
-            
+
             // Cache unavailable ports
             batch.forEach((port, index) => {
                 if (!results[index]) {
@@ -164,7 +164,7 @@ export async function findAvailablePort(
             // Continue checking next batch of ports
         }
     }
-    
+
     const duration = Date.now() - startTime;
     log.warn(`No available ports found in range: ${start}-${end} (took ${duration}ms)`);
     return null;
@@ -181,14 +181,14 @@ async function checkPortWithRetries(port: number, timeout: number, retries: numb
     // First check cache
     const cached = getCachedPortStatus(port);
     if (cached !== null) return cached;
-    
+
     // Multiple attempts to increase reliability
     for (let i = 0; i <= retries; i++) {
         try {
             if (await isPortAvailable(port, timeout)) {
                 return true;
             }
-            
+
             // If not available and there are retries left, wait briefly before retrying
             if (i < retries) {
                 await new Promise(resolve => setTimeout(resolve, 50));
@@ -199,7 +199,7 @@ async function checkPortWithRetries(port: number, timeout: number, retries: numb
             }
         }
     }
-    
+
     return false;
 }
 
@@ -214,7 +214,7 @@ function isPortAvailable(port: number, timeout: number): Promise<boolean> {
         // Create a server instance to try binding the port
         const server = net.createServer();
         let resolved = false;
-        
+
         // Set timeout handling
         const timeoutId = setTimeout(() => {
             if (!resolved) {
@@ -224,13 +224,13 @@ function isPortAvailable(port: number, timeout: number): Promise<boolean> {
                 resolve(false);
             }
         }, timeout);
-        
+
         // Error handling - usually indicates port unavailable
         server.once('error', (err: NodeJSNetworkError) => {
             if (!resolved) {
                 resolved = true;
                 clearTimeout(timeoutId);
-                
+
                 // EADDRINUSE indicates port in use
                 // EACCES indicates no permission to access port
                 // EADDRNOTAVAIL indicates address unavailable
@@ -240,13 +240,13 @@ function isPortAvailable(port: number, timeout: number): Promise<boolean> {
                 resolve(false);
             }
         });
-        
+
         // Listen success indicates port available
         server.once('listening', () => {
             if (!resolved) {
                 resolved = true;
                 clearTimeout(timeoutId);
-                
+
                 // Ensure server is closed before returning result
                 server.close(() => {
                     log.info(`Port ${port} is available`);
@@ -254,7 +254,7 @@ function isPortAvailable(port: number, timeout: number): Promise<boolean> {
                 });
             }
         });
-        
+
         // Try listening to port
         try {
             server.listen(port);
@@ -275,18 +275,18 @@ function isPortAvailable(port: number, timeout: number): Promise<boolean> {
 function shuffleArray<T>(array: T[]): T[] {
     // Create array copy to avoid modifying original array
     const result = [...array];
-    
+
     // Start from end, swap with random position
     for (let i = result.length - 1; i > 0; i--) {
         // Generate random index between 0 and i
         const j = Math.floor(Math.random() * (i + 1));
-        
+
         // Swap elements
         const temp = result[i];
         result[i] = result[j]!;
         result[j] = temp!;
     }
-    
+
     return result;
 }
 
@@ -297,16 +297,16 @@ function shuffleArray<T>(array: T[]): T[] {
  */
 export async function findPreferredPort(options: PortScanOptions = {}): Promise<number | null> {
     const preferredPorts = options.preferredPorts || [3000, 8080, 8000, 5000, 4000, 9000];
-    
+
     log.info(`Checking preferred ports first: ${preferredPorts.join(', ')}`);
-    
+
     // First optimization: Use Promise.all to parallel check all preferred ports
     try {
         const results = await Promise.all(
             preferredPorts.map(async port => {
                 try {
                     const available = await checkPortWithRetries(
-                        port, 
+                        port,
                         options.timeout || 400,
                         options.retries || 1
                     );
@@ -316,7 +316,7 @@ export async function findPreferredPort(options: PortScanOptions = {}): Promise<
                 }
             })
         );
-        
+
         // Find first available port
         const firstAvailable = results.find(r => r.available);
         if (firstAvailable) {
@@ -326,14 +326,14 @@ export async function findPreferredPort(options: PortScanOptions = {}): Promise<
     } catch (error) {
         log.warn('Error checking preferred ports:', error);
     }
-    
+
     // If no available preferred ports, try random range
     const randomStart = 10000 + Math.floor(Math.random() * 40000);
     const randomEnd = randomStart + 1000;
     log.info(`No preferred ports available, checking random range: ${randomStart}-${randomEnd}`);
-    
-    return findAvailablePort(randomStart, randomEnd, { 
-        ...options, 
+
+    return findAvailablePort(randomStart, randomEnd, {
+        ...options,
         randomize: true,
         concurrency: 10, // Use higher concurrency for random range
     });
@@ -374,20 +374,20 @@ export async function getCommonPortsStatus(options: PortScanOptions = {}): Promi
         'Django Default': 8000,
         'Flask Default': 5000
     };
-    
+
     const startTime = Date.now();
     log.info(`Checking status of ${Object.keys(commonPorts).length} common ports`);
-    
+
     const statuses: Record<string, boolean> = {};
     const timeout = options.timeout || 200; // Quick check, use shorter timeout
-    
+
     // Batch processing to reduce system pressure
     const batchSize = 5;
     const portEntries = Object.entries(commonPorts);
-    
+
     for (let i = 0; i < portEntries.length; i += batchSize) {
         const batch = portEntries.slice(i, i + batchSize);
-        
+
         // Parallel check current batch ports
         const results = await Promise.allSettled(
             batch.map(async ([name, port]) => {
@@ -395,19 +395,19 @@ export async function getCommonPortsStatus(options: PortScanOptions = {}): Promi
                 return { name, port, available };
             })
         );
-        
+
         // Process results
         results.forEach((result) => {
             if (result.status === 'fulfilled') {
                 const { name, port, available } = result.value;
                 statuses[`${name} (${port})`] = available;
-                
+
                 // Update cache
                 cachePortStatus(port, available);
             }
         });
     }
-    
+
     const duration = Date.now() - startTime;
     log.info(`Completed common ports status check in ${duration}ms`);
     return statuses;
@@ -432,17 +432,17 @@ export async function findMultipleAvailablePorts(
         const port = await findAvailablePort(start, end, options);
         return port ? [port] : [];
     }
-    
+
     const availablePorts: number[] = [];
     const exclude = [...(options.exclude || [])];
-    
+
     // Loop to find multiple ports
     for (let i = 0; i < count; i++) {
         const port = await findAvailablePort(start, end, {
             ...options,
             exclude: exclude, // Exclude already found ports
         });
-        
+
         if (port) {
             availablePorts.push(port);
             exclude.push(port); // Add found port to exclude list
@@ -451,7 +451,7 @@ export async function findMultipleAvailablePorts(
             break;
         }
     }
-    
+
     return availablePorts;
 }
 

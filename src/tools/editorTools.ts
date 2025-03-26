@@ -2,8 +2,7 @@ import * as vscode from 'vscode';
 import {AbstractEditorTools} from '../types/absEditorTools';
 import {Response, ToolParams} from '../types';
 import {responseHandler} from '../server/responseHandler';
-import {toAbsolutePathSafe} from '../utils/pathUtils';
-import path from "node:path";
+import {toAbsolutePathSafe, isAbsolutePath} from '../utils/pathUtils';
 
 /**
  * Get current open file content tool
@@ -231,7 +230,7 @@ export class OpenFileInEditorTool extends AbstractEditorTools<ToolParams['openFi
         try {
             const {filePath} = args;
 
-            const absolutePath = path.isAbsolute(filePath)
+            const absolutePath = isAbsolutePath(filePath)
                 ? filePath
                 : toAbsolutePathSafe(filePath);
 

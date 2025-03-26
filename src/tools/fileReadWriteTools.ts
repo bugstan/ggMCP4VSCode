@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
 import { AbstractFileTools } from '../types/absFileTools';
 import { Response, ToolParams } from '../types';
 import { responseHandler } from '../server/responseHandler';
+import { getDirName, joinPaths } from '../utils/pathUtils';
 
 /**
  * Get file content tool
@@ -73,8 +73,8 @@ export class ReplaceFileTextByPathTool extends AbstractFileTools<ToolParams['rep
         try {
             // Use optimized file write method
             const { writeTimeMs, size } = await this.writeFileWithPerformanceTracking(
-                absolutePath, 
-                text, 
+                absolutePath,
+                text,
                 { reloadAfterWrite: true }
             );
 
@@ -122,7 +122,7 @@ export class CreateNewFileWithTextTool extends AbstractFileTools<ToolParams['cre
             await this.measurePerformance(
                 'Directory creation',
                 async () => {
-                    const dirUri = vscode.Uri.file(path.dirname(absolutePath));
+                    const dirUri = vscode.Uri.file(getDirName(absolutePath));
                     await vscode.workspace.fs.createDirectory(dirUri);
                     return true;
                 }
@@ -130,8 +130,8 @@ export class CreateNewFileWithTextTool extends AbstractFileTools<ToolParams['cre
 
             // Use optimized file write method
             const { writeTimeMs, size } = await this.writeFileWithPerformanceTracking(
-                absolutePath, 
-                text, 
+                absolutePath,
+                text,
                 { reloadAfterWrite: false }
             );
 
@@ -175,7 +175,7 @@ export class ListFilesInFolderTool extends AbstractFileTools<ToolParams['listFil
             // Check if path is a directory
             const dirUri = vscode.Uri.file(absolutePath);
             const stat = await vscode.workspace.fs.stat(dirUri);
-            
+
             if (stat.type !== vscode.FileType.Directory) {
                 this.log.warn(`Path is not a directory: ${absolutePath}`);
                 return responseHandler.failure(`Path is not a directory: ${absolutePath}`);
@@ -192,7 +192,7 @@ export class ListFilesInFolderTool extends AbstractFileTools<ToolParams['listFil
             for (const [name, fileType] of entries) {
                 try {
                     // Calculate path for each entry
-                    const entryAbsPath = path.join(absolutePath, name);
+                    const entryAbsPath = joinPaths(absolutePath, name);
                     const entryRelPath = this.getRelativePath(entryAbsPath);
 
                     result.push({

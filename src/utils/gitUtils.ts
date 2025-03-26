@@ -1,8 +1,10 @@
 import * as vscode from 'vscode';
-import {Logger} from './logger';
-import {getProjectRoot, toRelativePath} from './pathUtils';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import { getProjectRoot, toRelativePath } from './pathUtils';
+import { Logger } from './logger';
 
-// Create module-specific logger
+const execAsync = promisify(exec);
 const log = Logger.forModule('GitUtils');
 
 /**
@@ -69,23 +71,29 @@ export async function getCurrentRepository() {
 export async function executeGitCommand(command: string): Promise<{
     stdout: string,
     stderr: string,
-    exitCode: number
-} | null> {
-    const repository = await getCurrentRepository();
-
-    if (!repository || typeof repository.exec !== 'function') {
-        log.warn('Cannot execute Git command: no repository or exec function not available');
-        return null;
-    }
-
+    exitCode: number | null
+}> {
     try {
-        log.info(`Executing Git command: ${command}`);
-        const result = await repository.exec(command);
-        log.info(`Git command result: exitCode=${result.exitCode}`);
-        return result;
+        const projectRoot = getProjectRoot();
+        if (!projectRoot) {
+            throw new Error('No project root found');
+        }
+
+        log.info(`Executing Git command in ${projectRoot}: ${command}`);
+        const { stdout, stderr } = await execAsync(command, { cwd: projectRoot });
+
+        return {
+            stdout: stdout || '',
+            stderr: stderr || '',
+            exitCode: 0
+        };
     } catch (error) {
-        log.error(`Failed to execute Git command: ${command}`, error);
-        return null;
+        log.error(`Error executing Git command: ${command}`, error);
+        return {
+            stdout: '',
+            stderr: error instanceof Error ? error.message : String(error),
+            exitCode: error instanceof Error && 'code' in error ? Number(error.code) : -1
+        };
     }
 }
 
@@ -146,7 +154,7 @@ export function formatErrorSafe(error: unknown): string {
 /**
  * Execute Git repository operations with proper error handling
  * This is a generic utility that wraps Git operations and handles common errors
- * 
+ *
  * @param action Function to execute with repository context
  * @returns Result of the action or throws an error
  */

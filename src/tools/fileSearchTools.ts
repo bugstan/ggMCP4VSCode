@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
 import {AbstractFileTools} from '../types/absFileTools';
 import {Response, ToolParams} from '../types';
 import {responseHandler} from '../server/responseHandler';
+import { getFileName, getDirName } from '../utils/pathUtils';
 
 /**
  * File content search tool
@@ -125,8 +125,8 @@ export class FindFilesByNameSubstringTool extends AbstractFileTools<ToolParams['
 
             // Format results with richer information
             const results = files.map(file => {
-                const fileName = path.basename(file.fsPath);
-                const dirPath = path.dirname(file.fsPath);
+                const fileName = getFileName(file.fsPath);
+                const dirPath = getDirName(file.fsPath);
 
                 return {
                     path: this.getRelativePath(file.fsPath),

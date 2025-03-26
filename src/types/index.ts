@@ -67,7 +67,7 @@ export interface ToolParams {
     runCommandOnBackground: {
         command: string;
         cwd?: string;
-        env?: NodeJS.ProcessEnv;
+        env?: Record<string, string | undefined>;
         timeout?: number;
     };
 }

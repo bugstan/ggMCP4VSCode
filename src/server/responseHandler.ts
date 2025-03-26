@@ -1,4 +1,4 @@
-import * as http from 'http';
+import http from 'http';
 import { Response } from '../types';
 import { Logger } from '../utils/logger';
 import { ResponseContext } from './interceptors';
@@ -18,25 +18,25 @@ export class ResponseHandler {
    */
   public sendResponse(res: http.ServerResponse, responseContext: ResponseContext): void {
     const { response, statusCode = 200 } = responseContext;
-    
+
     try {
       // Set content type and status code
       res.setHeader('Content-Type', 'application/json');
       res.statusCode = statusCode;
-      
+
       // Convert response to JSON string
       const jsonResponse = JSON.stringify(response);
-      
+
       // Send response
       res.end(jsonResponse);
-      
+
       // Log response information
       const responseSize = Buffer.byteLength(jsonResponse, 'utf8');
       log.info(`Sent response (status=${statusCode}, size=${responseSize} bytes)`);
     } catch (error) {
       // Handle errors that might occur during response sending
       log.error('Error sending response:', error);
-      
+
       // Try to send a simple error response
       try {
         res.statusCode = 500;
@@ -52,7 +52,7 @@ export class ResponseHandler {
       }
     }
   }
-  
+
   /**
    * Send JSON response
    * @param res HTTP response object
@@ -62,7 +62,7 @@ export class ResponseHandler {
   public sendJsonResponse(res: http.ServerResponse, statusCode: number, data: any): void {
     this.sendResponse(res, { response: data, statusCode });
   }
-  
+
   /**
    * Handle server errors
    * @param res HTTP response object
@@ -72,10 +72,10 @@ export class ResponseHandler {
   public handleServerError(res: http.ServerResponse, error: unknown, message: string): void {
     const errorMessage = error instanceof Error ? error.message : String(error);
     log.error(`${message}: ${errorMessage}`, error);
-    
+
     this.sendJsonResponse(res, 500, this.failure(`${message}: ${errorMessage}`));
   }
-  
+
   /**
    * Create error response object
    * @param message Error message
@@ -87,7 +87,7 @@ export class ResponseHandler {
       error: message
     };
   }
-  
+
   /**
    * Create standard response object
    * @param data Response data
@@ -99,13 +99,13 @@ export class ResponseHandler {
     if (data !== null && typeof data !== 'string') {
       data = JSON.stringify(data);
     }
-    
+
     return {
       status: data,
       error
     };
   }
-  
+
   /**
    * Create JSON-RPC response
    * @param result Result object
@@ -115,7 +115,7 @@ export class ResponseHandler {
   public createJsonRpcResponse(result: any, id: string | string[] | undefined): any {
     // Handle possible array ID
     const responseId = Array.isArray(id) ? id[0] : id;
-    
+
     return {
       jsonrpc: '2.0',
       id: responseId || null,

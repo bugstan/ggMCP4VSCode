@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import * as http from 'http';
+import http from 'http';
 import { findAvailablePort } from '../utils/portScanner';
 import { Logger } from '../utils/logger';
 import { MCPService } from './mcpService';
@@ -30,13 +30,13 @@ export class ServerManager {
 
             // Set status to starting
             vscode.commands.executeCommand('ggMCP.updateServerStatus', 'starting');
-            
+
             // Get configuration items
             const config = getConfig();
             const timeout = config.getPortScanTimeout();
             const concurrency = config.getPortScanConcurrency();
             const retries = config.getPortScanRetries();
-            
+
             // Find available port using configuration options
             const port = await findAvailablePort(portStart, portEnd, {
                 timeout,
@@ -44,7 +44,7 @@ export class ServerManager {
                 retries,
                 preferredPorts: config.getPreferredPorts()
             });
-            
+
             if (!port) {
                 const errorMsg = `Could not find available port in range ${portStart}-${portEnd}`;
                 log.error(errorMsg);
@@ -68,7 +68,7 @@ export class ServerManager {
 
             // Start listening on the port
             await this.startListening(port);
-            
+
             return {
                 dispose: () => this.dispose()
             };
@@ -87,22 +87,22 @@ export class ServerManager {
                 resolve();
                 return;
             }
-            
+
             this.server.listen(port, () => {
                 log.info(`MCP server running on port ${port}`);
-                
+
                 // First update port information
                 vscode.commands.executeCommand('ggMCP.updatePort', port);
-                
+
                 // Then directly update server status to running
                 // This is a key fix - ensures status is updated even if updatePort command doesn't work properly
                 vscode.commands.executeCommand('ggMCP.updateServerStatus', 'running');
-                
+
                 // Finally show notification
                 vscode.window.showInformationMessage(`MCP server started, port: ${port}`);
-                
+
                 log.info('Server status updated to running');
-                
+
                 // Add an extra delayed status update, in case the previous commands failed
                 setTimeout(() => {
                     try {
@@ -112,7 +112,7 @@ export class ServerManager {
                         log.error('Failed delayed status update:', retryErr);
                     }
                 }, 1000);
-                
+
                 resolve();
             });
         });
@@ -125,7 +125,7 @@ export class ServerManager {
         log.error('MCP server error:', err);
         vscode.commands.executeCommand('ggMCP.reportError', err.message);
         vscode.window.showErrorMessage(`MCP server error: ${err.message}`);
-        
+
         if (!this.isDisposed) {
             setTimeout(() => {
                 if (!this.isDisposed && this.server) {
@@ -148,7 +148,7 @@ export class ServerManager {
         log.error('Error starting MCP server:', error);
         vscode.commands.executeCommand('ggMCP.reportError', `Start failed: ${errorMsg}`);
         vscode.window.showErrorMessage(`Error starting MCP server: ${errorMsg}`);
-        
+
         if (this.server) {
             this.server.close();
             this.server = null;

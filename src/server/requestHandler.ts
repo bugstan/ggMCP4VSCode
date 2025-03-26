@@ -1,8 +1,7 @@
 import * as vscode from 'vscode';
-import * as http from 'http';
-import * as path from 'path';
+import http from 'http';
 import { ToolManager } from '../toolManager';
-import { getProjectRoot } from '../utils/project';
+import { getProjectRoot, getDirName } from '../utils/pathUtils';
 import { Logger } from '../utils/logger';
 import { responseHandler } from './responseHandler';
 import { RequestContext, ResponseContext } from './interceptors/types';
@@ -18,13 +17,13 @@ const log = Logger.forModule('RequestHandler');
 export class RequestHandler {
     private readonly toolManager = ToolManager.getInstance();
     private readonly interceptorChain: InterceptorChain;
-    
+
     constructor() {
         // Initialize interceptor chain
         this.interceptorChain = InterceptorChain.getInstance();
         // Register default interceptors
         initializeInterceptors();
-        
+
         log.info('RequestHandler initialized with interceptor chain');
     }
 
@@ -54,15 +53,15 @@ export class RequestHandler {
      * @param requestId Request ID
      */
     public async handleStatusRequest(
-        res: http.ServerResponse, 
-        type: 'initialize' | 'status', 
+        res: http.ServerResponse,
+        type: 'initialize' | 'status',
         requestId: string | string[] | undefined
     ): Promise<void> {
         try {
             const rootPath = getProjectRoot() || '';
             const activeFile = vscode.window.activeTextEditor?.document.uri.fsPath || '';
 
-            const response = type === 'initialize' 
+            const response = type === 'initialize'
                 ? this.createInitializeResponse(rootPath, activeFile, requestId)
                 : this.createStatusResponse(rootPath, activeFile, requestId);
 
@@ -80,12 +79,12 @@ export class RequestHandler {
      * @param requestId Request ID
      */
     private createInitializeResponse(
-        rootPath: string, 
-        activeFile: string, 
+        rootPath: string,
+        activeFile: string,
         requestId: string | string[] | undefined
     ) {
-        const currentDirectory = activeFile 
-            ? path.dirname(activeFile) 
+        const currentDirectory = activeFile
+            ? getDirName(activeFile)
             : rootPath;
 
         return responseHandler.createJsonRpcResponse({
@@ -113,12 +112,12 @@ export class RequestHandler {
      * @param requestId Request ID
      */
     private createStatusResponse(
-        rootPath: string, 
-        activeFile: string, 
+        rootPath: string,
+        activeFile: string,
         requestId: string | string[] | undefined
     ) {
-        const currentDirectory = activeFile 
-            ? path.dirname(activeFile) 
+        const currentDirectory = activeFile
+            ? getDirName(activeFile)
             : rootPath;
 
         return responseHandler.createJsonRpcResponse({
@@ -143,7 +142,7 @@ export class RequestHandler {
      * @param res HTTP response object
      */
     public async handleToolExecution(
-        toolName: string, 
+        toolName: string,
         params: any,
         method: string,
         path: string,
@@ -154,8 +153,8 @@ export class RequestHandler {
             if (!tool) {
                 log.warn(`Unknown tool requested: ${toolName}`);
                 responseHandler.sendJsonResponse(
-                    res, 
-                    404, 
+                    res,
+                    404,
                     responseHandler.failure(`Unknown tool: ${toolName}`)
                 );
                 return;
@@ -173,22 +172,22 @@ export class RequestHandler {
             const startTime = performance.now();
             const processedContext = await this.interceptorChain.processBeforeRequest(requestContext);
             const beforeTime = performance.now() - startTime;
-            
+
             // If interceptor returns null, terminate request processing
             if (processedContext === null) {
                 log.info(`Request processing terminated by interceptor for tool: ${toolName}`);
                 responseHandler.sendJsonResponse(res, 200, responseHandler.failure('Request cancelled by interceptor'));
                 return;
             }
-            
+
             // Update request context
             requestContext = processedContext;
-            
+
             // If cached response exists, return directly
             if (requestContext.cachedResponse) {
                 log.info(`Using cached response for tool: ${toolName}`);
                 responseHandler.sendJsonResponse(res, 200, requestContext.cachedResponse);
-                
+
                 // Log interceptor performance
                 const totalTime = performance.now() - startTime;
                 log.info(`Interceptor chain completed in ${totalTime.toFixed(2)}ms (cache hit)`);
@@ -208,7 +207,7 @@ export class RequestHandler {
             const afterStartTime = performance.now();
             responseContext = await this.interceptorChain.processAfterResponse(requestContext, responseContext);
             const afterTime = performance.now() - afterStartTime;
-            
+
             // Log interceptor performance
             const totalTime = performance.now() - startTime;
             if (totalTime > 50) {

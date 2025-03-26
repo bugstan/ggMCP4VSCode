@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import * as path from 'path';
 import { AbstractTool } from './absTool';
-import { getProjectRoot } from '../utils/pathUtils';
+import { getProjectRoot, toAbsolutePathSafe } from '../utils/pathUtils';
+import { Response } from './index';
+import { responseHandler } from '../server/responseHandler';
 
 /**
  * Abstract base class for project tools
@@ -15,25 +16,25 @@ export abstract class AbstractProjectTools<T = any> extends AbstractTool<T> {
      */
     protected getProjectRootPath(): string | null {
         const rootPath = getProjectRoot();
-        
+
         if (!rootPath) {
             this.log.warn('Project root not found');
             return null;
         }
-        
+
         this.log.info(`Project root path: ${rootPath}`);
         return rootPath;
     }
 
     /**
      * Check if a file exists at the specified path
-     * @param rootPath Project root path
      * @param filePath File path relative to root path
      * @returns Whether the file exists
      */
-    protected fileExists(rootPath: string, filePath: string): boolean {
+    protected fileExists(filePath: string): boolean {
         try {
-            const fullPath = path.join(rootPath, filePath);
+            const fullPath = toAbsolutePathSafe(filePath);
+            if (!fullPath) return false;
             return fs.existsSync(fullPath);
         } catch (err) {
             this.log.info(`Error checking file existence: ${filePath}`, err);
@@ -43,13 +44,13 @@ export abstract class AbstractProjectTools<T = any> extends AbstractTool<T> {
 
     /**
      * Safely read JSON file
-     * @param rootPath Project root path
      * @param filePath File path relative to root path
      * @returns Parsed JSON object or null
      */
-    protected readJsonFile<R = any>(rootPath: string, filePath: string): R | null {
+    protected readJsonFile<R = any>(filePath: string): R | null {
         try {
-            const fullPath = path.join(rootPath, filePath);
+            const fullPath = toAbsolutePathSafe(filePath);
+            if (!fullPath) return null;
             if (fs.existsSync(fullPath)) {
                 const content = fs.readFileSync(fullPath, 'utf8');
                 return JSON.parse(content) as R;
@@ -62,13 +63,13 @@ export abstract class AbstractProjectTools<T = any> extends AbstractTool<T> {
 
     /**
      * Safely read text file
-     * @param rootPath Project root path
      * @param filePath File path relative to root path
      * @returns File content or null
      */
-    protected readTextFile(rootPath: string, filePath: string): string | null {
+    protected readTextFile(filePath: string): string | null {
         try {
-            const fullPath = path.join(rootPath, filePath);
+            const fullPath = toAbsolutePathSafe(filePath);
+            if (!fullPath) return null;
             if (fs.existsSync(fullPath)) {
                 return fs.readFileSync(fullPath, 'utf8');
             }
@@ -98,57 +99,109 @@ export abstract class AbstractProjectTools<T = any> extends AbstractTool<T> {
     /**
      * Check project type and return results
      * Implements common project type detection logic
-     * @param rootPath Project root path
      * @returns Array of detected project types
      */
-    protected detectProjectTypes(rootPath: string): string[] {
+    protected detectProjectTypes(): string[] {
         const projectTypes: string[] = [];
-        
+
         // Check for Maven project
-        if (this.fileExists(rootPath, 'pom.xml')) {
+        if (this.fileExists('pom.xml')) {
             this.log.info('Maven project detected (pom.xml)');
             projectTypes.push('maven');
         }
-        
+
         // Check for Gradle project
-        if (this.fileExists(rootPath, 'build.gradle') || this.fileExists(rootPath, 'build.gradle.kts')) {
+        if (this.fileExists('build.gradle') || this.fileExists('build.gradle.kts')) {
             this.log.info('Gradle project detected (build.gradle)');
             projectTypes.push('gradle');
         }
-        
+
         // Check for Node.js project
-        if (this.fileExists(rootPath, 'package.json')) {
+        if (this.fileExists('package.json')) {
             this.log.info('Node.js project detected (package.json)');
             projectTypes.push('node');
         }
-        
+
         // Check for Python project
-        if (this.fileExists(rootPath, 'Pipfile')) {
+        if (this.fileExists('Pipfile')) {
             this.log.info('Python project detected (Pipfile)');
             projectTypes.push('python-pipenv');
-        } else if (this.fileExists(rootPath, 'requirements.txt')) {
+        } else if (this.fileExists('requirements.txt')) {
             this.log.info('Python project detected (requirements.txt)');
             projectTypes.push('python-pip');
         }
-        
+
         // Check for .NET project
-        if (this.fileExists(rootPath, '.csproj') || this.fileExists(rootPath, '.fsproj') || this.fileExists(rootPath, '.vbproj')) {
+        if (this.fileExists('.csproj') || this.fileExists('.fsproj') || this.fileExists('.vbproj')) {
             this.log.info('.NET project detected (.csproj/.fsproj/.vbproj)');
             projectTypes.push('dotnet');
         }
-        
+
         // Check for Go project
-        if (this.fileExists(rootPath, 'go.mod')) {
+        if (this.fileExists('go.mod')) {
             this.log.info('Go project detected (go.mod)');
             projectTypes.push('go');
         }
-        
+
         // Check for Rust project
-        if (this.fileExists(rootPath, 'Cargo.toml')) {
+        if (this.fileExists('Cargo.toml')) {
             this.log.info('Rust project detected (Cargo.toml)');
             projectTypes.push('rust');
         }
-        
+
         return projectTypes;
+    }
+
+    protected async executeProjectOperation(filePath: string): Promise<Response> {
+        try {
+            const fullPath = toAbsolutePathSafe(filePath);
+            if (!fullPath) {
+                return responseHandler.failure('Invalid file path');
+            }
+
+            if (!fs.existsSync(fullPath)) {
+                return responseHandler.failure('File does not exist');
+            }
+
+            return responseHandler.success({});
+        } catch (e) {
+            return responseHandler.failure(`Project operation error: ${e instanceof Error ? e.message : String(e)}`);
+        }
+    }
+
+    protected async readProjectFile(filePath: string): Promise<Response> {
+        try {
+            const fullPath = toAbsolutePathSafe(filePath);
+            if (!fullPath) {
+                return responseHandler.failure('Invalid file path');
+            }
+
+            if (fs.existsSync(fullPath)) {
+                const content = fs.readFileSync(fullPath, 'utf8');
+                return responseHandler.success(content);
+            }
+
+            return responseHandler.failure('File does not exist');
+        } catch (e) {
+            return responseHandler.failure(`File read error: ${e instanceof Error ? e.message : String(e)}`);
+        }
+    }
+
+    protected async writeProjectFile(filePath: string, content: string): Promise<Response> {
+        try {
+            const fullPath = toAbsolutePathSafe(filePath);
+            if (!fullPath) {
+                return responseHandler.failure('Invalid file path');
+            }
+
+            if (fs.existsSync(fullPath)) {
+                fs.writeFileSync(fullPath, content, 'utf8');
+                return responseHandler.success({});
+            }
+
+            return responseHandler.failure('File does not exist');
+        } catch (e) {
+            return responseHandler.failure(`File write error: ${e instanceof Error ? e.message : String(e)}`);
+        }
     }
 }

@@ -3,8 +3,12 @@ import {Response} from './index';
 import {AbstractTool} from './absTool';
 import {responseHandler} from '../server/responseHandler';
 import {TerminalManager} from '../utils/terminalManager';
-import {ShellIntegrationHelper} from '../utils/shellIntegrationHelper';
-import * as child_process from 'child_process';
+import child_process from 'child_process';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import { getProjectRoot } from '../utils/pathUtils';
+
+const execAsync = promisify(exec);
 
 /**
  * Base class for terminal operation tools
@@ -17,16 +21,17 @@ export abstract class AbstractTerminalTools<T = any> extends AbstractTool<T> {
      * Core logic implementation for terminal operations
      */
     protected async executeCore(args: T): Promise<Response> {
-        // Prepare terminal
-        const terminal = await this.prepareTerminal();
+        try {
+            const projectRoot = getProjectRoot();
+            if (!projectRoot) {
+                return responseHandler.failure('No project root found');
+            }
 
-        // If terminal is required but failed to get
-        if (this.requiresTerminal() && !terminal) {
-            return responseHandler.failure('Failed to get or create terminal');
+            return await this.executeTerminalOperation(projectRoot, args);
+        } catch (error) {
+            this.log.error('Error executing terminal operation', error);
+            return responseHandler.failure(error instanceof Error ? error.message : String(error));
         }
-
-        // Execute specific terminal operation
-        return await this.executeCommand(terminal, args);
     }
 
     /**
@@ -44,15 +49,6 @@ export abstract class AbstractTerminalTools<T = any> extends AbstractTool<T> {
             // Show terminal
             if (terminal && this.shouldShowTerminal()) {
                 terminal.show();
-            }
-
-            // Wait for terminal to be ready
-            if (terminal) {
-                const isReady = await ShellIntegrationHelper.waitForTerminalReady(terminal);
-                if (!isReady) {
-                    this.log.warn('Terminal is not ready after waiting');
-                    return null;
-                }
             }
 
             return terminal ?? null;
@@ -87,81 +83,44 @@ export abstract class AbstractTerminalTools<T = any> extends AbstractTool<T> {
     /**
      * Execute specific terminal operation, needs to be implemented by subclasses
      */
-    protected abstract executeCommand(terminal: vscode.Terminal | null, args: T): Promise<Response>;
-
-    /**
-     * Limit output line count
-     */
-    protected limitOutputLines(output: string, maxLines: number = 2000): string {
-        const lines = output.split('\n');
-        if (lines.length > maxLines) {
-            const truncated = lines.slice(0, maxLines).join('\n');
-            return `${truncated}\n\n[Output truncated, showing first ${maxLines} lines]`;
-        }
-        return output;
-    }
+    protected abstract executeTerminalOperation(projectRoot: string, args: T): Promise<Response>;
 
     /**
      * Execute command and capture output
      */
-    protected async executeCommandWithOutput(
-        terminal: vscode.Terminal,
-        command: string,
-        timeoutMs: number
-    ): Promise<string> {
-        return new Promise<string>((resolve) => {
-            try {
-                // Check Shell Integration API support
-                if (!ShellIntegrationHelper.hasShellIntegration(terminal)) {
-                    terminal.sendText(command);
-                    setTimeout(() => {
-                        resolve(`Command executed: ${command}\n\nOutput cannot be captured in current VS Code version.`);
-                    }, 500);
-                    return;
-                }
+    protected async executeCommand(command: string, cwd: string): Promise<{
+        stdout: string,
+        stderr: string,
+        exitCode: number | null
+    }> {
+        try {
+            this.log.info(`Executing command in ${cwd}: ${command}`);
+            const { stdout, stderr } = await execAsync(command, { cwd });
 
-                // Create timeout timer
-                const timer = setTimeout(() => {
-                    this.log.warn(`Command execution timed out after ${timeoutMs}ms: ${command}`);
-                    resolve(`Command execution timed out after ${timeoutMs}ms.`);
-                }, timeoutMs);
+            return {
+                stdout: stdout || '',
+                stderr: stderr || '',
+                exitCode: 0
+            };
+        } catch (error: unknown) {
+            this.log.error(`Error executing command: ${command}`, error);
+            return {
+                stdout: '',
+                stderr: error instanceof Error ? error.message : String(error),
+                exitCode: error instanceof Error && 'code' in error ? Number(error.code) : -1
+            };
+        }
+    }
 
-                // Check command detection support
-                if (ShellIntegrationHelper.hasCommandDetection(terminal)) {
-                    // Register command completion event handler
-                    const disposable = ShellIntegrationHelper.registerCommandFinishedHandler(
-                        terminal,
-                        (finishedCmd: any) => {
-                            clearTimeout(timer);
-                            disposable?.dispose();
-
-                            if (finishedCmd && finishedCmd.output) {
-                                resolve(this.limitOutputLines(finishedCmd.output));
-                            } else {
-                                resolve('Command executed, but no output was captured');
-                            }
-                        }
-                    );
-
-                    if (!disposable) {
-                        clearTimeout(timer);
-                        terminal.sendText(command);
-                        resolve('Command executed, but command detection registration failed');
-                        return;
-                    }
-
-                    // Send command
-                    terminal.sendText(command);
-                } else {
-                    clearTimeout(timer);
-                    terminal.sendText(command);
-                    resolve('Command executed, but shell integration command detection not available');
-                }
-            } catch (error) {
-                terminal.sendText(command);
-                resolve(`Failed to use Shell Integration API: ${error}`);
-            }
-        });
+    /**
+     * Limit output lines to prevent overwhelming the UI
+     */
+    protected limitOutputLines(output: string, maxLines: number = 100): string {
+        const lines = output.split('\n');
+        if (lines.length <= maxLines) {
+            return output;
+        }
+        return lines.slice(0, maxLines).join('\n') + '\n... (output truncated)';
     }
 
     /**
@@ -175,22 +134,26 @@ export abstract class AbstractTerminalTools<T = any> extends AbstractTool<T> {
         options: {
             timeout?: number;
             cwd?: string;
-            env?: NodeJS.ProcessEnv;
+            env?: Record<string, string | undefined>;
         } = {}
     ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
         return new Promise((resolve, reject) => {
             const timeout = options.timeout || this.getTimeoutMs();
+            let childProcess: child_process.ChildProcess;
+
             const timer = setTimeout(() => {
-                process.kill(-childProcess.pid!);
+                if (childProcess && childProcess.pid) {
+                    process.kill(-childProcess.pid);
+                }
                 reject(new Error(`Command execution timed out after ${timeout}ms`));
             }, timeout);
 
-            const childProcess = child_process.exec(command, {
+            childProcess = child_process.exec(command, {
                 cwd: options.cwd,
                 env: options.env,
                 maxBuffer: 1024 * 1024, // 1MB buffer
                 windowsHide: true // Hide window on Windows
-            }, (error, stdout, stderr) => {
+            }, (error: Error | null, stdout: string, stderr: string) => {
                 clearTimeout(timer);
                 if (error) {
                     reject(error);
