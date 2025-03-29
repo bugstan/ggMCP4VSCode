@@ -1,36 +1,37 @@
-## 描述
+## Description
 
-请包含对更改的总结以及相关动机和背景。列出所有需要理解此PR的依赖关系。
+Please include a summary of the changes and the related motivation and context. List any dependencies that are required for this PR.
 
-修复 #(issue)
+Fixes #(issue)
 
-## 更改类型
+## Type of Change
 
-请删除不相关的选项。
+Please delete options that are not relevant.
 
-- [ ] Bug修复 (修复一个不影响代码核心的问题)
-- [ ] 新功能 (添加不破坏现有功能的特性)
-- [ ] 破坏性变更 (可能导致现有功能无法按预期工作的修复或特性)
-- [ ] 文档更新
-- [ ] 性能优化
-- [ ] 代码风格更新（格式化、变量命名）
-- [ ] 重构（不改变外部行为的代码调整）
-- [ ] 构建相关变更
-- [ ] CI相关变更
+- [ ] Bug fix (non-breaking change which fixes an issue)
+- [ ] New feature (non-breaking change which adds functionality)
+- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
+- [ ] Documentation update
+- [ ] Performance improvement
+- [ ] Code style update (formatting, variable naming)
+- [ ] Refactoring (no functional changes, no api changes)
+- [ ] Build related changes
+- [ ] CI related changes
 
-## 测试说明
+## Testing Instructions
 
-请描述您添加的测试和/或提供测试这些变更的说明。
+Please describe the tests you added and/or provide instructions for testing these changes.
 
-## 屏幕截图（如果适用）:
+## Screenshots (if applicable):
 
-## 检查清单:
+## Checklist:
 
-- [ ] 我的代码遵循此项目的风格指南
-- [ ] 我已经自我审查了我的代码
-- [ ] 我已经注释了我的代码，特别是在难以理解的区域
-- [ ] 我的更改不会产生新的警告
-- [ ] 我已添加测试以证明我的修复是有效的或我的功能正常工作
-- [ ] 所有新的和现有的测试都通过了
-- [ ] 我已更新文档以反映我的更改
-- [ ] 我的更改不会破坏任何现有功能
+- [ ] My code follows the style guidelines of this project
+- [ ] I have performed a self-review of my own code
+- [ ] I have commented my code, particularly in hard-to-understand areas
+- [ ] I have made corresponding changes to the documentation
+- [ ] My changes generate no new warnings
+- [ ] I have added tests that prove my fix is effective or that my feature works
+- [ ] New and existing unit tests pass locally with my changes
+- [ ] I have updated the documentation to reflect my changes
+- [ ] My changes do not break any existing functionality

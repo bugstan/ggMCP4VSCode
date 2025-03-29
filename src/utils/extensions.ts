@@ -22,14 +22,14 @@ declare global {
 
 // Add prototype methods (if they don't exist)
 if (!String.prototype.trimStart) {
-    log.debug('Adding String.prototype.trimStart extension method');
+    log.info('Adding String.prototype.trimStart extension method');
     String.prototype.trimStart = function() {
         return this.replace(/^[\s\uFEFF\xA0]+/g, '');
     };
 }
 
 if (!Array.prototype.last) {
-    log.debug('Adding Array.prototype.last extension method');
+    log.info('Adding Array.prototype.last extension method');
     Array.prototype.last = function() {
         return this[this.length - 1];
     };

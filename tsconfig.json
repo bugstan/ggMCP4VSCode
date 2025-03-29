@@ -3,7 +3,9 @@
     "module": "commonjs",
     "target": "ES2022",
     "outDir": "dist",
-    "lib": ["ES2022"],
+    "lib": [
+      "ES2022"
+    ],
     "sourceMap": true,
     "rootDir": ".",
     "strict": true,
@@ -16,5 +18,9 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "exclude": ["node_modules", ".vscode-test"]
+  "exclude": [
+    "node_modules",
+    ".vscode-test",
+    ".github"
+  ],
 }

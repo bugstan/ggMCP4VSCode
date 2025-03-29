@@ -1,219 +1,245 @@
 import * as vscode from 'vscode';
-import { AbstractMcpTool, JsonSchemaObject } from '../types/tool';
-import { Response, ToolParams } from '../types';
-import { createResponse, formatError } from '../utils/response';
-import { normalizePath } from '../utils/pathUtils';
-import { Logger } from '../utils/logger';
-
-// Create module-specific logger
-const log = Logger.forModule('EditorTools');
-
-// Ensure optional chaining and nullish coalescing usage
-const emptySchema: JsonSchemaObject = {
-    type: 'object', 
-    properties: {}
-};
+import {AbsEditorTools} from '../types/absEditorTools';
+import {Response, ToolParams} from '../types';
+import {responseHandler} from '../server/responseHandler';
 
 /**
- * Get the text content of the file currently open in the editor
+ * Get current open file content tool
+ * Inherits from AbstractEditorTools base class to utilize common editor operation functionality
  */
-export class GetOpenInEditorFileTextTool extends AbstractMcpTool {
+export class GetOpenInEditorFileTextTool extends AbsEditorTools {
     constructor() {
         super(
             'get_open_in_editor_file_text',
-            'Retrieve the complete text content of the file currently open in the editor. Returns an empty string if no file is open.',
-            emptySchema
+            'Retrieves the complete text content of the currently active file in the VSCode IDE editor.\nUse this tool to access and analyze the file\'s contents for tasks such as code review, content inspection, or text processing.\nReturns empty string if no file is currently open.',
+            {
+                type: 'object',
+                properties: {}
+            }
         );
     }
 
-    async handle(_args: Record<string, never>): Promise<Response> {
+    /**
+     * This tool can run without an active editor
+     * If no active editor, simply return an empty string
+     */
+    protected requiresActiveEditor(): boolean {
+        return false;
+    }
+
+    /**
+     * Execute file content retrieval operation (implementing base class abstract method)
+     */
+    protected async execute(editor: vscode.TextEditor | undefined, _args: any): Promise<Response> {
         try {
-            const editor = vscode.window.activeTextEditor;
             if (!editor) {
-                log.debug('No active editor found');
-                return createResponse('');
+                return responseHandler.success('');
             }
-            
+
             const document = editor.document;
             const text = document.getText();
-            
-            log.debug(`Retrieved file content, size: ${text.length} characters`);
-            return createResponse(text);
+
+            return responseHandler.success(text);
         } catch (error) {
-            log.error('Error getting file content', error);
-            return createResponse(null, `Error getting file content: ${formatError(error)}`);
+            this.log.error('Error getting file content', error);
+            return responseHandler.failure(`Error getting file content: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
 }
 
 /**
- * Get the path of the file currently open in the editor
+ * Get current open file path tool
+ * Inherits from AbstractEditorTools base class to utilize common editor operation functionality
  */
-export class GetOpenInEditorFilePathTool extends AbstractMcpTool {
+export class GetOpenInEditorFilePathTool extends AbsEditorTools {
     constructor() {
         super(
             'get_open_in_editor_file_path',
-            'Get the absolute path of the file currently open in the editor. Returns an empty string if no file is open.',
-            emptySchema
+            'Retrieves the absolute path of the currently active file in the VSCode IDE editor.\nUse this tool to get the file location for tasks requiring file path information.\nReturns an empty string if no file is currently open.',
+            {
+                type: 'object',
+                properties: {}
+            }
         );
     }
 
-    async handle(_args: Record<string, never>): Promise<Response> {
+    /**
+     * This tool can run without an active editor
+     * If no active editor, simply return an empty string
+     */
+    protected requiresActiveEditor(): boolean {
+        return false;
+    }
+
+    /**
+     * Execute file path retrieval operation (implementing base class abstract method)
+     */
+    protected async execute(editor: vscode.TextEditor | undefined, _args: any): Promise<Response> {
         try {
-            const editor = vscode.window.activeTextEditor;
             if (!editor) {
-                log.debug('No active editor found');
-                return createResponse('');
+                return responseHandler.success('');
             }
-            
+
             const filePath = editor.document.uri.fsPath;
-            log.debug(`Retrieved file path: ${filePath}`);
-            
-            return createResponse(filePath);
+            const relativePath = this.getRelativePath(filePath);
+
+            return responseHandler.success(relativePath);
         } catch (error) {
-            log.error('Error getting file path', error);
-            return createResponse(null, `Error getting file path: ${formatError(error)}`);
+            this.log.error('Error getting file path', error);
+            return responseHandler.failure(`Error getting file path: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
 }
 
 /**
- * Replace selected text
+ * Replace selected text tool
+ * Inherits from AbstractEditorTools base class to utilize common editor operation functionality
  */
-export class ReplaceSelectedTextTool extends AbstractMcpTool<ToolParams['replaceSelectedText']> {
+export class ReplaceSelectedTextTool extends AbsEditorTools<ToolParams['replaceSelectedText']> {
     constructor() {
         super(
             'replace_selected_text',
-            'Replace the text currently selected in the editor. Returns an error if no text is selected or no editor is open.',
+            'Replaces the currently selected text in the active editor with specified new text.\nUse this tool to modify code or content by replacing the user\'s text selection.\nRequires a text parameter containing the replacement content.\nReturns one of three possible responses:\n    - "ok" if the text was successfully replaced\n    - "no text selected" if no text is selected or no editor is open\n    - "unknown error" if the operation fails',
             {
                 type: 'object',
                 properties: {
-                    text: { type: 'string' }
+                    text: {type: 'string'}
                 },
                 required: ['text']
             }
         );
     }
 
-    async handle(args: ToolParams['replaceSelectedText']): Promise<Response> {
+    /**
+     * Execute replace selected text operation (implementing base class abstract method)
+     */
+    protected async execute(editor: vscode.TextEditor | undefined, args: ToolParams['replaceSelectedText']): Promise<Response> {
         try {
-            const { text } = args;
-            const editor = vscode.window.activeTextEditor;
-            
+            const {text} = args;
+
             if (!editor) {
-                log.warn('No active editor found');
-                return createResponse(null, 'no active editor');
+                // This part should not be executed, as the base class executeCore checks if the editor exists
+                return responseHandler.failure('no active editor');
             }
-            
-            // Check if there is selected text
-            if (editor.selections.every((selection: vscode.Selection) => selection.isEmpty)) {
-                log.warn('No text selected');
-                return createResponse(null, 'no text selected');
+
+            // Check if there is a selection
+            if (!this.hasSelection(editor)) {
+                return responseHandler.failure('no text selected');
             }
-            
-            // Replace all selected text
-            await editor.edit(editBuilder => {
-                editor.selections.forEach((selection: vscode.Selection) => {
+
+            // Use base class applyEdit method to replace selected content
+            const success = await this.applyEdit(editor, editBuilder => {
+                editor.selections.forEach(selection => {
                     editBuilder.replace(selection, text);
                 });
             });
-            
-            log.info('Selected text replaced successfully');
-            return createResponse('ok');
+
+            if (success) {
+                return responseHandler.success('ok');
+            } else {
+                return responseHandler.failure('Failed to apply edit');
+            }
         } catch (error) {
-            log.error('Error replacing selected text', error);
-            return createResponse(null, `Error replacing selected text: ${formatError(error)}`);
+            this.log.error('Error replacing selected text', error);
+            return responseHandler.failure(`Error replacing selected text: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
 }
 
 /**
- * Replace current file's entire content
+ * Replace current file content tool
+ * Inherits from AbstractEditorTools base class to utilize common editor operation functionality
  */
-export class ReplaceCurrentFileTextTool extends AbstractMcpTool<ToolParams['replaceCurrentFileText']> {
+export class ReplaceCurrentFileTextTool extends AbsEditorTools<ToolParams['replaceCurrentFileText']> {
     constructor() {
         super(
             'replace_current_file_text',
-            'Replace the entire content of the file currently open in the editor. Returns an error if no file is open.',
+            'Replaces the entire content of the currently active file in the VSCode IDE with specified new text.\nUse this tool when you need to completely overwrite the current file\'s content.\nRequires a text parameter containing the new content.\nReturns one of three possible responses:\n- "ok" if the file content was successfully replaced\n- "no file open" if no editor is active\n- "unknown error" if the operation fails',
             {
                 type: 'object',
                 properties: {
-                    text: { type: 'string' }
+                    text: {type: 'string'}
                 },
                 required: ['text']
             }
         );
     }
 
-    async handle(args: ToolParams['replaceCurrentFileText']): Promise<Response> {
+    /**
+     * Execute replace file content operation (implementing base class abstract method)
+     */
+    protected async execute(editor: vscode.TextEditor | undefined, args: ToolParams['replaceCurrentFileText']): Promise<Response> {
         try {
-            const { text } = args;
-            const editor = vscode.window.activeTextEditor;
-            
+            const {text} = args;
+
             if (!editor) {
-                log.warn('No file open');
-                return createResponse(null, 'no file open');
+                // This part should not be executed, as the base class executeCore checks if the editor exists
+                return responseHandler.failure('no file open');
             }
-            
-            // Create a selection covering the entire file content
-            const document = editor.document;
-            const fullRange = new vscode.Range(
-                new vscode.Position(0, 0),
-                new vscode.Position(document.lineCount - 1, document.lineAt(document.lineCount - 1).text.length)
-            );
-            
-            // Replace entire content
-            await editor.edit(editBuilder => {
+
+            // Use base class getDocumentFullRange method to get full document range
+            const fullRange = this.getDocumentFullRange(editor.document);
+
+            // Use base class applyEdit method to replace entire file content
+            const success = await this.applyEdit(editor, editBuilder => {
                 editBuilder.replace(fullRange, text);
             });
-            
-            log.info('File content replaced successfully');
-            return createResponse('ok');
+
+            if (success) {
+                return responseHandler.success('ok');
+            } else {
+                return responseHandler.failure('Failed to replace file content');
+            }
         } catch (error) {
-            log.error('Error replacing file content', error);
-            return createResponse(null, `Error replacing file content: ${formatError(error)}`);
+            this.log.error('Error replacing file content', error);
+            return responseHandler.failure(`Error replacing file content: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
 }
 
 /**
- * Open file in editor
+ * Open file in editor tool
+ * Inherits from AbstractEditorTools base class to utilize common editor operation functionality
  */
-export class OpenFileInEditorTool extends AbstractMcpTool<ToolParams['openFileInEditor']> {
+export class OpenFileInEditorTool extends AbsEditorTools<ToolParams['openFileInEditor']> {
     constructor() {
         super(
             'open_file_in_editor',
-            'Open the specified file in the editor. Returns an error if the file does not exist or cannot be opened.',
+            'Opens the specified file in the VSCode IDE editor.',
             {
                 type: 'object',
                 properties: {
-                    filePath: { type: 'string' }
+                    pathInProject: {type: 'string'}
                 },
-                required: ['filePath']
+                required: ['pathInProject']
             }
         );
     }
 
-    async handle(args: ToolParams['openFileInEditor']): Promise<Response> {
+    /**
+     * This tool can run without an active editor
+     */
+    protected requiresActiveEditor(): boolean {
+        return false;
+    }
+
+    /**
+     * Execute open file operation (implementing base class abstract method)
+     */
+    protected async execute(_editor: vscode.TextEditor | undefined, args: ToolParams['openFileInEditor']): Promise<Response> {
         try {
-            const { filePath } = args;
-            const normalizedPath = normalizePath(filePath);
-            log.debug(`Attempting to open file: ${normalizedPath}`);
-            
-            try {
-                const fileUri = vscode.Uri.file(normalizedPath);
-                const document = await vscode.workspace.openTextDocument(fileUri);
-                await vscode.window.showTextDocument(document);
-                
-                log.info(`File opened successfully: ${normalizedPath}`);
-                return createResponse('file is opened');
-            } catch (err) {
-                log.warn(`File doesn't exist or can't be opened: ${normalizedPath}`, err);
-                return createResponse(null, 'file doesn\'t exist or can\'t be opened');
+            // Use base class path handling
+            const {absolutePath, isSafe} = await this.preparePath(this.extractPathFromArgs(args));
+            if (!absolutePath || !isSafe) {
+                return responseHandler.failure('Invalid file path or project directory not found');
             }
-        } catch (error) {
-            log.error('Error opening file', error);
-            return createResponse(null, `Error opening file: ${formatError(error)}`);
+
+            const fileUri = vscode.Uri.file(absolutePath);
+            const document = await vscode.workspace.openTextDocument(fileUri);
+            await this.showDocument(document);
+            return responseHandler.success('file is opened');
+        } catch (err) {
+            return responseHandler.failure(`file doesn't exist or can't be opened`);
         }
     }
 }

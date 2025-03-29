@@ -1,30 +1,28 @@
 import * as vscode from 'vscode';
-import {AbstractMcpTool} from '../types/tool';
-import {Response, ToolParams} from '../types';
-import {createResponse, formatError} from '../utils/response';
-import {Logger} from '../utils/logger';
-
-// Create module-specific logger
-const log = Logger.forModule('ActionTools');
+import { AbsTools } from '../types/absTools';
+import { Response, ToolParams } from '../types';
+import { responseHandler } from '../server/responseHandler';
 
 /**
- * List available actions
+ * List available actions tool
+ * Inherits from AbstractTool base class to utilize common tool functionality
  */
-export class ListAvailableActionsTool extends AbstractMcpTool<Record<string, never>> {
+export class ListAvailableActionsTool extends AbsTools<Record<string, never>> {
     constructor() {
         super(
             'list_available_actions',
-            'List all available actions in the IDE editor. Returns an array of action information.',
+            'Lists all available actions in VSCode IDE editor.\nReturns a JSON array of objects containing action information:\n- id: The action ID\n- text: The action presentation text\nUse this tool to discover available actions for execution with execute_action_by_id.',
             {type: 'object', properties: {}}
         );
     }
 
-    async handle(_args: Record<string, never>): Promise<Response> {
+    /**
+     * Core logic for listing available actions (implementing base class abstract method)
+     */
+    protected async executeCore(_args: Record<string, never>): Promise<Response> {
         try {
-            log.debug('Listing available actions');
-            
-            // Note: VS Code API doesn't have a method to directly get all available actions
-            // Here we return a set of most commonly used commands
+            // Note: VS Code API does not provide a method to directly get all available actions
+            // Returns a set of the most common commands
             const commonCommands = [
                 {id: 'workbench.action.files.save', text: 'Save File'},
                 {id: 'workbench.action.files.saveAll', text: 'Save All Files'},
@@ -38,23 +36,23 @@ export class ListAvailableActionsTool extends AbstractMcpTool<Record<string, nev
                 {id: 'workbench.action.terminal.toggleTerminal', text: 'Toggle Terminal'}
             ];
             
-            log.info(`Returning ${commonCommands.length} common IDE actions`);
-            return createResponse(commonCommands);
+            return responseHandler.success(commonCommands);
         } catch (error) {
-            log.error('Error listing actions', error);
-            return createResponse(null, `Error listing actions: ${formatError(error)}`);
+            this.log.error('Error listing actions', error);
+            return responseHandler.failure(`Error listing actions: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
 }
 
 /**
- * Execute action by ID
+ * Execute action by ID tool
+ * Inherits from AbstractTool base class to utilize common tool functionality
  */
-export class ExecuteActionByIdTool extends AbstractMcpTool<ToolParams['executeActionById']> {
+export class ExecuteActionByIdTool extends AbsTools<ToolParams['executeActionById']> {
     constructor() {
         super(
             'execute_action_by_id',
-            'Execute an action in the IDE editor by its ID. Returns an error if the action with the specified ID is not found.',
+            'Executes an action by its ID in VSCode IDE editor.\nRequires an actionId parameter containing the ID of the action to execute.\nReturns one of two possible responses:\n- "ok" if the action was successfully executed\n- "action not found" if the action with the specified ID was not found\nNote: This tool doesn\'t wait for the action to complete.',
             {
                 type: 'object',
                 properties: {
@@ -65,50 +63,63 @@ export class ExecuteActionByIdTool extends AbstractMcpTool<ToolParams['executeAc
         );
     }
 
-    async handle(args: ToolParams['executeActionById']): Promise<Response> {
+    /**
+     * Argument validation
+     */
+    protected validateArgs(args: ToolParams['executeActionById']): void {
+        super.validateArgs(args);
+        
+        if (!args.actionId || args.actionId.trim() === '') {
+            throw new Error('Action ID cannot be empty');
+        }
+    }
+
+    /**
+     * Core logic for executing action by ID (implementing base class abstract method)
+     */
+    protected async executeCore(args: ToolParams['executeActionById']): Promise<Response> {
         try {
             const {actionId} = args;
-            log.debug(`Executing action by ID: ${actionId}`);
 
             // Execute command
             try {
                 await vscode.commands.executeCommand(actionId);
-                log.info(`Successfully executed action: ${actionId}`);
-                return createResponse('ok');
+                return responseHandler.success('ok');
             } catch (err) {
-                log.warn(`Action not found: ${actionId}`, err);
-                return createResponse(null, 'action not found');
+                this.log.warn(`Action not found: ${actionId}`, err);
+                return responseHandler.failure('action not found');
             }
         } catch (error) {
-            log.error('Error executing action', error);
-            return createResponse(null, `Error executing action: ${formatError(error)}`);
+            this.log.error('Error executing action', error);
+            throw error; // Allow base class error handling to capture and format this error
         }
     }
 }
 
 /**
- * Get progress indicators
+ * Get progress indicators tool
+ * Inherits from AbstractTool base class to utilize common tool functionality
  */
-export class GetProgressIndicatorsTool extends AbstractMcpTool<Record<string, never>> {
+export class GetProgressIndicatorsTool extends AbsTools<Record<string, never>> {
     constructor() {
         super(
             'get_progress_indicators',
-            'Get the status of all running progress indicators in the IDE editor. Returns an array of progress information.',
+            'Retrieves the status of all running progress indicators in VSCode IDE editor.\nReturns a JSON array of objects containing progress information:\n- text: The progress text/description\n- fraction: The progress ratio (0.0 to 1.0)\n- indeterminate: Whether the progress is indeterminate\nReturns an empty array if no progress indicators are running.',
             {type: 'object', properties: {}}
         );
     }
 
-    async handle(_args: Record<string, never>): Promise<Response> {
+    /**
+     * Core logic for getting progress indicators (implementing base class abstract method)
+     */
+    protected async executeCore(_args: Record<string, never>): Promise<Response> {
         try {
-            log.debug('Getting progress indicators');
-            
-            // Note: VS Code API doesn't provide direct access to progress indicators
-            // Return an empty array
-            log.info('No progress indicators available through VS Code API');
-            return createResponse([]);
+            // Note: VS Code API does not provide direct access to progress indicators
+            // Returns an empty array
+            return responseHandler.success([]);
         } catch (error) {
-            log.error('Error getting progress indicators', error);
-            return createResponse(null, `Error getting progress indicators: ${formatError(error)}`);
+            this.log.error('Error getting progress indicators', error);
+            throw error; // Allow base class error handling to capture and format this error
         }
     }
 }

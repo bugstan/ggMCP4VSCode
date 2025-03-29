@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
-import * as path from 'path';
+import fs from 'fs';
+import path from 'path';
 
 /**
  * Log level enumeration
@@ -47,7 +47,7 @@ export class Logger {
     private static readonly LOG_FILE_EXT = '.log';
     private static readonly DEFAULT_MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
     private static readonly DEFAULT_MAX_FILES = 5;
-    
+
     private static config: LoggerConfig = {
         level: LogLevel.INFO,
         destination: LogDestination.CONSOLE,
@@ -67,15 +67,15 @@ export class Logger {
             // Load from VS Code configuration if available
             if (vscode && vscode.workspace) {
                 const vsConfig = vscode.workspace.getConfiguration('ggMCP');
-                
+
                 // Parse log level from configuration
                 const configLevel = vsConfig.get<string>('logLevel', 'info');
                 this.config.level = this.parseLogLevel(configLevel);
-                
+
                 // Parse destination from configuration
                 const configDest = vsConfig.get<string>('logDestination', 'console');
                 this.config.destination = this.parseLogDestination(configDest);
-                
+
                 // Get other configuration values
                 this.config.prefix = vsConfig.get<string>('logPrefix', this.DEFAULT_PREFIX);
                 this.config.filePath = vsConfig.get<string>('logFilePath', '');
@@ -84,12 +84,12 @@ export class Logger {
                 this.config.includeTimestamp = vsConfig.get<boolean>('logIncludeTimestamp', true);
                 this.config.includeModule = vsConfig.get<boolean>('logIncludeModule', true);
             }
-            
+
             // Override with custom config if provided
             if (customConfig) {
                 this.config = { ...this.config, ...customConfig };
             }
-            
+
             // Create log directory if needed
             if (this.config.destination !== LogDestination.CONSOLE && this.config.filePath) {
                 const logDir = path.dirname(this.config.filePath);
@@ -97,14 +97,14 @@ export class Logger {
                     fs.mkdirSync(logDir, { recursive: true });
                 }
             }
-            
+
             this.info('System', `Logger initialized with level: ${LogLevel[this.config.level]}, destination: ${this.config.destination}`);
         } catch (err) {
             console.error('Failed to initialize logger:', err);
             // Use default configuration if initialization fails
         }
     }
-    
+
     /**
      * Set logger configuration programmatically
      */
@@ -112,7 +112,7 @@ export class Logger {
         this.config = { ...this.config, ...config };
         this.info('System', `Logger configuration updated: ${JSON.stringify(this.config)}`);
     }
-    
+
     /**
      * Parse log level string to enum value
      */
@@ -128,7 +128,7 @@ export class Logger {
             default: return LogLevel.INFO;
         }
     }
-    
+
     /**
      * Parse log destination string to enum value
      */
@@ -153,19 +153,19 @@ export class Logger {
      */
     private static formatMessage(level: string, module: string, message: string): string {
         let formattedMessage = '';
-        
+
         if (this.config.includeTimestamp) {
             formattedMessage += `[${this.getTimestamp()}] `;
         }
-        
+
         formattedMessage += `[${this.config.prefix}] [${level}]`;
-        
+
         if (this.config.includeModule && module) {
             formattedMessage += ` [${module}]`;
         }
-        
+
         formattedMessage += ` ${message}`;
-        
+
         return formattedMessage;
     }
 
@@ -175,7 +175,7 @@ export class Logger {
     private static shouldLog(level: LogLevel): boolean {
         return level >= this.config.level && this.config.level !== LogLevel.NONE;
     }
-    
+
     /**
      * Write message to configured destinations
      */
@@ -198,9 +198,9 @@ export class Logger {
                     break;
             }
         }
-        
+
         // Write to file if configured
-        if ((this.config.destination === LogDestination.FILE || this.config.destination === LogDestination.BOTH) 
+        if ((this.config.destination === LogDestination.FILE || this.config.destination === LogDestination.BOTH)
             && this.config.filePath) {
             try {
                 this.writeToFile(formattedMessage, args);
@@ -209,7 +209,7 @@ export class Logger {
             }
         }
     }
-    
+
     /**
      * Write log message to file with rotation if needed
      */
@@ -217,7 +217,7 @@ export class Logger {
         if (!this.config.filePath) {
             return;
         }
-        
+
         try {
             // Check if file exists and should be rotated
             if (fs.existsSync(this.config.filePath)) {
@@ -226,7 +226,7 @@ export class Logger {
                     this.rotateLogFile();
                 }
             }
-            
+
             // Format the arguments for file output
             let argsStr = '';
             if (args && args.length > 0) {
@@ -244,14 +244,14 @@ export class Logger {
                 }).join(' ');
                 argsStr = ' ' + argsStr;
             }
-            
+
             // Append to log file
             fs.appendFileSync(this.config.filePath, message + argsStr + '\n');
         } catch (error) {
             console.error('Error writing to log file:', error);
         }
     }
-    
+
     /**
      * Rotate log files when size limit is reached
      */
@@ -259,29 +259,29 @@ export class Logger {
         if (!this.config.filePath) {
             return;
         }
-        
+
         try {
             const maxFiles = this.config.maxFiles || this.DEFAULT_MAX_FILES;
             const baseFilePath = this.config.filePath;
             const dirName = path.dirname(baseFilePath);
             const baseName = path.basename(baseFilePath, this.LOG_FILE_EXT);
-            
+
             // Delete oldest file if it exists
             const oldestFile = path.join(dirName, `${baseName}.${maxFiles - 1}${this.LOG_FILE_EXT}`);
             if (fs.existsSync(oldestFile)) {
                 fs.unlinkSync(oldestFile);
             }
-            
+
             // Shift existing log files
             for (let i = maxFiles - 2; i >= 0; i--) {
                 const oldFile = path.join(dirName, `${baseName}${i > 0 ? '.' + i : ''}${this.LOG_FILE_EXT}`);
                 const newFile = path.join(dirName, `${baseName}.${i + 1}${this.LOG_FILE_EXT}`);
-                
+
                 if (fs.existsSync(oldFile)) {
                     fs.renameSync(oldFile, newFile);
                 }
             }
-            
+
             // Create new empty log file
             fs.writeFileSync(this.config.filePath, '');
         } catch (error) {
@@ -338,7 +338,7 @@ export class Logger {
     public static error(module: string, message: string, error?: any, ...args: any[]): void {
         if (this.shouldLog(LogLevel.ERROR)) {
             const formattedMessage = this.formatMessage('ERROR', module, message);
-            
+
             if (error) {
                 if (error instanceof Error) {
                     this.writeLog(formattedMessage, LogLevel.ERROR, [
@@ -353,7 +353,7 @@ export class Logger {
             }
         }
     }
-    
+
     /**
      * Log fatal level message
      * @param module Module name
@@ -364,7 +364,7 @@ export class Logger {
     public static fatal(module: string, message: string, error?: any, ...args: any[]): void {
         if (this.shouldLog(LogLevel.FATAL)) {
             const formattedMessage = this.formatMessage('FATAL', module, message);
-            
+
             if (error) {
                 if (error instanceof Error) {
                     this.writeLog(formattedMessage, LogLevel.FATAL, [
@@ -400,7 +400,7 @@ export class Logger {
             fatal: (message: string, error?: any, ...args: any[]) => this.fatal(module, message, error, ...args)
         };
     }
-    
+
     /**
      * Clear all log files
      */
@@ -408,18 +408,18 @@ export class Logger {
         if (!this.config.filePath) {
             return false;
         }
-        
+
         try {
             const baseFilePath = this.config.filePath;
             const dirName = path.dirname(baseFilePath);
             const baseName = path.basename(baseFilePath, this.LOG_FILE_EXT);
             const maxFiles = this.config.maxFiles || this.DEFAULT_MAX_FILES;
-            
+
             // Delete main log file
             if (fs.existsSync(baseFilePath)) {
                 fs.unlinkSync(baseFilePath);
             }
-            
+
             // Delete rotated log files
             for (let i = 1; i < maxFiles; i++) {
                 const rotatedFile = path.join(dirName, `${baseName}.${i}${this.LOG_FILE_EXT}`);
@@ -427,14 +427,14 @@ export class Logger {
                     fs.unlinkSync(rotatedFile);
                 }
             }
-            
+
             return true;
         } catch (error) {
             console.error('Error clearing log files:', error);
             return false;
         }
     }
-    
+
     /**
      * Get full log content from all log files
      * @param maxLines Maximum number of lines to retrieve (most recent)
@@ -443,26 +443,26 @@ export class Logger {
         if (!this.config.filePath || !fs.existsSync(this.config.filePath)) {
             return '';
         }
-        
+
         try {
             const baseFilePath = this.config.filePath;
             const dirName = path.dirname(baseFilePath);
             const baseName = path.basename(baseFilePath, this.LOG_FILE_EXT);
             const maxFiles = this.config.maxFiles || this.DEFAULT_MAX_FILES;
-            
+
             let allLogs = '';
-            
+
             // Read rotated log files in order (oldest first)
             for (let i = maxFiles - 1; i >= 0; i--) {
-                const logFile = i === 0 
-                    ? baseFilePath 
+                const logFile = i === 0
+                    ? baseFilePath
                     : path.join(dirName, `${baseName}.${i}${this.LOG_FILE_EXT}`);
-                
+
                 if (fs.existsSync(logFile)) {
                     allLogs += fs.readFileSync(logFile, 'utf8') + '\n';
                 }
             }
-            
+
             // Limit to maximum number of lines if specified
             if (maxLines && maxLines > 0) {
                 const lines = allLogs.split('\n');
@@ -470,7 +470,7 @@ export class Logger {
                     return lines.slice(-maxLines).join('\n');
                 }
             }
-            
+
             return allLogs;
         } catch (error) {
             console.error('Error reading log files:', error);

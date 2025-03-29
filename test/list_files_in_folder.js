@@ -1,54 +1,66 @@
-const { findMCPServerPort, makeRequest, buildRequestBody, displayResponse, getStandardApiPath } = require('./utils');
+const { findMCPServerPort, makeRequest, buildRequestBody, colors, getStandardApiPath } = require('./utils');
 
 /**
- * 测试目录列表功能
- * @param {number} port 端口号
- * @param {string} path 要列出的目录路径
+ * Test listing files in a folder
+ * @param {number} port Port number
+ * @param {string} path Directory path to list
  */
 async function testListFilesInFolder(port, path = "/") {
-    console.log(`\n========== 测试目录列表功能 ==========`);
-    console.log(`请求路径: ${path}`);
+    console.log(`\n========== Test List Files In Folder ==========`);
+    console.log(`Target Path: ${path}`);
     
     try {
-        // 构造请求体
+        // Build request body
         const requestBody = buildRequestBody("list_files_in_folder", { pathInProject: path });
         
-        // 获取标准API路径
+        // Get standard API path
         const apiPath = getStandardApiPath('list_files_in_folder');
         
-        // 打印请求信息
-        console.log('\n请求信息:');
-        console.log(`URL: http://localhost:${port}${apiPath}`);
-        console.log(`Method: POST`);
-        console.log(`Headers: Content-Type: application/json, Accept: application/json`);
-        console.log(`请求数据:\n${JSON.stringify(requestBody, null, 2)}`);
+        // Display API endpoint (blue)
+        console.log(`\n${colors.blue}API Endpoint: http://localhost:${port}${apiPath}${colors.reset}`);
         
-        // 发送请求
-        console.log('\n发送请求...');
+        // Show request information
+        console.log(`\nOriginal Request:\n${JSON.stringify(requestBody, null, 2)}`);
+        
+        // Send request
         const response = await makeRequest(port, apiPath, 'POST', requestBody);
-        console.log('收到响应。');
         
-        // 只显示原始数据和JSON格式化后的输出
-        displayResponse(response);
+        // Display response (green for success, red for failure)
+        const isSuccess = response.statusCode >= 200 && response.statusCode < 300 && 
+                         (!response.parsedResponse || !response.parsedResponse.error);
+        
+        console.log(`\nOriginal Response:`);
+        if (isSuccess) {
+            console.log(`${colors.green}${JSON.stringify(response.parsedResponse, null, 2)}${colors.reset}`);
+        } else {
+            console.log(`${colors.red}${JSON.stringify(response.parsedResponse, null, 2)}${colors.reset}`);
+        }
+        
+        // Display request result at the bottom
+        console.log(`\nRequest Result: ${isSuccess ? colors.green + 'SUCCESS' + colors.reset : colors.red + 'FAILED' + colors.reset}`);
         
         return response.parsedResponse;
     } catch (error) {
-        console.error(`\n测试目录列表功能时出错:`, error);
+        console.log(`\nOriginal Response:`);
+        console.log(`${colors.red}Error: ${error.message}${colors.reset}`);
+        
+        // Display request result at the bottom
+        console.log(`\nRequest Result: ${colors.red}FAILED${colors.reset}`);
         throw error;
     }
 }
 
-// 如果直接运行此脚本
+// If running directly
 if (require.main === module) {
     (async () => {
         try {
             const port = await findMCPServerPort();
             
-            // 获取路径参数
+            // Get path parameter
             const args = process.argv.slice(2);
-            let path = "/";  // 默认路径
+            let path = "/";  // Default path
             
-            // 查找路径参数
+            // Find path parameter
             for (let i = 0; i < args.length; i++) {
                 if (args[i].startsWith('--path=')) {
                     path = args[i].split('=')[1];
@@ -61,7 +73,6 @@ if (require.main === module) {
             
             await testListFilesInFolder(port, path);
         } catch (error) {
-            console.error(`测试失败: ${error.message}`);
             process.exit(1);
         }
     })();

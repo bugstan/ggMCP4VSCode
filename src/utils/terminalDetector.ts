@@ -1,4 +1,4 @@
-import * as os from 'os';
+import os from 'os';
 import * as vscode from 'vscode';
 import { exec } from 'child_process';
 import { Logger } from './logger';
@@ -56,7 +56,7 @@ export class TerminalDetector {
      */
     public static getOSType(): OSType {
         const platform = os.platform();
-        
+
         if (platform === 'win32') {
             return OSType.Windows;
         } else if (platform === 'darwin') {
@@ -74,7 +74,7 @@ export class TerminalDetector {
     public static getOSVersion(): string {
         return os.release();
     }
-    
+
     /**
      * Check if terminal is VS Code's integrated terminal
      * @param terminal VSCode terminal instance
@@ -84,39 +84,57 @@ export class TerminalDetector {
         // but we can infer it from the name or use a command detection trick
         const name = terminal.name.toLowerCase();
         const isIntegrated = !name.includes('external');
-        
+
         return isIntegrated;
     }
-    
+
     /**
      * Detect terminal type using environment variables
      * @param callback Callback function that receives the detected terminal type
      */
     public static detectTerminalType(callback: (terminalType: TerminalType) => void): void {
-        const osType = this.getOSType();
-        
-        switch (osType) {
-            case OSType.Windows:
-                this.detectWindowsTerminal(callback);
-                break;
-            case OSType.macOS:
-                this.detectMacTerminal(callback);
-                break;
-            case OSType.Linux:
-                this.detectLinuxTerminal(callback);
-                break;
-            default:
+        try {
+            const osType = this.getOSType();
+
+            // Set a default timeout in case detection methods fail
+            const timeout = setTimeout(() => {
+                log.warn('Terminal detection timeout, using fallback');
                 callback(TerminalType.Other);
+            }, 5000);
+
+            // Create a wrapper that ensures callback is only called once
+            const safeCallback = (terminalType: TerminalType) => {
+                clearTimeout(timeout);
+                callback(terminalType);
+            };
+
+            switch (osType) {
+                case OSType.Windows:
+                    this.detectWindowsTerminal(safeCallback);
+                    break;
+                case OSType.macOS:
+                    this.detectMacTerminal(safeCallback);
+                    break;
+                case OSType.Linux:
+                    this.detectLinuxTerminal(safeCallback);
+                    break;
+                default:
+                    clearTimeout(timeout);
+                    callback(TerminalType.Other);
+            }
+        } catch (error) {
+            log.error('Error in detectTerminalType', error);
+            callback(TerminalType.Other);
         }
     }
-    
+
     /**
      * Check if current terminal is the default for the OS
      * @param terminalType Terminal type to check
      */
     public static isDefaultTerminal(terminalType: TerminalType): boolean {
         const osType = this.getOSType();
-        
+
         switch (osType) {
             case OSType.Windows:
                 return terminalType === TerminalType.CMD;
@@ -129,47 +147,65 @@ export class TerminalDetector {
                 return false;
         }
     }
-    
+
     /**
      * Get complete terminal information
+     * @param terminal VS Code terminal instance (optional)
      * @param callback Callback function that receives terminal information
      */
     public static getTerminalInfo(terminal?: vscode.Terminal, callback?: (info: TerminalInfo) => void): void {
-        const osType = this.getOSType();
-        const osVersion = this.getOSVersion();
-        
-        // If we don't have a terminal instance, we can't check if it's integrated
-        const isIntegrated = terminal ? this.isIntegratedTerminal(terminal) : false;
-        
-        this.detectTerminalType((terminalType) => {
-            const isDefault = this.isDefaultTerminal(terminalType);
-            
-            const info: TerminalInfo = {
-                osType,
-                osVersion,
-                terminalType,
-                isIntegratedTerminal: isIntegrated,
-                isDefault
-            };
-            
-            if (callback) {
-                callback(info);
+        try {
+            if (!callback) {
+                log.warn('No callback provided to getTerminalInfo');
+                return;
             }
-        });
+
+            const osType = this.getOSType();
+            const osVersion = this.getOSVersion();
+
+            // If we don't have a terminal instance, we can't check if it's integrated
+            const isIntegrated = terminal ? this.isIntegratedTerminal(terminal) : false;
+
+            this.detectTerminalType((terminalType) => {
+                const isDefault = this.isDefaultTerminal(terminalType);
+
+                const info: TerminalInfo = {
+                    osType,
+                    osVersion,
+                    terminalType,
+                    isIntegratedTerminal: isIntegrated,
+                    isDefault
+                };
+
+                callback(info);
+            });
+        } catch (error) {
+            log.error('Error in getTerminalInfo', error);
+
+            // Return basic info in case of error
+            if (callback) {
+                callback({
+                    osType: this.getOSType(),
+                    terminalType: TerminalType.Other,
+                    isIntegratedTerminal: false,
+                    isDefault: false
+                });
+            }
+        }
     }
-    
+
     /**
      * Detect Windows terminal type
      */
     private static detectWindowsTerminal(callback: (terminalType: TerminalType) => void): void {
         // Check for common Windows environment variables
         const isPowerShell = process.env.PSModulePath !== undefined;
-        
+
         if (isPowerShell) {
             callback(TerminalType.PowerShell);
             return;
         }
-        
+
         // Try to detect via a command
         exec('echo %ComSpec%', (error, stdout) => {
             if (error) {
@@ -177,9 +213,9 @@ export class TerminalDetector {
                 callback(TerminalType.Other);
                 return;
             }
-            
+
             const output = stdout.trim().toLowerCase();
-            
+
             if (output.includes('cmd.exe')) {
                 callback(TerminalType.CMD);
             } else if (output.includes('powershell.exe')) {
@@ -191,14 +227,14 @@ export class TerminalDetector {
             }
         });
     }
-    
+
     /**
      * Detect macOS terminal type
      */
     private static detectMacTerminal(callback: (terminalType: TerminalType) => void): void {
         // Check for shell environment variable
         const shellEnv = process.env.SHELL || '';
-        
+
         if (shellEnv.includes('zsh')) {
             callback(TerminalType.Zsh);
             return;
@@ -209,7 +245,7 @@ export class TerminalDetector {
             callback(TerminalType.Fish);
             return;
         }
-        
+
         // Try to detect via a command
         exec('ps -p $PPID -o comm=', (error, stdout) => {
             if (error) {
@@ -217,9 +253,9 @@ export class TerminalDetector {
                 callback(TerminalType.Other);
                 return;
             }
-            
+
             const output = stdout.trim().toLowerCase();
-            
+
             if (output.includes('terminal')) {
                 callback(TerminalType.Terminal);
             } else if (output.includes('iterm')) {
@@ -235,14 +271,14 @@ export class TerminalDetector {
             }
         });
     }
-    
+
     /**
      * Detect Linux terminal type
      */
     private static detectLinuxTerminal(callback: (terminalType: TerminalType) => void): void {
         // Check for shell environment variable
         const shellEnv = process.env.SHELL || '';
-        
+
         if (shellEnv.includes('zsh')) {
             callback(TerminalType.Zsh);
             return;
@@ -253,11 +289,11 @@ export class TerminalDetector {
             callback(TerminalType.Fish);
             return;
         }
-        
+
         // Try to detect via terminal environment variables
         if (process.env.TERM_PROGRAM) {
             const termProgram = process.env.TERM_PROGRAM.toLowerCase();
-            
+
             if (termProgram.includes('gnome')) {
                 callback(TerminalType.Gnome);
                 return;
@@ -269,7 +305,7 @@ export class TerminalDetector {
                 return;
             }
         }
-        
+
         // Try command line detection as fallback
         exec('ps -p $PPID -o comm=', (error, stdout) => {
             if (error) {
@@ -277,9 +313,9 @@ export class TerminalDetector {
                 callback(TerminalType.Other);
                 return;
             }
-            
+
             const output = stdout.trim().toLowerCase();
-            
+
             if (output.includes('gnome')) {
                 callback(TerminalType.Gnome);
             } else if (output.includes('konsole')) {
