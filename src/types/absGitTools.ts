@@ -1,5 +1,5 @@
 import {Response} from './index';
-import {AbstractTool} from './absTool';
+import {AbsTools} from './absTools';
 import {responseHandler} from '../server/responseHandler';
 import {withGitRepository, executeGitCommand, escapeShellArg} from '../utils/gitUtils';
 
@@ -7,11 +7,17 @@ import {withGitRepository, executeGitCommand, escapeShellArg} from '../utils/git
  * Base class for Git operation tools
  * Provides Git repository access and command execution functionality
  */
-export abstract class AbstractGitTools<T = any> extends AbstractTool<T> {
+export abstract class AbsGitTools<T = any> extends AbsTools<T> {
     /**
      * Core implementation of Git operation logic
      */
     protected async executeCore(args: T): Promise<Response> {
+        // Check if workspace is valid
+        const workspace = this.validateWorkspace();
+        if (!workspace.valid) {
+            return responseHandler.failure(workspace.error || 'No valid workspace found');
+        }
+        
         // Use withGitRepository helper function
         return await withGitRepository(async (repository) => {
             if (!repository) {

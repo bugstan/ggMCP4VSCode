@@ -1,14 +1,18 @@
 import * as vscode from 'vscode';
-import { AbstractFileTools } from '../types/absFileTools';
+import { AbsFileTools } from '../types/absFileTools';
 import { Response, ToolParams } from '../types';
 import { responseHandler } from '../server/responseHandler';
 import { getDirName, joinPaths } from '../utils/pathUtils';
+import { CacheManager } from '../utils/cacheManager';
+
+// Create file cache instance
+const fileCache = new CacheManager<string>();
 
 /**
  * Get file content tool
  * Inherits from AbstractFileTools base class to utilize common file operation functionality
  */
-export class GetFileTextByPathTool extends AbstractFileTools<ToolParams['getFileTextByPath']> {
+export class GetFileTextByPathTool extends AbsFileTools<ToolParams['getFileTextByPath']> {
     constructor() {
         super(
             'get_file_text_by_path',
@@ -34,12 +38,10 @@ export class GetFileTextByPathTool extends AbstractFileTools<ToolParams['getFile
 
             return responseHandler.success({
                 content: text,
-                path: absolutePath,
-                relativePath: this.getRelativePath(absolutePath)
+                pathInProject: this.getRelativePath(absolutePath)
             });
         } catch (err) {
-            this.log.warn(`File not found: ${absolutePath}`, err);
-            return responseHandler.failure('file not found');
+            return this.handleFileSystemError(err, absolutePath, 'reading');
         }
     }
 }
@@ -48,7 +50,7 @@ export class GetFileTextByPathTool extends AbstractFileTools<ToolParams['getFile
  * Replace file content tool
  * Inherits from AbstractFileTools base class to utilize common file operation functionality
  */
-export class ReplaceFileTextByPathTool extends AbstractFileTools<ToolParams['replaceFileTextByPath']> {
+export class ReplaceFileTextByPathTool extends AbsFileTools<ToolParams['replaceFileTextByPath']> {
     constructor() {
         super(
             'replace_file_text_by_path',
@@ -71,22 +73,18 @@ export class ReplaceFileTextByPathTool extends AbstractFileTools<ToolParams['rep
         const { text } = args;
 
         try {
-            // Use optimized file write method
-            const { writeTimeMs, size } = await this.writeFileWithPerformanceTracking(
-                absolutePath,
-                text,
-                { reloadAfterWrite: true }
-            );
+            const fileUri = vscode.Uri.file(absolutePath);
+            await this.writeFileSimple(fileUri, text, {
+                checkExists: true,
+                mustExist: true
+            });
 
             return responseHandler.success({
-                path: absolutePath,
-                relativePath: this.getRelativePath(absolutePath),
-                size,
-                operationTimeMs: writeTimeMs
+                pathInProject: this.getRelativePath(absolutePath),
+                size: text.length
             });
         } catch (err) {
-            this.log.error(`Error writing file: ${absolutePath}`, err);
-            return responseHandler.failure(`Error writing file: ${err instanceof Error ? err.message : String(err)}`);
+            return this.handleFileSystemError(err, absolutePath, 'writing');
         }
     }
 }
@@ -95,7 +93,7 @@ export class ReplaceFileTextByPathTool extends AbstractFileTools<ToolParams['rep
  * Create new file tool
  * Inherits from AbstractFileTools base class to utilize common file operation functionality
  */
-export class CreateNewFileWithTextTool extends AbstractFileTools<ToolParams['createNewFileWithText']> {
+export class CreateNewFileWithTextTool extends AbsFileTools<ToolParams['createNewFileWithText']> {
     constructor() {
         super(
             'create_new_file_with_text',
@@ -118,32 +116,22 @@ export class CreateNewFileWithTextTool extends AbstractFileTools<ToolParams['cre
         const { text } = args;
 
         try {
-            // Create directory
-            await this.measurePerformance(
-                'Directory creation',
-                async () => {
-                    const dirUri = vscode.Uri.file(getDirName(absolutePath));
-                    await vscode.workspace.fs.createDirectory(dirUri);
-                    return true;
-                }
-            );
+            // Ensure directory exists
+            const dirUri = vscode.Uri.file(getDirName(absolutePath));
+            await vscode.workspace.fs.createDirectory(dirUri);
 
-            // Use optimized file write method
-            const { writeTimeMs, size } = await this.writeFileWithPerformanceTracking(
-                absolutePath,
-                text,
-                { reloadAfterWrite: false }
-            );
+            // Write file
+            const fileUri = vscode.Uri.file(absolutePath);
+            await this.writeFileSimple(fileUri, text, {
+                checkExists: true,
+                mustExist: false
+            });
 
-            this.log.info(`Successfully created file: ${absolutePath} in ${writeTimeMs}ms of size ${size}`);
             return responseHandler.success({
-                path: absolutePath,
-                relativePath: this.getRelativePath(absolutePath),
-                operationTimeMs: writeTimeMs
+                pathInProject: this.getRelativePath(absolutePath)
             });
         } catch (err) {
-            this.log.error(`Failed to create file: ${absolutePath}`, err);
-            return responseHandler.failure(`Failed to create file: ${err instanceof Error ? err.message : String(err)}`);
+            return this.handleFileSystemError(err, absolutePath, 'creating');
         }
     }
 }
@@ -152,7 +140,7 @@ export class CreateNewFileWithTextTool extends AbstractFileTools<ToolParams['cre
  * List folder contents tool
  * Inherits from AbstractFileTools base class to utilize common file operation functionality
  */
-export class ListFilesInFolderTool extends AbstractFileTools<ToolParams['listFilesInFolder']> {
+export class ListFilesInFolderTool extends AbsFileTools<ToolParams['listFilesInFolder']> {
     constructor() {
         super(
             'list_files_in_folder',
@@ -172,6 +160,12 @@ export class ListFilesInFolderTool extends AbstractFileTools<ToolParams['listFil
      */
     protected async execute(absolutePath: string, _args: ToolParams['listFilesInFolder']): Promise<Response> {
         try {
+            // Check if path is safe and within project directory
+            const { isSafe } = await this.preparePath(absolutePath);
+            if (!isSafe) {
+                return responseHandler.failure('Path is outside project directory');
+            }
+
             // Check if path is a directory
             const dirUri = vscode.Uri.file(absolutePath);
             const stat = await vscode.workspace.fs.stat(dirUri);
@@ -198,7 +192,7 @@ export class ListFilesInFolderTool extends AbstractFileTools<ToolParams['listFil
                     result.push({
                         name: name,
                         type: fileType === vscode.FileType.Directory ? 'directory' : 'file',
-                        path: entryRelPath
+                        pathInProject: entryRelPath
                     });
                 } catch (entryErr) {
                     // Skip entries that cannot be processed
@@ -217,9 +211,141 @@ export class ListFilesInFolderTool extends AbstractFileTools<ToolParams['listFil
             this.log.info(`Found ${result.length} items in directory: ${absolutePath}, time: ${timeMs.toFixed(2)}ms`);
             return responseHandler.success(result);
         } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : String(err);
-            this.log.error(`Cannot access path: ${absolutePath}`, err);
-            return responseHandler.failure(`Cannot access path: ${absolutePath} (${errorMessage})`);
+            return this.handleFileSystemError(err, absolutePath, 'listing', true);
+        }
+    }
+}
+
+/**
+ * Replace file content at specific position tool
+ * Inherits from AbstractFileTools base class to utilize common file operation functionality
+ */
+export class ReplaceFileContentAtPositionTool extends AbsFileTools<ToolParams['replace_file_content_at_position']> {
+    constructor() {
+        super(
+            'replace_file_content_at_position',
+            'Replace a portion of file content at specified line positions. This tool allows replacing content between specific lines in a file, optionally with a character offset within the line. The replacement is precise and only affects the specified range, leaving the rest of the file unchanged.',
+            {
+                type: 'object',
+                properties: {
+                    pathInProject: { type: 'string' },
+                    startLine: { type: 'number' },
+                    endLine: { type: 'number' },
+                    content: { type: 'string' },
+                    offset: { type: 'number', optional: true }
+                },
+                required: ['pathInProject', 'startLine', 'endLine', 'content']
+            }
+        );
+    }
+
+    /**
+     * Execute file content replacement operation (implementing base class abstract method)
+     */
+    protected async execute(absolutePath: string, args: ToolParams['replace_file_content_at_position']): Promise<Response> {
+        const { startLine, endLine, content, offset = 0 } = args;
+
+        try {
+            const fileUri = vscode.Uri.file(absolutePath);
+
+            // Read current file content
+            const currentContent = await this.readFile(fileUri);
+            const lines = currentContent.split('\n');
+
+            // Validate line numbers
+            if (startLine < 1 || endLine > lines.length || startLine > endLine) {
+                return responseHandler.failure('Invalid line numbers');
+            }
+
+            // Convert to 0-based index
+            const startIndex = startLine - 1;
+            const endIndex = endLine - 1;
+
+            // Replace content at specified position
+            if (startLine === endLine) {
+                // Single line replacement
+                const lineToModify = lines[startIndex] as string;
+                const newLine = lineToModify.substring(0, offset) + content + lineToModify.substring(offset + content.length);
+                lines[startIndex] = newLine;
+            } else {
+                // Multi-line replacement
+                const newLines = content.split('\n');
+                lines.splice(startIndex, endIndex - startIndex + 1, ...newLines);
+            }
+
+            // Join lines back together
+            const newContent = lines.join('\n');
+
+            // Write updated content
+            await this.writeFileSimple(fileUri, newContent, {
+                checkExists: true,
+                mustExist: true
+            });
+
+            return responseHandler.success('ok');
+        } catch (err) {
+            return this.handleFileSystemError(err, absolutePath, 'replacing content in');
+        }
+    }
+}
+
+/**
+ * Append content to file tool
+ * Inherits from AbstractFileTools base class to utilize common file operation functionality
+ */
+export class AppendFileContentTool extends AbsFileTools<ToolParams['appendFileContent']> {
+    constructor() {
+        super(
+            'append_file_content',
+            'Append content to the end of a file. Returns an error if the file does not exist or cannot be accessed.',
+            {
+                type: 'object',
+                properties: {
+                    pathInProject: {type: 'string'},
+                    content: {type: 'string'}
+                },
+                required: ['pathInProject', 'content']
+            }
+        );
+    }
+
+    /**
+     * Execute file append operation (implementing base class abstract method)
+     */
+    protected async execute(absolutePath: string, args: ToolParams['appendFileContent']): Promise<Response> {
+        const {content} = args;
+
+        try {
+            const fileUri = vscode.Uri.file(absolutePath);
+
+            // Check if file exists
+            if (!(await this.fileExists(fileUri))) {
+                return responseHandler.failure('File does not exist');
+            }
+
+            // Read existing content
+            const existingContent = await this.readFile(fileUri);
+
+            // Append new content
+            const newContent = existingContent + content;
+
+            // Write back to file
+            await this.writeFileSimple(fileUri, newContent, {
+                checkExists: true,
+                mustExist: true
+            });
+
+            // Handle cache update asynchronously
+            setImmediate(() => {
+                fileCache.delete(absolutePath);
+            });
+
+            return responseHandler.success({
+                pathInProject: this.getRelativePath(absolutePath),
+                size: newContent.length
+            });
+        } catch (err) {
+            return this.handleFileSystemError(err, absolutePath, 'appending to');
         }
     }
 }

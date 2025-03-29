@@ -1,4 +1,4 @@
-import { AbstractTerminalTools } from '../types/absTerminalTools';
+import { AbsTerminalTools } from '../types/absTerminalTools';
 import { Response } from '../types';
 import { responseHandler } from '../server/responseHandler';
 
@@ -6,7 +6,7 @@ import { responseHandler } from '../server/responseHandler';
  * Execute terminal command tool
  * Inherits from AbstractTerminalTools base class to utilize common terminal operation functionality
  */
-export class ExecuteTerminalCommandTool extends AbstractTerminalTools<{
+export class ExecuteTerminalCommandTool extends AbsTerminalTools<{
     command: string;
 }> {
     constructor() {
@@ -57,7 +57,7 @@ export class ExecuteTerminalCommandTool extends AbstractTerminalTools<{
  * Wait for specified milliseconds tool
  * Inherits from AbstractTerminalTools base class to utilize common terminal operation functionality
  */
-export class WaitTool extends AbstractTerminalTools<{
+export class WaitTool extends AbsTerminalTools<{
     milliseconds: number;
 }> {
     constructor() {
@@ -103,7 +103,7 @@ export class WaitTool extends AbstractTerminalTools<{
  * Run command in background tool
  * Inherits from AbstractTerminalTools base class to utilize common terminal operation functionality
  */
-export class RunCommandOnBackgroundTool extends AbstractTerminalTools<{
+export class RunCommandOnBackgroundTool extends AbsTerminalTools<{
     command: string;
     cwd?: string;
     env?: Record<string, string | undefined>;

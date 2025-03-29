@@ -16,8 +16,9 @@ Supercharge your AI assistants for VSCode! This extension enables a Model Contex
 - **Terminal Operations** - Allow AI assistants to run terminal commands and get results (**Now with output capture in VS Code 1.93+**)
 - **Git Integration** - Check change status, commit history
 
-## 🆕 What's New in 1.0.4
+## 🆕 What's New in 1.1.0
 
+- **Improved Path Handling** - Better cross-platform compatibility and path standardization with the new `pathInProject` parameter
 - **Terminal Shell Integration API Support** - Takes advantage of VS Code 1.93+'s new Shell Integration API
 - **Command Output Capture** - AI assistants can now execute commands and get their output
 - **Enhanced Terminal Tools** - Better terminal text access and command execution

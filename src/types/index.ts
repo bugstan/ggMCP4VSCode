@@ -17,19 +17,34 @@ export type ToolHandler = (args: any) => Promise<Response>;
 export interface ToolParams {
     // File tool parameters
     createNewFileWithText: { pathInProject: string, text: string };
-    findFilesByNameSubstring: { nameSubstring: string };
+    findFilesByNameSubstring: { nameSubstring: string, caseSensitive?: boolean };
     getFileTextByPath: { pathInProject: string };
     replaceFileTextByPath: { pathInProject: string, text: string };
+    replace_file_content_at_position: {
+        pathInProject: string,
+        startLine: number,
+        endLine: number,
+        content: string,
+        offset?: number
+    };
     listFilesInFolder: { pathInProject: string };
-    searchInFilesContent: { searchText: string };
+    searchInFilesContent: { searchText: string, caseSensitive?: boolean };
+    appendFileContent: {
+        pathInProject: string,
+        content: string
+    };
+
+    // Project tool parameters
+    getProjectModules: Record<string, never>;
+    getProjectDependencies: Record<string, never>;
 
     // Editor tool parameters
     replaceSelectedText: { text: string };
     replaceCurrentFileText: { text: string };
-    openFileInEditor: { filePath: string };
+    openFileInEditor: { pathInProject: string };
 
     // Debug tool parameters
-    toggleDebuggerBreakpoint: { filePathInProject: string, line: number };
+    toggleDebuggerBreakpoint: { pathInProject: string, line: number };
     runConfiguration: { configName: string };
 
     // Terminal tool parameters

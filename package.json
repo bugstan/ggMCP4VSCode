@@ -102,12 +102,13 @@
         "description": "This extension requires workspace trust to access the file system and execute commands"
     },
     "scripts": {
-        "vscode:prepublish": "npm run compile && npm run update-readme",
+        "version": "node scripts/version.js",
+        "build": "npm run version && tsc",
+        "vscode:prepublish": "npm run compile && npm run version",
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
         "lint": "eslint . --ext .ts",
         "test": "node ./test/run-all-tests.js",
-        "update-readme": "node update-readme.js",
         "package": "vsce package"
     },
     "devDependencies": {

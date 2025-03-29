@@ -10,7 +10,9 @@ import {
     GetFileTextByPathTool,
     ReplaceFileTextByPathTool,
     CreateNewFileWithTextTool,
-    ListFilesInFolderTool
+    ListFilesInFolderTool,
+    ReplaceFileContentAtPositionTool,
+    AppendFileContentTool
 } from './tools/fileReadWriteTools';
 import {
     SearchInFilesContentTool,
@@ -132,7 +134,9 @@ export class ToolManager {
             new GetFileTextByPathTool(),
             new ReplaceFileTextByPathTool(),
             new ListFilesInFolderTool(),
+            new ReplaceFileContentAtPositionTool(),
             new SearchInFilesContentTool(),
+            new AppendFileContentTool(),
 
             // Debug tools
             new ToggleDebuggerBreakpointTool(),

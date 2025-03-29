@@ -1,4 +1,4 @@
-import {AbstractGitTools} from '../types/absGitTools';
+import {AbsGitTools} from '../types/absGitTools';
 import {Response, ToolParams} from '../types';
 import {responseHandler} from '../server/responseHandler';
 import {toRelativePath} from '../utils/pathUtils';
@@ -7,7 +7,7 @@ import {toRelativePath} from '../utils/pathUtils';
  * Get project version control status tool
  * Inherits from AbstractGitTools base class to utilize common Git operation functionality
  */
-export class GetProjectVcsStatusTool extends AbstractGitTools {
+export class GetProjectVcsStatusTool extends AbsGitTools {
     constructor() {
         super(
             'get_project_vcs_status',
@@ -52,7 +52,7 @@ export class GetProjectVcsStatusTool extends AbstractGitTools {
                 const statusDesc = this.formatGitStatus(statusCode);
 
                 return {
-                    path: relativePath || path,
+                    pathInProject: relativePath || path,
                     type: statusDesc
                 };
             });
@@ -70,7 +70,7 @@ export class GetProjectVcsStatusTool extends AbstractGitTools {
  * Find commit by message tool
  * Inherits from AbstractGitTools base class to utilize common Git operation functionality
  */
-export class FindCommitByMessageTool extends AbstractGitTools<ToolParams['findCommitByMessage']> {
+export class FindCommitByMessageTool extends AbsGitTools<ToolParams['findCommitByMessage']> {
     constructor() {
         super(
             'find_commit_by_message',

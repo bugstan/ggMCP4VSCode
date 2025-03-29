@@ -1,27 +1,67 @@
 import * as vscode from 'vscode';
 import {Response} from './index';
-import {AbstractTool} from './absTool';
+import {AbsTools} from './absTools';
 import {responseHandler} from '../server/responseHandler';
-import {normalizePath, toAbsolutePathSafe, isPathWithinProject, toRelativePath} from '../utils/pathUtils';
 import {FileOperationPerformance} from '../utils/performanceMonitor';
 import {FileCache} from '../server/cache/fileCache';
 import {FileReloader} from '../utils/fileReloader';
 import path from 'path';
+import {EventEmitter} from 'events';
 
 /**
  * Base class for file operation tools
  * Provides file path handling, security checks, and performance monitoring functionality
  */
-export abstract class AbstractFileTools<T extends Record<string, any> = any> extends AbstractTool<T> {
+export abstract class AbsFileTools<T extends Record<string, any> = any> extends AbsTools<T> {
+    // Add static encoder instances
+    private static readonly textEncoder = new TextEncoder();
+    private static readonly textDecoder = new TextDecoder();
+    protected eventEmitter: EventEmitter;
+
+    constructor(
+        name: string,
+        description: string,
+        parameters: any
+    ) {
+        super(name, description, parameters);
+        this.eventEmitter = new EventEmitter();
+    }
+
+    /**
+     * Emit an event
+     */
+    protected emit(event: string, data: any): void {
+        this.eventEmitter.emit(event, data);
+    }
+
+    /**
+     * Add event listener
+     */
+    public on(event: string, listener: (data: any) => void): void {
+        this.eventEmitter.on(event, listener);
+    }
+
+    /**
+     * Remove event listener
+     */
+    public off(event: string, listener: (data: any) => void): void {
+        this.eventEmitter.off(event, listener);
+    }
+
     /**
      * Core implementation of file operation logic
      */
     protected async executeCore(args: T): Promise<Response> {
         const startTime = performance.now();
 
-        // Prepare for file operation
-        const {path, absolutePath} = await this.prepareFilePath(args);
-        if (!absolutePath) {
+        const pathArg = this.extractPathFromArgs(args);
+        this.log.error(`executeCore extractPathFromArgs 路径: ${pathArg}`);
+
+        // Use base class path handling
+        const {path, absolutePath, isSafe} = await this.preparePath(pathArg);
+        this.log.error(`executeCore 绝对路径: ${absolutePath}`);
+
+        if (!absolutePath || !isSafe) {
             return responseHandler.failure('Invalid file path or project directory not found');
         }
 
@@ -33,40 +73,6 @@ export abstract class AbstractFileTools<T extends Record<string, any> = any> ext
         this.recordPerformance(path, totalTime);
 
         return result;
-    }
-
-    /**
-     * Prepare file path, including path normalization and security checks
-     */
-    protected async prepareFilePath(args: T): Promise<{ path: string, absolutePath: string | null }> {
-        // Extract path from arguments
-        const path = this.extractPathFromArgs(args);
-        if (!path) {
-            return {path: '', absolutePath: null};
-        }
-
-        // Normalize path
-        const normalizedPath = normalizePath(path);
-        const absolutePath = toAbsolutePathSafe(normalizedPath);
-
-        // Security check
-        if (absolutePath) {
-            const projectRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-            if (projectRoot && !isPathWithinProject(absolutePath, projectRoot)) {
-                this.log.warn('Path is outside project directory', {path: absolutePath});
-                return {path, absolutePath: null};
-            }
-        }
-
-        return {path, absolutePath};
-    }
-
-    /**
-     * Extract path from arguments, can be overridden by subclasses
-     * Default implementation extracts pathInProject property
-     */
-    protected extractPathFromArgs(args: T): string {
-        return (args as any).pathInProject || '/';
     }
 
     /**
@@ -88,38 +94,59 @@ export abstract class AbstractFileTools<T extends Record<string, any> = any> ext
     }
 
     /**
-     * Get relative path of file
-     */
-    protected getRelativePath(absolutePath: string): string {
-        return toRelativePath(absolutePath) || absolutePath;
-    }
-
-    /**
-     * Check if file exists
-     */
-    protected async fileExists(uri: vscode.Uri): Promise<boolean> {
-        try {
-            await vscode.workspace.fs.stat(uri);
-            return true;
-        } catch (error) {
-            return false;
-        }
-    }
-
-    /**
      * Read file content
      */
     protected async readFile(uri: vscode.Uri): Promise<string> {
         const data = await vscode.workspace.fs.readFile(uri);
-        return new TextDecoder().decode(data);
+        return AbsFileTools.textDecoder.decode(data);
     }
 
     /**
-     * Write file content
+     * Write file content with minimal overhead
      */
-    protected async writeFile(uri: vscode.Uri, content: string): Promise<void> {
-        const data = new TextEncoder().encode(content);
-        await vscode.workspace.fs.writeFile(uri, data);
+    protected async writeFileSimple(
+        uri: vscode.Uri,
+        content: string,
+        options?: {
+            checkExists?: boolean,
+            mustExist?: boolean
+        }
+    ): Promise<void> {
+        try {
+            // Check file existence if needed
+            if (options?.checkExists) {
+                const exists = this.fileExists(uri);
+                if (options.mustExist && !exists) {
+                    throw new Error('File does not exist');
+                }
+                if (!options.mustExist && exists) {
+                    throw new Error('File already exists');
+                }
+            }
+
+            // Write file content
+            const data = AbsFileTools.textEncoder.encode(content);
+            await vscode.workspace.fs.writeFile(uri, data);
+
+            // Handle cache update and file reload asynchronously
+            setImmediate(() => {
+                // Update cache with new content
+                FileCache.updateCache(uri.fsPath, content).catch(err => {
+                    this.log.error(`Error updating cache for file: ${uri.fsPath}`, err);
+                    // If cache update fails, invalidate the cache to ensure consistency
+                    FileCache.invalidate(uri.fsPath);
+                });
+
+                // Reload file in editor
+                FileReloader.reloadFile(uri.fsPath).catch(err => {
+                    this.log.error(`Error reloading file: ${uri.fsPath}`, err);
+                });
+            });
+        } catch (error) {
+            // If file write fails, invalidate the cache
+            FileCache.invalidate(uri.fsPath);
+            throw error;
+        }
     }
 
     /**
@@ -153,6 +180,49 @@ export abstract class AbstractFileTools<T extends Record<string, any> = any> ext
             '.mp3', '.mp4', '.wav', '.avi', '.mov', '.mkv'
         ];
         return binaryExtensions.includes(ext);
+    }
+
+    /**
+     * Handle file system errors with specific error messages
+     * @param error The error object
+     * @param absolutePath The file path where the error occurred
+     * @param operation The operation that failed (e.g., 'reading', 'writing', 'deleting')
+     * @param isDirectory Whether the operation was on a directory
+     * @returns Response with appropriate error message
+     */
+    protected handleFileSystemError(
+        error: unknown,
+        absolutePath: string,
+        operation: string = 'accessing',
+        isDirectory: boolean = false
+    ): Response {
+        const itemType = isDirectory ? 'directory' : 'file';
+        this.log.error(`Error ${operation} ${itemType}: ${absolutePath}`, error);
+
+        if (error instanceof vscode.FileSystemError) {
+            switch (error.code) {
+                case 'FileNotFound':
+                    return responseHandler.failure(`${itemType.charAt(0).toUpperCase() + itemType.slice(1)} does not exist`);
+                case 'NoPermissions':
+                    return responseHandler.failure(`No permission to ${operation} the ${itemType}`);
+                case 'FileIsADirectory':
+                    return isDirectory
+                        ? responseHandler.failure(`Internal error: Unexpected FileIsADirectory error`)
+                        : responseHandler.failure(`Cannot ${operation} a directory as a file. Use the appropriate directory tool instead.`);
+                case 'FileNotADirectory':
+                    return isDirectory
+                        ? responseHandler.failure(`Cannot ${operation} a file as a directory. Use the appropriate file tool instead.`)
+                        : responseHandler.failure(`Internal error: Unexpected FileNotADirectory error`);
+                case 'FileIsLocked':
+                    return responseHandler.failure(`${itemType.charAt(0).toUpperCase() + itemType.slice(1)} is locked by another process`);
+                case 'FileExists':
+                    return responseHandler.failure(`${itemType.charAt(0).toUpperCase() + itemType.slice(1)} already exists`);
+                default:
+                    return responseHandler.failure(`File system error: ${error.message}`);
+            }
+        }
+
+        return responseHandler.failure(`Error ${operation} ${itemType}: ${error instanceof Error ? error.message : String(error)}`);
     }
 
     /**
@@ -208,7 +278,7 @@ export abstract class AbstractFileTools<T extends Record<string, any> = any> ext
         // Encode text and measure performance
         const {timeMs: encodeTimeMs, result: bytes} = await this.measurePerformance(
             'Text encoding',
-            async () => new TextEncoder().encode(content),
+            async () => AbsFileTools.textEncoder.encode(content),
             100
         );
 
@@ -301,5 +371,43 @@ export abstract class AbstractFileTools<T extends Record<string, any> = any> ext
         // Wait for all tasks to complete
         await Promise.all(running);
         return results;
+    }
+
+    protected async writeFileWithResponse(
+        absolutePath: string,
+        content: string,
+        options: {
+            createDirectory?: boolean,
+            mustExist?: boolean,
+            includeSize?: boolean
+        } = {}
+    ): Promise<Response> {
+        try {
+            const fileUri = vscode.Uri.file(absolutePath);
+
+            // Create directory if needed
+            if (options.createDirectory) {
+                const dirUri = vscode.Uri.file(path.dirname(absolutePath));
+                await vscode.workspace.fs.createDirectory(dirUri);
+            }
+
+            // Write file
+            await this.writeFileSimple(fileUri, content, {
+                checkExists: true,
+                mustExist: options.mustExist
+            });
+
+            // Build result
+            const result: any = {
+                path: absolutePath,
+            };
+            if (options.includeSize) {
+                result.size = content.length;
+            }
+
+            return responseHandler.success(result);
+        } catch (err) {
+            return this.handleFileSystemError(err, absolutePath, 'writing');
+        }
     }
 }

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { AbstractTool } from '../types/absTool';
+import { AbsTools } from '../types/absTools';
 import { Response, ToolParams } from '../types';
 import { responseHandler } from '../server/responseHandler';
 
@@ -7,7 +7,7 @@ import { responseHandler } from '../server/responseHandler';
  * List available actions tool
  * Inherits from AbstractTool base class to utilize common tool functionality
  */
-export class ListAvailableActionsTool extends AbstractTool<Record<string, never>> {
+export class ListAvailableActionsTool extends AbsTools<Record<string, never>> {
     constructor() {
         super(
             'list_available_actions',
@@ -48,7 +48,7 @@ export class ListAvailableActionsTool extends AbstractTool<Record<string, never>
  * Execute action by ID tool
  * Inherits from AbstractTool base class to utilize common tool functionality
  */
-export class ExecuteActionByIdTool extends AbstractTool<ToolParams['executeActionById']> {
+export class ExecuteActionByIdTool extends AbsTools<ToolParams['executeActionById']> {
     constructor() {
         super(
             'execute_action_by_id',
@@ -100,7 +100,7 @@ export class ExecuteActionByIdTool extends AbstractTool<ToolParams['executeActio
  * Get progress indicators tool
  * Inherits from AbstractTool base class to utilize common tool functionality
  */
-export class GetProgressIndicatorsTool extends AbstractTool<Record<string, never>> {
+export class GetProgressIndicatorsTool extends AbsTools<Record<string, never>> {
     constructor() {
         super(
             'get_progress_indicators',

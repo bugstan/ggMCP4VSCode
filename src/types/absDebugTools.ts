@@ -1,13 +1,13 @@
 import * as vscode from 'vscode';
 import { Response } from './index';
-import { AbstractTool } from './absTool';
-import { toAbsolutePathSafe } from '../utils/pathUtils';
+import { AbsTools } from './absTools';
+import { toAbsolutePath } from '../utils/pathUtils';
 
 /**
  * Base class for debugging tools
  * Provides debugging session and breakpoint management functionality
  */
-export abstract class AbstractDebugTools<T = any> extends AbstractTool<T> {
+export abstract class AbsDebugTools<T = any> extends AbsTools<T> {
     /**
      * Core implementation of debugging operation logic
      */
@@ -29,8 +29,8 @@ export abstract class AbstractDebugTools<T = any> extends AbstractTool<T> {
         position: vscode.Position
     } | null> {
         try {
-            // Get absolute path
-            const absolutePath = toAbsolutePathSafe(filePath);
+            // Get absolute path using new utility function
+            const absolutePath = toAbsolutePath(filePath);
             if (!absolutePath) {
                 return null;
             }

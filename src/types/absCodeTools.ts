@@ -1,14 +1,14 @@
 import * as vscode from 'vscode';
 import { Response } from './index';
-import { AbstractTool } from './absTool';
+import { AbsTools } from './absTools';
 import { responseHandler } from '../server/responseHandler';
-import { toAbsolutePathSafe } from '../utils/pathUtils';
+import { toAbsolutePath } from '../utils/pathUtils';
 
 /**
  * Base class for code analysis tools
  * Provides symbol analysis and code manipulation functionality
  */
-export abstract class AbstractCodeTools<T = any> extends AbstractTool<T> {
+export abstract class AbsCodeTools<T = any> extends AbsTools<T> {
     /**
      * Core implementation of code analysis logic
      */
@@ -37,8 +37,8 @@ export abstract class AbstractCodeTools<T = any> extends AbstractTool<T> {
                 return { document: null, position: null };
             }
             
-            // Get absolute path
-            const absolutePath = toAbsolutePathSafe(filePath);
+            // Get absolute path using new utility function
+            const absolutePath = toAbsolutePath(filePath);
             if (!absolutePath) {
                 return { document: null, position: null };
             }

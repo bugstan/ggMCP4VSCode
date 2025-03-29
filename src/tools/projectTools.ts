@@ -1,69 +1,124 @@
-import {Response} from '../types';
-import {responseHandler} from '../server/responseHandler';
-import {AbstractProjectTools} from '../types/absProjectTools';
+import * as vscode from 'vscode';
+import * as fs from 'fs';
+import { AbsTools } from '../types/absTools';
+import { toAbsolutePath } from '../utils/pathUtils';
+import { Response, ToolParams } from '../types';
+import { responseHandler } from '../server/responseHandler';
 
 /**
  * Get project modules tool
- * Supports detection of multiple project types and dependencies
+ * Inherits from AbstractTool base class
  */
-export class GetProjectModulesTool extends AbstractProjectTools<Record<string, never>> {
+export class GetProjectModulesTool extends AbsTools<ToolParams['getProjectModules']> {
     constructor() {
         super(
             'get_project_modules',
-            'Get a list of all modules and their dependencies in the project. Returns an array of module names.',
-            {type: 'object', properties: {}}
+            'Get information about project modules and dependencies. Returns an array of module information.',
+            {
+                type: 'object',
+                properties: {},
+                required: []
+            }
         );
     }
 
     /**
-     * Execute tool core logic
-     * @param _args Empty parameter object
-     * @returns Response object
+     * Execute project module detection (implementing base class abstract method)
      */
-    protected async executeCore(_args: Record<string, never>): Promise<Response> {
-        const rootPath = this.getProjectRootPath();
+    protected async executeCore(_args: ToolParams['getProjectModules']): Promise<Response> {
+        try {
+            const projectTypes = this.detectProjectTypes();
+            return responseHandler.success({
+                types: projectTypes,
+                extensions: this.getVSCodeExtensions()
+            });
+        } catch (err) {
+            this.log.error('Error getting project modules', err);
+            return responseHandler.failure(err instanceof Error ? err.message : String(err));
+        }
+    }
 
-        if (!rootPath) {
-            return responseHandler.failure('Project root directory not found');
+    /**
+     * Get VSCode extension list (as fallback when no other dependencies are found)
+     */
+    private getVSCodeExtensions(limit: number = 10): string[] {
+        try {
+            return vscode.extensions.all
+                .filter(ext => !ext.packageJSON.isBuiltin)
+                .slice(0, limit)
+                .map(ext => ext.id);
+        } catch (err) {
+            this.log.info('Error getting VS Code extensions', err);
+            return [];
+        }
+    }
+
+    /**
+     * Check project type and return results
+     */
+    private detectProjectTypes(): string[] {
+        const projectTypes: string[] = [];
+
+        // Check for Maven project
+        if (this.fileExists(vscode.Uri.file('pom.xml'))) {
+            this.log.info('Maven project detected (pom.xml)');
+            projectTypes.push('maven');
         }
 
-        this.log.info(`Analyzing project modules at path: ${rootPath}`);
-
-        // Use base class method to detect project types
-        const modules = this.detectProjectTypes();
-
-        // Additional processing for Node.js project dependencies
-        if (modules.includes('node')) {
-            try {
-                const packageJson = this.readJsonFile<{
-                    dependencies?: Record<string, string>
-                }>('package.json');
-
-                if (packageJson?.dependencies) {
-                    for (const dep in packageJson.dependencies) {
-                        modules.push(`node:${dep}`);
-                    }
-                }
-            } catch (err) {
-                // Ignore error
-                this.log.info('Error reading package.json dependencies', err);
-            }
+        // Check for Gradle project
+        if (this.fileExists(vscode.Uri.file('build.gradle')) || this.fileExists(vscode.Uri.file('build.gradle.kts'))) {
+            this.log.info('Gradle project detected (build.gradle)');
+            projectTypes.push('gradle');
         }
 
-        this.log.info(`Found ${modules.length} modules in project`);
-        return responseHandler.success(modules);
+        // Check for Node.js project
+        if (this.fileExists(vscode.Uri.file('package.json'))) {
+            this.log.info('Node.js project detected (package.json)');
+            projectTypes.push('node');
+        }
+
+        // Check for Python project
+        if (this.fileExists(vscode.Uri.file('Pipfile'))) {
+            this.log.info('Python project detected (Pipfile)');
+            projectTypes.push('python-pipenv');
+        } else if (this.fileExists(vscode.Uri.file('requirements.txt'))) {
+            this.log.info('Python project detected (requirements.txt)');
+            projectTypes.push('python-pip');
+        }
+
+        // Check for .NET project
+        if (this.fileExists(vscode.Uri.file('.csproj')) ||
+            this.fileExists(vscode.Uri.file('.fsproj')) ||
+            this.fileExists(vscode.Uri.file('.vbproj'))) {
+            this.log.info('.NET project detected (.csproj/.fsproj/.vbproj)');
+            projectTypes.push('dotnet');
+        }
+
+        // Check for Go project
+        if (this.fileExists(vscode.Uri.file('go.mod'))) {
+            this.log.info('Go project detected (go.mod)');
+            projectTypes.push('go');
+        }
+
+        // Check for Rust project
+        if (this.fileExists(vscode.Uri.file('Cargo.toml'))) {
+            this.log.info('Rust project detected (Cargo.toml)');
+            projectTypes.push('rust');
+        }
+
+        return projectTypes;
     }
 }
 
 /**
  * Get project dependencies tool
- * Inherits from AbstractProjectTools base class to utilize common project analysis functionality
+ * Inherits from AbstractTool base class
  */
-export class GetProjectDependenciesTool extends AbstractProjectTools {
+export class GetProjectDependenciesTool extends AbsTools<ToolParams['getProjectDependencies']> {
     constructor() {
         super(
             'get_project_dependencies',
-            'Get project dependencies from package.json or other dependency management files.',
+            'Get project dependencies from package management files. Returns an array of dependency information.',
             {
                 type: 'object',
                 properties: {},
@@ -73,101 +128,107 @@ export class GetProjectDependenciesTool extends AbstractProjectTools {
     }
 
     /**
-     * Execute project dependency analysis operation (implementing base class abstract method)
+     * Execute dependency detection (implementing base class abstract method)
      */
-    protected async executeCore(_args: Record<string, never>): Promise<Response> {
-        const rootPath = this.getProjectRootPath();
-        if (!rootPath) {
-            return responseHandler.failure('Project root not found');
-        }
-
+    protected async executeCore(_args: ToolParams['getProjectDependencies']): Promise<Response> {
         try {
-            // Try to read package.json first
-            const packageJson = this.readJsonFile<{
-                dependencies?: Record<string, string>;
-                devDependencies?: Record<string, string>;
-            }>('package.json');
-
-            if (packageJson) {
-                const dependencies = packageJson.dependencies || {};
-                const devDependencies = packageJson.devDependencies || {};
-
-                return responseHandler.success({
-                    dependencies: Object.keys(dependencies),
-                    devDependencies: Object.keys(devDependencies)
-                });
-            }
-
-            // If no package.json, try other dependency files
-            const projectTypes = this.detectProjectTypes();
-            if (projectTypes.length === 0) {
-                // Fallback to VS Code extensions if no other dependencies found
-                const extensions = this.getVSCodeExtensions();
-                return responseHandler.success({
-                    extensions
-                });
-            }
-
-            // Try to read package.json for Node.js projects
-            if (projectTypes.includes('node')) {
-                const nodePackageJson = this.readJsonFile<{
-                    dependencies?: Record<string, string>;
-                    devDependencies?: Record<string, string>;
-                }>('package.json');
-
-                if (nodePackageJson) {
-                    return responseHandler.success({
-                        dependencies: Object.keys(nodePackageJson.dependencies || {}),
-                        devDependencies: Object.keys(nodePackageJson.devDependencies || {})
-                    });
-                }
-            }
-
-            // For other project types, return project type info
-            return responseHandler.success({
-                projectTypes
-            });
+            const dependencies = await this.getDependencies();
+            return responseHandler.success(dependencies);
         } catch (err) {
             this.log.error('Error getting project dependencies', err);
-            return responseHandler.failure(`Error getting project dependencies: ${err instanceof Error ? err.message : String(err)}`);
+            return responseHandler.failure(err instanceof Error ? err.message : String(err));
         }
-    }
-}
-
-/**
- * Get project type tool
- * Inherits from AbstractProjectTools base class to utilize common project analysis functionality
- */
-export class GetProjectTypeTool extends AbstractProjectTools {
-    constructor() {
-        super(
-            'get_project_type',
-            'Detect project type based on presence of specific files (package.json, pom.xml, etc.).',
-            {
-                type: 'object',
-                properties: {},
-                required: []
-            }
-        );
     }
 
     /**
-     * Execute project type detection operation (implementing base class abstract method)
+     * Get project dependencies
      */
-    protected async executeCore(_args: Record<string, never>): Promise<Response> {
-        const rootPath = this.getProjectRootPath();
-        if (!rootPath) {
-            return responseHandler.failure('Project root not found');
+    private async getDependencies(): Promise<any> {
+        // Try to read package.json for Node.js projects
+        const packageJson = this.readJsonFile<any>('package.json');
+        if (packageJson && (packageJson.dependencies || packageJson.devDependencies)) {
+            return {
+                type: 'node',
+                dependencies: packageJson.dependencies || {},
+                devDependencies: packageJson.devDependencies || {}
+            };
         }
 
+        // Try to read requirements.txt for Python projects
+        const requirementsTxt = this.readTextFile('requirements.txt');
+        if (requirementsTxt) {
+            const dependencies = requirementsTxt
+                .split('\n')
+                .map(line => line.trim())
+                .filter(line => line && !line.startsWith('#'))
+                .reduce((acc, line) => {
+                    const [name, version] = line.split('==');
+                    if (name) {
+                        acc[name] = version || 'latest';
+                    }
+                    return acc;
+                }, {} as Record<string, string>);
+
+            return {
+                type: 'python',
+                dependencies
+            };
+        }
+
+        // Fallback to VS Code extensions
+        return {
+            type: 'vscode',
+            extensions: this.getVSCodeExtensions()
+        };
+    }
+
+    /**
+     * Safely read JSON file - 使用新的路径处理函数
+     */
+    private readJsonFile<R = any>(filePath: string): R | null {
         try {
-            const projectTypes = this.detectProjectTypes();
-            return responseHandler.success({
-                projectTypes
-            });
+            // 使用新的 toAbsolutePath 函数
+            const fullPath = toAbsolutePath(filePath);
+            if (!fullPath) return null;
+            if (this.fileExists(vscode.Uri.file(fullPath))) {
+                const content = fs.readFileSync(fullPath, 'utf8');
+                return JSON.parse(content) as R;
+            }
         } catch (err) {
-            this.log.error('Error detecting project type', err);
-            return responseHandler.failure(`Error detecting project type: ${err instanceof Error ? err.message : String(err)}`);
+            this.log.info(`Error reading JSON file: ${filePath}`, err);
+        }
+        return null;
+    }
+
+    /**
+     * Safely read text file - 使用新的路径处理函数
+     */
+    private readTextFile(filePath: string): string | null {
+        try {
+            // 使用新的 toAbsolutePath 函数
+            const fullPath = toAbsolutePath(filePath);
+            if (!fullPath) return null;
+            if (this.fileExists(vscode.Uri.file(fullPath))) {
+                return fs.readFileSync(fullPath, 'utf8');
+            }
+        } catch (err) {
+            this.log.info(`Error reading text file: ${filePath}`, err);
+        }
+        return null;
+    }
+
+    /**
+     * Get VSCode extension list
+     */
+    private getVSCodeExtensions(limit: number = 10): string[] {
+        try {
+            return vscode.extensions.all
+                .filter(ext => !ext.packageJSON.isBuiltin)
+                .slice(0, limit)
+                .map(ext => ext.id);
+        } catch (err) {
+            this.log.info('Error getting VS Code extensions', err);
+            return [];
         }
     }
 }

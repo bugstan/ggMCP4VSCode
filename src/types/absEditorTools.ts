@@ -1,13 +1,13 @@
 import * as vscode from 'vscode';
 import { Response } from './index';
-import { AbstractTool } from './absTool';
+import { AbsTools } from './absTools';
 import { responseHandler } from '../server/responseHandler';
 
 /**
  * Base class for editor operation tools
  * Provides editor inspection and common editor operations
  */
-export abstract class AbstractEditorTools<T = any> extends AbstractTool<T> {
+export abstract class AbsEditorTools<T = any> extends AbsTools<T> {
     /**
      * Core implementation of editor operation logic
      */

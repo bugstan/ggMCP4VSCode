@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { getProjectRoot } from './pathUtils';
 import { Logger } from './logger';
-import { FileCache } from './fileCache';
+import { FileCache } from '../server/cache/fileCache';
 
 // Create module-specific logger
 const log = Logger.forModule('FileReloader');

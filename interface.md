@@ -1,5 +1,7 @@
 # VSCode MCP Server Plugin Interface Documentation
 
+[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/bugstan/ggMCP4VSCode)
+
 ## Introduction
 
 The VSCode MCP Server Plugin is an extension for Visual Studio Code that provides Model Context Protocol (MCP) support. It allows MCP clients (such as AI assistants) to communicate with VSCode through HTTP protocol, executing various VSCode operations like file reading/writing, code editing, debugging control, etc.
@@ -106,12 +108,12 @@ The VSCode MCP Server Plugin is an extension for Visual Studio Code that provide
 
 - **URL**: `http://${HOST}:${PORT}/mcp/${toolName}`
 - **Method**: POST
-- **Request Headers**: 
+- **Request Headers**:
   ```
   Content-Type: application/json
   ```
 - **Request Body**: JSON object, can be one of two formats:
-  
+
   1. Direct parameter format:
   ```json
   {
@@ -119,7 +121,7 @@ The VSCode MCP Server Plugin is an extension for Visual Studio Code that provide
     "param2": 123
   }
   ```
-  
+
   2. JSON-RPC 2.0 format:
   ```json
   {
@@ -133,7 +135,7 @@ The VSCode MCP Server Plugin is an extension for Visual Studio Code that provide
     }
   }
   ```
-  
+
 - **Function**: Execute a specific VSCode tool invocation
 - **Response Format**: MCP standard format
   ```json
@@ -142,7 +144,7 @@ The VSCode MCP Server Plugin is an extension for Visual Studio Code that provide
     "error": null
   }
   ```
-  
+
   Error response:
   ```json
   {
@@ -241,12 +243,12 @@ The plugin provides various tools for operating the VSCode environment, organize
 
 - **Description**: Open the specified file in the editor.
 - **Parameters**:
-  - `filePath` (string, required): The path of the file to open, can be absolute or relative to the project root.
+  - `pathInProject` (string, required): The path of the file to open, can be absolute or relative to the project root.
 - **Returns**: `"file is opened"` if successful, error message otherwise.
 - **Example Request**:
   ```json
   {
-    "filePath": "src/index.js"
+    "pathInProject": "src/index.js"
   }
   ```
 - **Example Response**:
@@ -310,7 +312,35 @@ The plugin provides various tools for operating the VSCode environment, organize
   }
   ```
 
-#### 8. create_new_file_with_text
+#### 8. replace_file_content_at_position
+
+- **Description**: Replace a portion of file content at specified line positions. This tool allows replacing content between specific lines in a file, optionally with a character offset within the line. The replacement is precise and only affects the specified range, leaving the rest of the file unchanged.
+- **Parameters**:
+  - `pathInProject` (string, required): The path to the target file, relative to project root.
+  - `startLine` (number, required): The starting line number (1-based).
+  - `endLine` (number, required): The ending line number (1-based).
+  - `content` (string, required): The new content to write.
+  - `offset` (number, optional): The character offset within the line (0-based).
+- **Returns**: "ok" if successful, error message otherwise.
+- **Example Request**:
+  ```json
+  {
+    "pathInProject": "src/utils/helper.js",
+    "startLine": 5,
+    "endLine": 5,
+    "content": "function helper() { return 'Updated'; }",
+    "offset": 0
+  }
+  ```
+- **Example Response**:
+  ```json
+  {
+    "status": "ok",
+    "error": null
+  }
+  ```
+
+#### 9. create_new_file_with_text
 
 - **Description**: Create a new file at the specified path in the project directory and populate it with content.
 - **Parameters**:
@@ -336,7 +366,7 @@ The plugin provides various tools for operating the VSCode environment, organize
   }
   ```
 
-#### 9. list_files_in_folder
+#### 10. list_files_in_folder
 
 - **Description**: List all files and directories in the specified project folder.
 - **Parameters**:
@@ -374,7 +404,7 @@ The plugin provides various tools for operating the VSCode environment, organize
 
 ### File Search Tools
 
-#### 10. search_in_files_content
+#### 11. search_in_files_content
 
 - **Description**: Search for a text substring within all files in the project.
 - **Parameters**:
@@ -403,7 +433,7 @@ The plugin provides various tools for operating the VSCode environment, organize
   }
   ```
 
-#### 11. find_files_by_name_substring
+#### 12. find_files_by_name_substring
 
 - **Description**: Search for all files in the project whose names contain the specified substring.
 - **Parameters**:
@@ -438,7 +468,7 @@ The plugin provides various tools for operating the VSCode environment, organize
 
 ### Code Analysis Tools
 
-#### 12. get_symbols_in_file
+#### 13. get_symbols_in_file
 
 - **Description**: Get all symbols defined in the file (functions, classes, variables, etc.).
 - **Parameters**:
@@ -458,7 +488,7 @@ The plugin provides various tools for operating the VSCode environment, organize
   }
   ```
 
-#### 13. find_references
+#### 14. find_references
 
 - **Description**: Find all reference locations of a symbol.
 - **Parameters**:
@@ -482,7 +512,7 @@ The plugin provides various tools for operating the VSCode environment, organize
   }
   ```
 
-#### 14. refactor_code_at_location
+#### 15. refactor_code_at_location
 
 - **Description**: Perform code refactoring at a specific location. Supports rename, extract function, extract variable, and other operations.
 - **Parameters**:
@@ -515,17 +545,17 @@ The plugin provides various tools for operating the VSCode environment, organize
 
 ### Debug Tools
 
-#### 15. toggle_debugger_breakpoint
+#### 16. toggle_debugger_breakpoint
 
 - **Description**: Toggle a debugger breakpoint at the specified line in a project file.
 - **Parameters**:
-  - `filePathInProject` (string, required): The relative path to the file within the project.
+  - `pathInProject` (string, required): The relative path to the file within the project.
   - `line` (number, required): The line number where to toggle the breakpoint (1-based).
 - **Returns**: `"Breakpoint added"` or `"Breakpoint removed"` if successful, error message otherwise.
 - **Example Request**:
   ```json
   {
-    "filePathInProject": "src/utils/helper.js",
+    "pathInProject": "src/utils/helper.js",
     "line": 5
   }
   ```
@@ -537,7 +567,7 @@ The plugin provides various tools for operating the VSCode environment, organize
   }
   ```
 
-#### 16. get_debugger_breakpoints
+#### 17. get_debugger_breakpoints
 
 - **Description**: Get information about all line breakpoints set in the project.
 - **Parameters**: None
@@ -559,7 +589,7 @@ The plugin provides various tools for operating the VSCode environment, organize
   }
   ```
 
-#### 17. get_run_configurations
+#### 18. get_run_configurations
 
 - **Description**: Get a list of available run configurations in the current project.
 - **Parameters**: None
@@ -576,7 +606,7 @@ The plugin provides various tools for operating the VSCode environment, organize
   }
   ```
 
-#### 18. run_configuration
+#### 19. run_configuration
 
 - **Description**: Run a specific run configuration in the current project.
 - **Parameters**:
@@ -598,7 +628,7 @@ The plugin provides various tools for operating the VSCode environment, organize
 
 ### Terminal Tools
 
-#### 19. get_terminal_text
+#### 20. get_terminal_text
 
 - **Description**: Retrieve the current text content from the first active terminal in the IDE.
 - **Parameters**: None
@@ -611,7 +641,7 @@ The plugin provides various tools for operating the VSCode environment, organize
   }
   ```
 
-#### 20. execute_terminal_command
+#### 21. execute_terminal_command
 
 - **Description**: Execute a specified shell command in the IDE's integrated terminal.
 - **Parameters**:
@@ -631,7 +661,7 @@ The plugin provides various tools for operating the VSCode environment, organize
   }
   ```
 
-#### 21. execute_command_with_output
+#### 22. execute_command_with_output
 
 - **Description**: Execute a specified shell command and capture its output using VS Code's Shell Integration API.
 - **Parameters**:
@@ -651,7 +681,7 @@ The plugin provides various tools for operating the VSCode environment, organize
   }
   ```
 
-#### 22. get_command_output
+#### 23. get_command_output
 
 - **Description**: Get the output from the last command executed with execute_command_with_output.
 - **Parameters**: None
@@ -667,7 +697,7 @@ The plugin provides various tools for operating the VSCode environment, organize
   }
   ```
 
-#### 23. wait
+#### 24. wait
 
 - **Description**: Wait for a specified number of milliseconds.
 - **Parameters**:
@@ -689,7 +719,7 @@ The plugin provides various tools for operating the VSCode environment, organize
 
 ### Git Tools
 
-#### 24. get_project_vcs_status
+#### 25. get_project_vcs_status
 
 - **Description**: Get the version control status of files in the project.
 - **Parameters**: None
@@ -711,7 +741,7 @@ The plugin provides various tools for operating the VSCode environment, organize
   }
   ```
 
-#### 25. find_commit_by_message
+#### 26. find_commit_by_message
 
 - **Description**: Search for a commit based on the provided text or keywords in the project history.
 - **Parameters**:
@@ -736,7 +766,7 @@ The plugin provides various tools for operating the VSCode environment, organize
 
 ### Project Tools
 
-#### 26. get_project_modules
+#### 27. get_project_modules
 
 - **Description**: Get list of all modules in the project with their dependencies.
 - **Parameters**: None
@@ -753,7 +783,7 @@ The plugin provides various tools for operating the VSCode environment, organize
   }
   ```
 
-#### 27. get_project_dependencies
+#### 28. get_project_dependencies
 
 - **Description**: Get list of all dependencies defined in the project.
 - **Parameters**: None
@@ -772,7 +802,7 @@ The plugin provides various tools for operating the VSCode environment, organize
 
 ### Action Tools
 
-#### 28. list_available_actions
+#### 29. list_available_actions
 
 - **Description**: List all available actions in VSCode IDE editor.
 - **Parameters**: None
@@ -794,68 +824,9 @@ The plugin provides various tools for operating the VSCode environment, organize
   }
   ```
 
-#### 29. execute_action_by_id
+#### 30. execute_action_by_id
 
 - **Description**: Execute an action by its ID in VSCode IDE editor.
 - **Parameters**:
   - `actionId` (string, required): The ID of the action to execute.
-- **Returns**: `"ok"` if successful, error message otherwise.
-- **Example Request**:
-  ```json
-  {
-    "actionId": "format.document"
-  }
-  ```
-- **Example Response**:
-  ```json
-  {
-    "status": "ok",
-    "error": null
-  }
-  ```
-
-## Data Structures
-
-### Internal Response Interface
-
-```typescript
-interface IDEResponseOk {
-    /** Operation success status message */
-    status: string;
-    /** Error information is empty */
-    error: null;
-}
-
-interface IDEResponseErr {
-    /** Status is empty */
-    status: null;
-    /** Error information */
-    error: string;
-}
-
-type IDEResponse = IDEResponseOk | IDEResponseErr;
-```
-
-### Tool Definition
-
-```typescript
-interface Tool {
-    name: string;
-    description: string;
-    inputSchema: {
-        type: string;
-        properties: Record<string, any>;
-        required?: string[];
-    };
-}
-```
-
-### VSCode Configuration Options
-
-VSCode MCP Server Plugin provides the following configuration options:
-
-- `ggMCP.portStart`: MCP server port range start value (default: 9960)
-- `ggMCP.portEnd`: MCP server port range end value (default: 9990)
-- `ggMCP.terminalTimeout`: Terminal command execution timeout (default: 15000 milliseconds)
-- `ggMCP.enableLogging`: Enable logging (default: true)
-- `ggMCP.autoReloadModifiedFiles`: Automatically reload files modified remotely (default: true)
+- **Returns**: `"ok"`

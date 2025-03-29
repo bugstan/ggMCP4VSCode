@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import {AbstractDebugTools} from '../types/absDebugTools';
+import {AbsDebugTools} from '../types/absDebugTools';
 import {Response, ToolParams} from '../types';
 import {responseHandler} from '../server/responseHandler';
 
@@ -7,18 +7,18 @@ import {responseHandler} from '../server/responseHandler';
  * Toggle debugger breakpoint tool
  * Inherits from AbstractDebugTools base class to utilize common debugging functionality
  */
-export class ToggleDebuggerBreakpointTool extends AbstractDebugTools<ToolParams['toggleDebuggerBreakpoint']> {
+export class ToggleDebuggerBreakpointTool extends AbsDebugTools<ToolParams['toggleDebuggerBreakpoint']> {
     constructor() {
         super(
             'toggle_debugger_breakpoint',
-            'Toggles a debugger breakpoint at the specified line in a project file.\nRequires two parameters:\n- filePathInProject: The relative path to the file within the project\n- line: The line number where to toggle the breakpoint. The line number is starts at 1 for the first line.\nReturns one of two possible responses:\n- "ok" if the breakpoint was successfully toggled\n- "can\'t find project dir" if the project directory cannot be determined\nNote: Automatically navigates to the breakpoint location in the editor',
+            'Toggles a debugger breakpoint at the specified line in a project file.\nRequires two parameters:\n- pathInProject: The relative path to the file within the project\n- line: The line number where to toggle the breakpoint. The line number is starts at 1 for the first line.\nReturns one of two possible responses:\n- "ok" if the breakpoint was successfully toggled\n- "can\'t find project dir" if the project directory cannot be determined\nNote: Automatically navigates to the breakpoint location in the editor',
             {
                 type: 'object',
                 properties: {
-                    filePathInProject: {type: 'string'},
+                    pathInProject: {type: 'string'},
                     line: {type: 'number'}
                 },
-                required: ['filePathInProject', 'line']
+                required: ['pathInProject', 'line']
             }
         );
     }
@@ -28,10 +28,10 @@ export class ToggleDebuggerBreakpointTool extends AbstractDebugTools<ToolParams[
      */
     protected async execute(args: ToolParams['toggleDebuggerBreakpoint']): Promise<Response> {
         try {
-            const {filePathInProject, line} = args;
+            const {pathInProject, line} = args;
 
             // Use base class method to create breakpoint location
-            const breakpointLocation = await this.createBreakpointLocation(filePathInProject, line);
+            const breakpointLocation = await this.createBreakpointLocation(pathInProject, line);
             if (!breakpointLocation) {
                 return responseHandler.failure('Project directory not found or path is invalid');
             }
@@ -48,7 +48,7 @@ export class ToggleDebuggerBreakpointTool extends AbstractDebugTools<ToolParams[
                 // Add new breakpoint
                 const breakpoint = this.addBreakpoint(breakpointLocation.uri, breakpointLocation.position);
                 this.log.info('Breakpoint added:', breakpoint);
-                
+
                 // Open file and show breakpoint location
                 try {
                     const document = await vscode.workspace.openTextDocument(breakpointLocation.uri);
@@ -77,7 +77,7 @@ export class ToggleDebuggerBreakpointTool extends AbstractDebugTools<ToolParams[
  * Get all breakpoint information tool
  * Inherits from AbstractDebugTools base class to utilize common debugging functionality
  */
-export class GetDebuggerBreakpointsTool extends AbstractDebugTools<{}> {
+export class GetDebuggerBreakpointsTool extends AbsDebugTools<{}> {
     constructor() {
         super(
             'get_debugger_breakpoints',
@@ -104,7 +104,7 @@ export class GetDebuggerBreakpointsTool extends AbstractDebugTools<{}> {
                     const sourceBp = bp as vscode.SourceBreakpoint;
                     const location = sourceBp.location;
                     return {
-                        path: location.uri.fsPath,
+                        pathInProject: this.getRelativePath(location.uri.fsPath),
                         line: location.range.start.line + 1 // Convert to 1-based line number
                     };
                 });
@@ -121,7 +121,7 @@ export class GetDebuggerBreakpointsTool extends AbstractDebugTools<{}> {
  * Get run configurations list tool
  * Inherits from AbstractDebugTools base class to utilize common debugging functionality
  */
-export class GetRunConfigurationsTool extends AbstractDebugTools<{}> {
+export class GetRunConfigurationsTool extends AbsDebugTools<{}> {
     constructor() {
         super(
             'get_run_configurations',
@@ -156,7 +156,7 @@ export class GetRunConfigurationsTool extends AbstractDebugTools<{}> {
  * Run specific configuration tool
  * Inherits from AbstractDebugTools base class to utilize common debugging functionality
  */
-export class RunConfigurationTool extends AbstractDebugTools<ToolParams['runConfiguration']> {
+export class RunConfigurationTool extends AbsDebugTools<ToolParams['runConfiguration']> {
     constructor() {
         super(
             'run_configuration',

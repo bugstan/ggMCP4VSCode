@@ -1,6 +1,6 @@
 /**
  * File Cache
- * 
+ *
  * A specialized cache for file content to improve file operation efficiency.
  */
 
@@ -20,9 +20,9 @@ interface FileCacheEntry {
  * FileCache class - Provides caching for file content to reduce disk I/O
  */
 export class FileCache {
-    private static readonly CACHE_EXPIRY_MS = 5000; // Cache for 5 seconds
-    private static readonly MAX_CACHE_SIZE = 20; // Cache up to 20 files
-    private static readonly MAX_FILE_SIZE = 5 * 1024 * 1024; // Limit cached file size to 5MB
+    private static readonly CACHE_EXPIRY_MS = 300000; // Cache for 5 minutes
+    private static readonly MAX_CACHE_SIZE = 50; // Cache up to 50 files
+    private static readonly MAX_FILE_SIZE = 1024 * 1024; // Limit cached file size to 1MB
     private static cache: Map<string, FileCacheEntry> = new Map();
 
     /**
@@ -98,20 +98,55 @@ export class FileCache {
         for (const entry of this.cache.values()) {
             totalSize += entry.size;
         }
-        
+
         return {
             entries: this.cache.size,
             sizeBytes: totalSize
         };
     }
-    
+
     /**
      * Check if a file is in the cache and not expired
      */
     public static isCached(filePath: string): boolean {
         const entry = this.cache.get(filePath);
         if (!entry) return false;
-        
+
         return (Date.now() - entry.timestamp) < this.CACHE_EXPIRY_MS;
+    }
+
+    /**
+     * Update file content in cache asynchronously
+     * Directly updates cache without verification since file write was successful
+     */
+    public static async updateCache(filePath: string, content: string): Promise<void> {
+        try {
+            const now = Date.now();
+            const size = content.length;
+
+            // Only cache files smaller than the size limit
+            if (size <= this.MAX_FILE_SIZE) {
+                // Manage cache size
+                if (this.cache.size >= this.MAX_CACHE_SIZE) {
+                    // Remove oldest entry
+                    const entries = Array.from(this.cache.entries());
+                    if (entries.length > 0) {
+                        const oldestEntry = entries.sort((a, b) => a[1].timestamp - b[1].timestamp)[0]!;
+                        const oldestKey = oldestEntry[0];
+                        this.cache.delete(oldestKey);
+                    }
+                }
+
+                // Update or add to cache
+                this.cache.set(filePath, {
+                    content,
+                    timestamp: now,
+                    size
+                });
+            }
+        } catch (err) {
+            // If cache update fails, invalidate the cache
+            this.invalidate(filePath);
+        }
     }
 }

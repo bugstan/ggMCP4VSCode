@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import {Response} from '../types';
-import {AbstractCodeTools} from '../types/absCodeTools';
+import {AbsCodeTools} from '../types/absCodeTools';
 import {responseHandler} from '../server/responseHandler';
 
 /**
@@ -30,7 +30,7 @@ interface SymbolInfo {
  * Get file symbols tool
  * Inherits from AbstractCodeTools base class to utilize common code analysis functionality
  */
-export class GetSymbolsInFileTool extends AbstractCodeTools {
+export class GetSymbolsInFileTool extends AbsCodeTools {
     constructor() {
         super(
             'get_symbols_in_file',
@@ -161,7 +161,7 @@ export class GetSymbolsInFileTool extends AbstractCodeTools {
  * Find references tool
  * Inherits from AbstractCodeTools base class to utilize common code analysis functionality
  */
-export class FindReferencesTool extends AbstractCodeTools {
+export class FindReferencesTool extends AbsCodeTools {
     constructor() {
         super(
             'find_references',
@@ -216,7 +216,7 @@ export class FindReferencesTool extends AbstractCodeTools {
                 const relativePath = vscode.workspace.asRelativePath(uri.fsPath);
 
                 return {
-                    path: relativePath,
+                    pathInProject: relativePath,
                     line: range.start.line,
                     character: range.start.character,
                     endLine: range.end.line,
@@ -236,7 +236,7 @@ export class FindReferencesTool extends AbstractCodeTools {
  * Refactor code tool
  * Inherits from AbstractCodeTools base class to utilize common code analysis functionality
  */
-export class RefactorCodeAtLocationTool extends AbstractCodeTools {
+export class RefactorCodeAtLocationTool extends AbsCodeTools {
     constructor() {
         super(
             'refactor_code_at_location',

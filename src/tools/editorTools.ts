@@ -1,14 +1,13 @@
 import * as vscode from 'vscode';
-import {AbstractEditorTools} from '../types/absEditorTools';
+import {AbsEditorTools} from '../types/absEditorTools';
 import {Response, ToolParams} from '../types';
 import {responseHandler} from '../server/responseHandler';
-import {toAbsolutePathSafe, isAbsolutePath} from '../utils/pathUtils';
 
 /**
  * Get current open file content tool
  * Inherits from AbstractEditorTools base class to utilize common editor operation functionality
  */
-export class GetOpenInEditorFileTextTool extends AbstractEditorTools {
+export class GetOpenInEditorFileTextTool extends AbsEditorTools {
     constructor() {
         super(
             'get_open_in_editor_file_text',
@@ -52,7 +51,7 @@ export class GetOpenInEditorFileTextTool extends AbstractEditorTools {
  * Get current open file path tool
  * Inherits from AbstractEditorTools base class to utilize common editor operation functionality
  */
-export class GetOpenInEditorFilePathTool extends AbstractEditorTools {
+export class GetOpenInEditorFilePathTool extends AbsEditorTools {
     constructor() {
         super(
             'get_open_in_editor_file_path',
@@ -82,8 +81,9 @@ export class GetOpenInEditorFilePathTool extends AbstractEditorTools {
             }
 
             const filePath = editor.document.uri.fsPath;
+            const relativePath = this.getRelativePath(filePath);
 
-            return responseHandler.success(filePath);
+            return responseHandler.success(relativePath);
         } catch (error) {
             this.log.error('Error getting file path', error);
             return responseHandler.failure(`Error getting file path: ${error instanceof Error ? error.message : String(error)}`);
@@ -95,7 +95,7 @@ export class GetOpenInEditorFilePathTool extends AbstractEditorTools {
  * Replace selected text tool
  * Inherits from AbstractEditorTools base class to utilize common editor operation functionality
  */
-export class ReplaceSelectedTextTool extends AbstractEditorTools<ToolParams['replaceSelectedText']> {
+export class ReplaceSelectedTextTool extends AbsEditorTools<ToolParams['replaceSelectedText']> {
     constructor() {
         super(
             'replace_selected_text',
@@ -150,7 +150,7 @@ export class ReplaceSelectedTextTool extends AbstractEditorTools<ToolParams['rep
  * Replace current file content tool
  * Inherits from AbstractEditorTools base class to utilize common editor operation functionality
  */
-export class ReplaceCurrentFileTextTool extends AbstractEditorTools<ToolParams['replaceCurrentFileText']> {
+export class ReplaceCurrentFileTextTool extends AbsEditorTools<ToolParams['replaceCurrentFileText']> {
     constructor() {
         super(
             'replace_current_file_text',
@@ -201,26 +201,33 @@ export class ReplaceCurrentFileTextTool extends AbstractEditorTools<ToolParams['
  * Open file in editor tool
  * Inherits from AbstractEditorTools base class to utilize common editor operation functionality
  */
-export class OpenFileInEditorTool extends AbstractEditorTools<ToolParams['openFileInEditor']> {
+export class OpenFileInEditorTool extends AbsEditorTools<ToolParams['openFileInEditor']> {
     constructor() {
         super(
             'open_file_in_editor',
-            'Opens the specified file in the VSCode IDE editor.\nRequires a filePath parameter containing the path to the file to open.\nRequires two parameters:\n    - filePath: The path of file to open can be absolute or relative to the project root.\n    - text: The content to write into the new file\nReturns one of two possible responses:\n    - "file is opened" if the file was successfully created and populated\n    - "file doesn\'t exist or can\'t be opened" otherwise',
+            'Opens the specified file in the VSCode IDE editor.',
             {
                 type: 'object',
                 properties: {
-                    filePath: {type: 'string'}
+                    pathInProject: {type: 'string'}
                 },
-                required: ['filePath']
+                required: ['pathInProject']
             }
         );
     }
 
     /**
-     * This tool doesn't require an active editor to run
+     * This tool can run without an active editor
      */
     protected requiresActiveEditor(): boolean {
         return false;
+    }
+
+    /**
+     * Extract path from arguments
+     */
+    protected extractPathFromArgs(args: ToolParams['openFileInEditor']): string {
+        return args.pathInProject;
     }
 
     /**
@@ -228,30 +235,18 @@ export class OpenFileInEditorTool extends AbstractEditorTools<ToolParams['openFi
      */
     protected async execute(_editor: vscode.TextEditor | undefined, args: ToolParams['openFileInEditor']): Promise<Response> {
         try {
-            const {filePath} = args;
-
-            const absolutePath = isAbsolutePath(filePath)
-                ? filePath
-                : toAbsolutePathSafe(filePath);
-
-            if (!absolutePath) {
-                return responseHandler.failure(`Cannot resolve path: ${filePath}`);
+            // Use base class path handling
+            const {absolutePath, isSafe} = await this.preparePath(this.extractPathFromArgs(args));
+            if (!absolutePath || !isSafe) {
+                return responseHandler.failure('Invalid file path or project directory not found');
             }
 
-            try {
-                const fileUri = vscode.Uri.file(absolutePath);
-                const document = await vscode.workspace.openTextDocument(fileUri);
-
-                // Use base class showDocument method to open file
-                await this.showDocument(document);
-
-                return responseHandler.success('file is opened');
-            } catch (err) {
-                return responseHandler.failure(`file ${absolutePath} doesn't exist or can't be opened`);
-            }
-        } catch (error) {
-            this.log.error('Error opening file', error);
-            return responseHandler.failure(`Error opening file: ${error instanceof Error ? error.message : String(error)}`);
+            const fileUri = vscode.Uri.file(absolutePath);
+            const document = await vscode.workspace.openTextDocument(fileUri);
+            await this.showDocument(document);
+            return responseHandler.success('file is opened');
+        } catch (err) {
+            return responseHandler.failure(`file doesn't exist or can't be opened`);
         }
     }
 }

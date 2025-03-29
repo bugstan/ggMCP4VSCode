@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import {Response} from './index';
-import {AbstractTool} from './absTool';
+import {AbsTools} from './absTools';
 import {responseHandler} from '../server/responseHandler';
 import {TerminalManager} from '../utils/terminalManager';
 import child_process from 'child_process';
@@ -14,7 +14,7 @@ const execAsync = promisify(exec);
  * Base class for terminal operation tools
  * Provides terminal access and command execution functionality
  */
-export abstract class AbstractTerminalTools<T = any> extends AbstractTool<T> {
+export abstract class AbsTerminalTools<T = any> extends AbsTools<T> {
     protected readonly terminalManager = TerminalManager.getInstance();
 
     /**
@@ -22,6 +22,7 @@ export abstract class AbstractTerminalTools<T = any> extends AbstractTool<T> {
      */
     protected async executeCore(args: T): Promise<Response> {
         try {
+            // 使用新的 getProjectRoot 函数
             const projectRoot = getProjectRoot();
             if (!projectRoot) {
                 return responseHandler.failure('No project root found');

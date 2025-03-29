@@ -1,4 +1,4 @@
-import {AbstractGitTools} from '../types/absGitTools';
+import {AbsGitTools} from '../types/absGitTools';
 import {Response, ToolParams} from '../types';
 import {responseHandler} from '../server/responseHandler';
 
@@ -6,7 +6,7 @@ import {responseHandler} from '../server/responseHandler';
  * Get file modification history tool
  * Inherits from AbstractGitTools base class to utilize common Git operation functionality
  */
-export class GetFileHistoryTool extends AbstractGitTools<ToolParams['getFileHistory']> {
+export class GetFileHistoryTool extends AbsGitTools<ToolParams['getFileHistory']> {
     constructor() {
         super(
             'get_file_history',
@@ -28,9 +28,23 @@ export class GetFileHistoryTool extends AbstractGitTools<ToolParams['getFileHist
     protected async executeGitOperation(_repository: any, args: ToolParams['getFileHistory']): Promise<Response> {
         try {
             const {pathInProject, maxCount = 10} = args;
-            this.log.info(`Getting file history for: ${pathInProject}, max count: ${maxCount}`);
 
-            const command = `git log --max-count=${maxCount} --format="%H|%an|%ad|%s" --date=short -- "${this.escapeArg(pathInProject)}"`;
+            // Prepare and validate path
+            const { path: relativePath, isSafe } = await this.preparePath(pathInProject);
+            if (!isSafe) {
+                return responseHandler.failure('Path is outside project directory');
+            }
+
+            this.log.info(`Getting file history for: ${relativePath}, max count: ${maxCount}`);
+
+            // Check if file exists in Git repository
+            const checkCommand = `git ls-files --error-unmatch "${relativePath}"`;
+            const checkResult = await this.executeGitCommand(checkCommand);
+            if (checkResult.exitCode !== 0) {
+                return responseHandler.failure(`File is not tracked by Git: ${relativePath}`);
+            }
+
+            const command = `git log --max-count=${maxCount} --format="%H|%an|%ad|%s" --date=short -- "${relativePath}"`;
             const result = await this.executeGitCommand(command);
 
             if (result.exitCode !== 0 || !result.stdout) {
@@ -48,19 +62,19 @@ export class GetFileHistoryTool extends AbstractGitTools<ToolParams['getFileHist
 
 /**
  * Get file diff tool
- * Inherits from AbstractGitTools base class to utilize common Git operation functionality
+ * Inherits from AbstractGitTools base class to utilize common git operation functionality
  */
-export class GetFileDiffTool extends AbstractGitTools<ToolParams['getFileDiff']> {
+export class GetFileDiffTool extends AbsGitTools<ToolParams['getFileDiff']> {
     constructor() {
         super(
             'get_file_diff',
-            'Get the diff information for a file. Can compare differences between two commits, between a specific commit and the working area, or between the staging area and working area.',
+            'Get the diff between two versions of a file. If no hashes are provided, returns the diff between the current version and the previous version.',
             {
                 type: 'object',
                 properties: {
-                    pathInProject: {type: 'string'},
-                    hash1: {type: 'string'},
-                    hash2: {type: 'string'}
+                    pathInProject: { type: 'string' },
+                    hash1: { type: 'string', optional: true },
+                    hash2: { type: 'string', optional: true }
                 },
                 required: ['pathInProject']
             }
@@ -68,36 +82,40 @@ export class GetFileDiffTool extends AbstractGitTools<ToolParams['getFileDiff']>
     }
 
     /**
-     * Execute Git get file diff operation (implementing base class abstract method)
+     * Execute git operation (implementing base class abstract method)
      */
     protected async executeGitOperation(_repository: any, args: ToolParams['getFileDiff']): Promise<Response> {
         try {
-            const {pathInProject, hash1, hash2} = args;
-            this.log.info(`Getting file diff for: ${pathInProject} between ${hash1 || 'working copy'} and ${hash2 || 'index'}`);
+            const { pathInProject, hash1, hash2 } = args;
 
-            let command: string;
-            const escapedPath = this.escapeArg(pathInProject);
+            // Prepare and validate path
+            const { path: relativePath, absolutePath, isSafe } = await this.preparePath(pathInProject);
+            if (!absolutePath || !isSafe) {
+                return responseHandler.failure('Path is outside project directory or invalid');
+            }
 
+            // Build git command
+            let command = 'git diff';
+
+            // Add hash arguments if provided
             if (hash1 && hash2) {
-                command = `git diff ${this.escapeArg(hash1)} ${this.escapeArg(hash2)} -- "${escapedPath}"`;
+                command += ` ${hash1} ${hash2}`;
             } else if (hash1) {
-                command = `git diff ${this.escapeArg(hash1)} -- "${escapedPath}"`;
+                command += ` ${hash1}`;
             } else {
-                command = `git diff -- "${escapedPath}"`;
+                // If no hashes provided, compare with HEAD~1
+                command += ' HEAD~1 HEAD';
             }
 
-            this.log.info(`Executing Git command: ${command}`);
+            // Add file path
+            command += ` -- "${relativePath}"`;
+
+            // Execute command
             const result = await this.executeGitCommand(command);
-
-            if (result.exitCode !== 0 || !result.stdout) {
-                this.log.error(`Failed to get file diff: ${result.stderr || 'Unknown error'}`);
-                return responseHandler.failure(`Failed to get file diff: ${result.stderr}`);
-            }
-
-            return this.parseCommandOutput(result.stdout, 'Failed to get file diff');
-        } catch (error) {
-            this.log.error('Error getting file diff', error);
-            return responseHandler.failure(`Error getting file diff: ${error instanceof Error ? error.message : String(error)}`);
+            return responseHandler.success(result);
+        } catch (err) {
+            this.log.error(`Error getting file diff`, err);
+            return responseHandler.failure(err instanceof Error ? err.message : String(err));
         }
     }
 }
@@ -106,7 +124,7 @@ export class GetFileDiffTool extends AbstractGitTools<ToolParams['getFileDiff']>
  * Get branch information tool
  * Inherits from AbstractGitTools base class to utilize common Git operation functionality
  */
-export class GetBranchInfoTool extends AbstractGitTools {
+export class GetBranchInfoTool extends AbsGitTools {
     constructor() {
         super(
             'get_branch_info',
@@ -145,7 +163,7 @@ export class GetBranchInfoTool extends AbstractGitTools {
  * Get commit details tool
  * Inherits from AbstractGitTools base class to utilize common Git operation functionality
  */
-export class GetCommitDetailsTool extends AbstractGitTools<ToolParams['getCommitDetails']> {
+export class GetCommitDetailsTool extends AbsGitTools<ToolParams['getCommitDetails']> {
     constructor() {
         super(
             'get_commit_details',
@@ -173,7 +191,14 @@ export class GetCommitDetailsTool extends AbstractGitTools<ToolParams['getCommit
                 return responseHandler.failure('Commit hash cannot be empty');
             }
 
-            const command = `git show --format="%H|%an|%ae|%ad|%s|%b" --name-status --date=iso ${this.escapeArg(hash)}`;
+            // Validate commit hash
+            const validateCommand = `git rev-parse --verify ${hash}`;
+            const validateResult = await this.executeGitCommand(validateCommand);
+            if (validateResult.exitCode !== 0) {
+                return responseHandler.failure(`Invalid commit hash: ${hash}`);
+            }
+
+            const command = `git show --format="%H|%an|%ae|%ad|%s|%b" --name-status --date=iso ${hash}`;
             this.log.info(`Executing Git command: ${command}`);
 
             const result = await this.executeGitCommand(command);
@@ -195,7 +220,7 @@ export class GetCommitDetailsTool extends AbstractGitTools<ToolParams['getCommit
  * Commit changes tool
  * Inherits from AbstractGitTools base class to utilize common Git operation functionality
  */
-export class CommitChangesTool extends AbstractGitTools<ToolParams['commitChanges']> {
+export class CommitChangesTool extends AbsGitTools<ToolParams['commitChanges']> {
     constructor() {
         super(
             'commit_changes',
@@ -254,10 +279,9 @@ export class CommitChangesTool extends AbstractGitTools<ToolParams['commitChange
             }
 
             // Prepare commit command
-            const escapedMessage = this.escapeArg(message || '');
             const commitCommand = amend
-                ? `git commit --amend -m "${escapedMessage}"`
-                : `git commit -m "${escapedMessage}"`;
+                ? `git commit --amend -m "${message}"`
+                : `git commit -m "${message}"`;
 
             this.log.info(`Executing Git command: ${commitCommand}`);
 
@@ -265,6 +289,12 @@ export class CommitChangesTool extends AbstractGitTools<ToolParams['commitChange
             const commitResult = await this.executeGitCommand(commitCommand);
 
             if (commitResult.exitCode !== 0) {
+                if (commitResult.stderr?.includes('nothing to commit')) {
+                    return responseHandler.failure('No changes to commit');
+                }
+                if (commitResult.stderr?.includes('no changes added to commit')) {
+                    return responseHandler.failure('No changes staged for commit');
+                }
                 this.log.error(`Failed to commit changes: ${commitResult.stderr || 'Unknown error'}`);
                 return responseHandler.failure(`Failed to commit changes: ${commitResult.stderr}`);
             }
@@ -281,7 +311,7 @@ export class CommitChangesTool extends AbstractGitTools<ToolParams['commitChange
  * Pull changes tool
  * Inherits from AbstractGitTools base class to utilize common Git operation functionality
  */
-export class PullChangesTool extends AbstractGitTools<ToolParams['pullChanges']> {
+export class PullChangesTool extends AbsGitTools<ToolParams['pullChanges']> {
     constructor() {
         super(
             'pull_changes',
@@ -301,15 +331,58 @@ export class PullChangesTool extends AbstractGitTools<ToolParams['pullChanges']>
             const {remote = 'origin', branch} = args;
             this.log.info(`Pulling changes from remote: ${remote}${branch ? `, branch: ${branch}` : ''}`);
 
-            const pullCommand = branch
-                ? `git pull ${this.escapeArg(remote)} ${this.escapeArg(branch)}`
-                : `git pull ${this.escapeArg(remote)}`;
+            // Check if remote exists
+            const remoteCheckCommand = `git remote get-url ${remote}`;
+            const remoteCheckResult = await this.executeGitCommand(remoteCheckCommand);
+
+            if (remoteCheckResult.exitCode !== 0) {
+                return responseHandler.failure(`Remote '${remote}' does not exist`);
+            }
+
+            // Get current branch if no branch specified
+            let targetBranch = branch;
+            if (!targetBranch) {
+                const currentBranchCommand = 'git rev-parse --abbrev-ref HEAD';
+                const currentBranchResult = await this.executeGitCommand(currentBranchCommand);
+                if (currentBranchResult.exitCode === 0 && currentBranchResult.stdout) {
+                    targetBranch = currentBranchResult.stdout.trim();
+                }
+            }
+
+            // Check if branch exists remotely
+            if (targetBranch) {
+                const branchCheckCommand = `git ls-remote --heads ${remote} ${targetBranch}`;
+                const branchCheckResult = await this.executeGitCommand(branchCheckCommand);
+
+                if (branchCheckResult.exitCode !== 0 || !branchCheckResult.stdout) {
+                    return responseHandler.failure(`Branch '${targetBranch}' does not exist in remote '${remote}'`);
+                }
+            }
+
+            // Check for uncommitted changes
+            const statusCommand = 'git status --porcelain';
+            const statusResult = await this.executeGitCommand(statusCommand);
+
+            if (statusResult.exitCode === 0 && statusResult.stdout.trim() !== '') {
+                return responseHandler.failure('Cannot pull changes: You have uncommitted changes. Please commit or stash them first.');
+            }
+
+            // Prepare pull command
+            const pullCommand = targetBranch
+                ? `git pull ${remote} ${targetBranch}`
+                : `git pull ${remote}`;
 
             this.log.info(`Executing Git command: ${pullCommand}`);
 
             const result = await this.executeGitCommand(pullCommand);
 
             if (result.exitCode !== 0) {
+                if (result.stderr?.includes('CONFLICT')) {
+                    return responseHandler.failure('Pull failed due to merge conflicts. Please resolve conflicts manually.');
+                }
+                if (result.stderr?.includes('fatal: couldn\'t find remote ref')) {
+                    return responseHandler.failure(`Remote branch '${targetBranch}' not found in remote '${remote}'`);
+                }
                 this.log.error(`Failed to pull changes: ${result.stderr || 'Unknown error'}`);
                 return responseHandler.failure(`Failed to pull changes: ${result.stderr}`);
             }
@@ -326,7 +399,7 @@ export class PullChangesTool extends AbstractGitTools<ToolParams['pullChanges']>
  * Switch branch tool
  * Inherits from AbstractGitTools base class to utilize common Git operation functionality
  */
-export class SwitchBranchTool extends AbstractGitTools<ToolParams['switchBranch']> {
+export class SwitchBranchTool extends AbsGitTools<ToolParams['switchBranch']> {
     constructor() {
         super(
             'switch_branch',
@@ -351,12 +424,34 @@ export class SwitchBranchTool extends AbstractGitTools<ToolParams['switchBranch'
                 return responseHandler.failure('Branch name cannot be empty');
             }
 
-            const checkoutCommand = `git checkout ${this.escapeArg(branch)}`;
+            // Check for uncommitted changes
+            const statusCommand = 'git status --porcelain';
+            const statusResult = await this.executeGitCommand(statusCommand);
+
+            if (statusResult.exitCode === 0 && statusResult.stdout.trim() !== '') {
+                return responseHandler.failure('Cannot switch branch: You have uncommitted changes. Please commit or stash them first.');
+            }
+
+            // Check if branch exists
+            const branchCheckCommand = `git show-ref --verify --quiet refs/heads/${branch}`;
+            const branchCheckResult = await this.executeGitCommand(branchCheckCommand);
+
+            if (branchCheckResult.exitCode !== 0) {
+                return responseHandler.failure(`Branch '${branch}' does not exist`);
+            }
+
+            const checkoutCommand = `git checkout ${branch}`;
             this.log.info(`Executing Git command: ${checkoutCommand}`);
 
             const result = await this.executeGitCommand(checkoutCommand);
 
             if (result.exitCode !== 0) {
+                if (result.stderr?.includes('already exists')) {
+                    return responseHandler.failure(`Branch '${branch}' already exists`);
+                }
+                if (result.stderr?.includes('not a valid object name')) {
+                    return responseHandler.failure(`Invalid branch name: ${branch}`);
+                }
                 this.log.error(`Failed to switch branch: ${result.stderr || 'Unknown error'}`);
                 return responseHandler.failure(`Failed to switch branch: ${result.stderr}`);
             }
@@ -373,7 +468,7 @@ export class SwitchBranchTool extends AbstractGitTools<ToolParams['switchBranch'
  * Create branch tool
  * Inherits from AbstractGitTools base class to utilize common Git operation functionality
  */
-export class CreateBranchTool extends AbstractGitTools<ToolParams['createBranch']> {
+export class CreateBranchTool extends AbsGitTools<ToolParams['createBranch']> {
     constructor() {
         super(
             'create_branch',
@@ -399,15 +494,27 @@ export class CreateBranchTool extends AbstractGitTools<ToolParams['createBranch'
                 return responseHandler.failure('Branch name cannot be empty');
             }
 
+            // Validate branch name
+            if (!/^[a-zA-Z0-9\-_/\.]+$/.test(branch)) {
+                return responseHandler.failure('Invalid branch name. Branch names can only contain letters, numbers, hyphens, underscores, forward slashes, and dots.');
+            }
+
+            // Create branch command
             const createCommand = startPoint
-                ? `git checkout -b ${this.escapeArg(branch)} ${this.escapeArg(startPoint)}`
-                : `git checkout -b ${this.escapeArg(branch)}`;
+                ? `git checkout -b ${branch} ${startPoint}`
+                : `git checkout -b ${branch}`;
 
             this.log.info(`Executing Git command: ${createCommand}`);
 
             const result = await this.executeGitCommand(createCommand);
 
             if (result.exitCode !== 0) {
+                if (result.stderr?.includes('already exists')) {
+                    return responseHandler.failure(`Branch '${branch}' already exists`);
+                }
+                if (result.stderr?.includes('not a valid object name')) {
+                    return responseHandler.failure(`Invalid start point: ${startPoint}`);
+                }
                 this.log.error(`Failed to create branch: ${result.stderr || 'Unknown error'}`);
                 return responseHandler.failure(`Failed to create branch: ${result.stderr}`);
             }

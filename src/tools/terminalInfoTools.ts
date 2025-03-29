@@ -1,4 +1,4 @@
-import { AbstractTerminalTools } from '../types/absTerminalTools';
+import { AbsTerminalTools } from '../types/absTerminalTools';
 import { Response } from '../types';
 import { responseHandler } from '../server/responseHandler';
 import { TerminalDetector, OSType, TerminalInfo, TerminalType } from '../utils/terminalDetector';
@@ -7,7 +7,7 @@ import { TerminalDetector, OSType, TerminalInfo, TerminalType } from '../utils/t
  * Get terminal information tool
  * Inherits from AbstractTerminalTools base class to utilize common terminal operation functionality
  */
-export class GetTerminalInfoTool extends AbstractTerminalTools {
+export class GetTerminalInfoTool extends AbsTerminalTools {
     constructor() {
         super(
             'get_terminal_info',
@@ -127,7 +127,7 @@ export class GetTerminalInfoTool extends AbstractTerminalTools {
  * Execute OS-specific command tool
  * Inherits from AbstractTerminalTools base class to utilize common terminal operation functionality
  */
-export class ExecuteOSSpecificCommandTool extends AbstractTerminalTools<{
+export class ExecuteOSSpecificCommandTool extends AbsTerminalTools<{
     windowsCommand?: string;
     unixCommand?: string;
     macCommand?: string;

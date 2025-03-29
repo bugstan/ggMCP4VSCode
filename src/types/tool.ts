@@ -4,4 +4,4 @@
  */
 
 export { JsonSchemaObject, McpTool, NoArgs } from './toolInterfaces';
-export { AbstractTool as AbstractMcpTool } from './absTool';
+export { AbsTools as AbstractMcpTool } from './absTools';

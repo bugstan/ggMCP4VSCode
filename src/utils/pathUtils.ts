@@ -2,554 +2,278 @@ import path from 'path';
 import * as vscode from 'vscode';
 import { Logger } from './logger';
 
-// Create module-specific logger
+// 创建模块特定的日志记录器
 const log = Logger.forModule('PathUtils');
 
-// Cache for project root to avoid repeated queries
+// 缓存项目根目录以避免重复查询
 let cachedProjectRoot: string | null = null;
 let cachedProjectRootTimestamp = 0;
-const CACHE_TTL = 10000; // 10 seconds TTL
+const CACHE_TTL = 10000; // 10秒缓存有效期
 
 /**
- * Interface representing path resolution result
- */
-export interface PathResult {
-    /** Original path */
-    original: string;
-    /** Normalized path */
-    normalized: string;
-    /** Absolute path */
-    absolute: string | null;
-    /** Relative path (relative to project root) */
-    relative: string | null;
-    /** Whether the path is safe (does not contain directory traversal) */
-    isSafe: boolean;
-    /** Whether the path is within project directory */
-    isWithinProject: boolean;
-    /** Whether it's a directory */
-    isDirectory: boolean;
-    /** Error message (if any) */
-    error: string | null;
-}
-
-// Cache recent path resolution results to avoid repeated calculations
-const pathCache = new Map<string, PathResult>();
-const CACHE_SIZE_LIMIT = 100;
-
-/**
- * Get project root directory
- * Returns workspace root directory if available, otherwise returns current file directory
- * @returns Project root path or null
+ * 获取项目根目录
+ * 如果可用，返回工作区根目录，否则返回当前文件目录
+ * @returns 项目根路径或null
  */
 export function getProjectRoot(): string | null {
-    // Check cache first if not expired
-    const now = Date.now();
-    if (cachedProjectRoot && (now - cachedProjectRootTimestamp < CACHE_TTL)) {
-        return cachedProjectRoot;
-    }
+  // 先检查缓存是否有效
+  const now = Date.now();
+  if (cachedProjectRoot && (now - cachedProjectRootTimestamp < CACHE_TTL)) {
+    return cachedProjectRoot;
+  }
 
-    // First try to get workspace root directory
-    const workspaceFolders = vscode.workspace.workspaceFolders;
-    if (workspaceFolders && workspaceFolders.length > 0) {
-        // Ensure safe access
-        const firstFolder = workspaceFolders[0];
-        if (firstFolder) {
-            log.info(`Project root from workspace: ${firstFolder.uri.fsPath}`);
-            cachedProjectRoot = firstFolder.uri.fsPath;
-            cachedProjectRootTimestamp = now;
-            return cachedProjectRoot;
-        }
+  // 首先尝试获取工作区根目录
+  const workspaceFolders = vscode.workspace.workspaceFolders;
+  if (workspaceFolders && workspaceFolders.length > 0) {
+    const firstFolder = workspaceFolders[0];
+    if (firstFolder) {
+      log.info(`项目根目录来自工作区: ${firstFolder.uri.fsPath}`);
+      cachedProjectRoot = firstFolder.uri.fsPath;
+      cachedProjectRootTimestamp = now;
+      return cachedProjectRoot;
     }
+  }
 
-    // If no workspace, try using current open file directory
-    const activeEditor = vscode.window.activeTextEditor;
-    if (activeEditor) {
-        const filePath = activeEditor.document.uri.fsPath;
-        const directory = path.dirname(filePath);
-        log.info(`Project root from active file: ${directory}`);
-        cachedProjectRoot = directory;
-        cachedProjectRootTimestamp = now;
-        return cachedProjectRoot;
-    }
-
-    // No workspace and no open file
-    log.warn('Could not determine project root: no workspace folders or active files');
-    cachedProjectRoot = null;
+  // 如果没有工作区，尝试使用当前打开文件的目录
+  const activeEditor = vscode.window.activeTextEditor;
+  if (activeEditor) {
+    const filePath = activeEditor.document.uri.fsPath;
+    const directory = path.dirname(filePath);
+    log.info(`项目根目录来自活动文件: ${directory}`);
+    cachedProjectRoot = directory;
     cachedProjectRootTimestamp = now;
-    return null;
+    return cachedProjectRoot;
+  }
+
+  // 没有工作区也没有打开的文件
+  log.warn('无法确定项目根目录: 没有工作区文件夹或活动文件');
+  cachedProjectRoot = null;
+  cachedProjectRootTimestamp = now;
+  return null;
 }
 
 /**
- * Get current active file
- * @returns Active file path or null
- */
-export function getActiveFile(): string | null {
-    const activeEditor = vscode.window.activeTextEditor;
-    if (activeEditor) {
-        log.info(`Active file: ${activeEditor.document.uri.fsPath}`);
-        return activeEditor.document.uri.fsPath;
-    }
-
-    log.info('No active file found');
-    return null;
-}
-
-/**
- * Get current working directory
- * Prioritizes workspace root directory, falls back to current file directory
- * @returns Current working directory or null
- */
-export function getCurrentDirectory(): string | null {
-    // First try to get workspace root directory
-    const workspaceRoot = getProjectRoot();
-    if (workspaceRoot) {
-        return workspaceRoot;
-    }
-
-    // If no workspace, use current open file directory
-    const activeFile = getActiveFile();
-    if (activeFile) {
-        const directory = path.dirname(activeFile);
-        log.info(`Current directory from active file: ${directory}`);
-        return directory;
-    }
-
-    log.warn('Could not determine current directory');
-    return null;
-}
-
-/**
- * Generate UUID
- * @returns UUID string
- */
-export function uuid(): string {
-    const generatedUuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-        const r = Math.random() * 16 | 0;
-        const v = c === 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-    });
-
-    log.info(`Generated UUID: ${generatedUuid}`);
-    return generatedUuid;
-}
-
-/**
- * Clear path cache
- */
-export function clearPathCache(): void {
-    pathCache.clear();
-    // Also clear project root cache
-    cachedProjectRoot = null;
-    cachedProjectRootTimestamp = 0;
-    log.info('Path cache cleared');
-}
-
-/**
- * Normalize path and unify using / as separator
- * @param inputPath Input path
- * @returns Normalized path
+ * 规范化路径并统一使用 / 作为分隔符
+ * @param inputPath 输入路径
+ * @returns 规范化的路径
  */
 export function normalizePath(inputPath: string): string {
-    // Safety check
-    if (inputPath === undefined || inputPath === null) return '/';
+  // 安全检查
+  if (inputPath === undefined || inputPath === null) return '/';
 
-    // Convert all backslashes to forward slashes
-    let normalizedPath = String(inputPath).replace(/\\/g, '/');
+  // 转换所有反斜杠为正斜杠
+  let normalizedPath = String(inputPath).replace(/\\/g, '/');
 
-    // Use path.normalize to handle ../ and ./ cases, then ensure using / again
-    try {
-        normalizedPath = path.normalize(normalizedPath).replace(/\\/g, '/');
-    } catch (e) {
-        log.error('Path normalization error', e);
-        return '/'; // Return root path if error occurs
-    }
+  // 使用 path.normalize 处理 ../ 和 ./ 情况，然后再次确保使用 /
+  try {
+    normalizedPath = path.normalize(normalizedPath).replace(/\\/g, '/');
+  } catch (e) {
+    log.error('路径规范化错误', e);
+    return '/'; // 如果发生错误则返回根路径
+  }
 
-    // Ensure not ending with / (unless it's the root path)
-    if (normalizedPath !== '/' && normalizedPath.endsWith('/')) {
-        normalizedPath = normalizedPath.slice(0, -1);
-    }
+  // 确保不以 / 结尾（除非是根路径）
+  if (normalizedPath !== '/' && normalizedPath.endsWith('/')) {
+    normalizedPath = normalizedPath.slice(0, -1);
+  }
 
-    return normalizedPath;
+  return normalizedPath;
 }
 
 /**
- * Check if path is safe (doesn't contain path traversal)
- * @param normalizedPath Already normalized path
- * @returns Whether it's safe
+ * 检查路径是否安全且在项目内
+ * 合并了原来的 isPathSafe 和 isPathWithinProject 函数
+ * @param normalizedPath 已经规范化的路径
+ * @param projectRoot 项目根目录（可选）
+ * @returns 包含安全性和原因的对象
  */
-export function isPathSafe(normalizedPath: string): boolean {
-    try {
-        // Check if path contains "../" or equals ".." (which could lead to directory traversal)
-        return !(normalizedPath.includes('../') || normalizedPath === '..');
-    } catch (e) {
-        log.error('Path safety check error', e);
-        return false; // Consider path unsafe if error occurs
+export function isPathSafe(normalizedPath: string, projectRoot?: string | null): {
+  safe: boolean;
+  withinProject: boolean;
+  reason?: string;
+} {
+  try {
+    // 获取项目根目录（如果未提供）
+    const root = projectRoot ?? getProjectRoot();
+    
+    // 检查路径是否包含可能导致目录遍历的模式
+    const hasDirTraversal = normalizedPath.includes('../') || normalizedPath === '..';
+    
+    // 检查是否在项目目录内（如果有项目根目录）
+    let withinProject = false;
+    if (root && path.isAbsolute(normalizedPath)) {
+      const normalizedRoot = path.normalize(root).replace(/\\/g, '/');
+      withinProject = normalizedPath.startsWith(normalizedRoot);
     }
+
+    if (hasDirTraversal) {
+      return { 
+        safe: false, 
+        withinProject,
+        reason: '路径包含目录遍历模式 (../)'
+      };
+    }
+
+    return { 
+      safe: true, 
+      withinProject 
+    };
+  } catch (e) {
+    log.error('路径安全检查错误', e);
+    return { 
+      safe: false, 
+      withinProject: false,
+      reason: `安全检查错误: ${e instanceof Error ? e.message : String(e)}`
+    };
+  }
 }
 
 /**
- * Check if path is within project directory, preventing path traversal attacks
- * @param absolutePath Absolute path to check
- * @param projectRoot Project root directory
- * @returns Whether path is within project directory
+ * 将路径转换为绝对路径
+ * @param inputPath 输入路径
+ * @returns 绝对路径或null
  */
-export function isPathWithinProject(absolutePath: string, projectRoot: string): boolean {
-    try {
-        if (!absolutePath || !projectRoot) return false;
-
-        const normalizedPath = path.normalize(absolutePath);
-        const normalizedRoot = path.normalize(projectRoot);
-
-        // Check if normalized path starts with project root directory
-        return normalizedPath.startsWith(normalizedRoot);
-    } catch (e) {
-        log.error('Directory check error', e);
-        return false; // Consider path unsafe if error occurs
+export function toAbsolutePath(inputPath: string): string | null {
+  try {
+    // 规范化路径
+    const normalizedPath = normalizePath(inputPath);
+    
+    // 获取项目根目录
+    const projectRoot = getProjectRoot();
+    if (!projectRoot) {
+      log.warn('无法确定项目根目录');
+      return null;
     }
+
+    // 特殊处理根路径 "/"
+    if (normalizedPath === '/') {
+      return projectRoot;
+    }
+
+    // 处理以 / 开头的路径（相对于项目根目录）
+    if (normalizedPath.startsWith('/')) {
+      return path.join(projectRoot, normalizedPath.slice(1));
+    }
+
+    // 处理已经是绝对路径的情况
+    if (path.isAbsolute(normalizedPath)) {
+      return normalizedPath;
+    }
+
+    log.error(`toAbsolutePath 调试信息:`);
+    log.error(`输入路径: ${inputPath}`);
+    log.error(`规范化路径: ${normalizedPath}`);
+    log.error(`项目根目录: ${projectRoot}`);
+
+    // 处理普通相对路径（相对于项目根目录）
+    return path.join(projectRoot, normalizedPath);
+  } catch (e) {
+    log.error('路径转换错误', e);
+    return null;
+  }
 }
 
 /**
- * Convert relative path to absolute path
- * @param relativePath Relative path (normalized)
- * @returns Absolute path or null
- */
-export function toAbsolutePath(relativePath: string): string | null {
-    try {
-        // If already absolute path, return directly
-        if (path.isAbsolute(relativePath)) {
-            return relativePath;
-        }
-
-        // Try to resolve using project root directory
-        const projectRoot = getProjectRoot();
-        if (projectRoot) {
-            return path.join(projectRoot, relativePath);
-        }
-
-        // Try to resolve using current directory
-        const currentDir = getCurrentDirectory();
-        if (currentDir) {
-            return path.join(currentDir, relativePath);
-        }
-
-        // Unable to resolve
-        log.warn('Unable to resolve path, missing project root and current directory reference', { relativePath });
-        return null;
-    } catch (e) {
-        log.error('Path conversion error', e);
-        return null;
-    }
-}
-
-/**
- * Convert absolute path to project relative path
- * @param absolutePath Absolute path
- * @returns Relative path or null
+ * 将绝对路径转换为相对于项目根目录的路径
+ * @param absolutePath 绝对路径
+ * @returns 相对路径或null
  */
 export function toRelativePath(absolutePath: string): string | null {
-    try {
-        if (!absolutePath) return null;
-
-        // Get project root directory or current directory
-        const rootDir = getProjectRoot() || getCurrentDirectory();
-        if (!rootDir) {
-            // No reference directory, return absolute path (normalized)
-            return normalizePath(absolutePath);
-        }
-
-        // Normalize paths
-        const normalizedAbsPath = path.normalize(absolutePath);
-        const normalizedRoot = path.normalize(rootDir);
-
-        // Check if path is within reference directory
-        if (normalizedAbsPath.startsWith(normalizedRoot)) {
-            // Calculate relative path
-            let relativePath = path.relative(normalizedRoot, normalizedAbsPath).replace(/\\/g, '/');
-
-            // Ensure root directory returns /
-            if (!relativePath) {
-                return '/';
-            }
-
-            return relativePath;
-        } else {
-            // Path not within reference directory, return absolute path (normalized)
-            return normalizePath(absolutePath);
-        }
-    } catch (e) {
-        log.error('Relative path conversion error', e);
-        return null;
+  try {
+    if (!absolutePath) {
+      return null;
     }
+
+    // 规范化绝对路径
+    const normalizedAbsPath = path.normalize(absolutePath).replace(/\\/g, '/');
+    
+    // 获取项目根目录
+    const rootDir = getProjectRoot();
+    if (!rootDir) {
+      // 无参考目录，返回规范化的绝对路径
+      return normalizePath(absolutePath);
+    }
+
+    const normalizedRoot = path.normalize(rootDir).replace(/\\/g, '/');
+
+    // 检查路径是否在项目目录内
+    if (normalizedAbsPath.startsWith(normalizedRoot)) {
+      // 计算相对路径
+      let relativePath = path.relative(normalizedRoot, normalizedAbsPath).replace(/\\/g, '/');
+
+      // 确保空相对路径返回 /
+      if (!relativePath) {
+        return '/';
+      }
+
+      return relativePath;
+    } else {
+      // 路径不在项目目录内，返回规范化的绝对路径
+      return normalizePath(absolutePath);
+    }
+  } catch (e) {
+    log.error('相对路径转换错误', e);
+    return null;
+  }
 }
 
 /**
- * Fully analyze path, including normalization, safety check, path conversion etc.
- * Uses cache to avoid repeated calculations
- * @param inputPath Input path
- * @param forceNoCache Force not to use cache
- * @returns Path resolution result
- */
-export function analyzePath(inputPath: string, forceNoCache = false): PathResult {
-    try {
-        // If cache is available and not forcibly disabled, try to use cache
-        if (!forceNoCache && pathCache.has(inputPath)) {
-            const cachedResult = pathCache.get(inputPath);
-            if (cachedResult) {
-                log.info('Using path cache', { path: inputPath });
-                return cachedResult;
-            }
-        }
-
-        // Initialize result object
-        const result: PathResult = {
-            original: inputPath,
-            normalized: '',
-            absolute: null,
-            relative: null,
-            isSafe: false,
-            isWithinProject: false,
-            isDirectory: false,
-            error: null
-        };
-
-        // Normalize path
-        result.normalized = normalizePath(inputPath);
-        log.info('Normalized path', { original: inputPath, normalized: result.normalized });
-
-        // Safety check
-        result.isSafe = isPathSafe(result.normalized);
-        if (!result.isSafe) {
-            result.error = 'Unsafe path, may contain directory traversal';
-            log.warn('Path safety check failed', { path: result.normalized });
-            return updateCache(result);
-        }
-
-        // Special handling for root path "/"
-        if (result.normalized === '/') {
-            const projectRoot = getProjectRoot();
-            if (projectRoot) {
-                result.absolute = projectRoot;
-                result.relative = '/';
-                result.isWithinProject = true;
-                result.isDirectory = true;
-                log.info('Resolved root path "/"', { absolute: result.absolute });
-                return updateCache(result);
-            } else {
-                result.error = 'Cannot resolve root path, missing project context';
-                log.warn('Cannot resolve root path, missing project context');
-                return updateCache(result);
-            }
-        }
-
-        // Resolve absolute path
-        result.absolute = toAbsolutePath(result.normalized);
-        if (!result.absolute) {
-            result.error = 'Cannot resolve absolute path';
-            log.warn('Cannot resolve absolute path', { normalized: result.normalized });
-            return updateCache(result);
-        }
-
-        // Check if path is within project directory
-        const projectRoot = getProjectRoot();
-        if (projectRoot) {
-            result.isWithinProject = isPathWithinProject(result.absolute, projectRoot);
-        }
-
-        // If path is within project, calculate relative path
-        if (result.isWithinProject) {
-            result.relative = toRelativePath(result.absolute);
-        }
-
-        // Simple inference whether it's a directory (based on path ending)
-        // Note: More accurate check should use file system API, but this requires async operation
-        result.isDirectory = result.normalized.endsWith('/') || result.original.endsWith('/') || result.original.endsWith('\\');
-
-        // Cache and return result
-        return updateCache(result);
-    } catch (e) {
-        log.error('Path analysis error', e, { path: inputPath });
-
-        // Return result with error
-        const errorResult: PathResult = {
-            original: inputPath,
-            normalized: inputPath,
-            absolute: null,
-            relative: null,
-            isSafe: false,
-            isWithinProject: false,
-            isDirectory: false,
-            error: e instanceof Error ? e.message : String(e)
-        };
-        return errorResult; // Don't cache errors
-    }
-}
-
-/**
- * Update path cache and return result
- * @param result Path resolution result
- * @returns Input result (for chaining)
- */
-function updateCache(result: PathResult): PathResult {
-    // Simple cache eviction strategy: clear entire cache when size exceeds limit
-    if (pathCache.size >= CACHE_SIZE_LIMIT) {
-        log.info('Path cache reached limit, clearing cache');
-        pathCache.clear();
-    }
-
-    // Cache result
-    pathCache.set(result.original, result);
-    return result;
-}
-
-/**
- * Convert project relative path to absolute path, with safety check
- * Returns null if path conversion fails or is unsafe
- * @param pathInProject Project relative path
- * @returns Absolute path or null
- */
-export function toAbsolutePathSafe(pathInProject: string): string | null {
-    const pathResult = analyzePath(pathInProject);
-
-    if (pathResult.error || !pathResult.isSafe) {
-        log.warn('Path unsafe or resolution error', { path: pathInProject, error: pathResult.error });
-        return null;
-    }
-
-    return pathResult.absolute;
-}
-
-/**
- * Check if path is absolute
- * @param inputPath Input path to check
- * @returns Whether the path is absolute
+ * 判断路径是否为绝对路径
+ * @param inputPath 输入路径
+ * @returns 是否为绝对路径
  */
 export function isAbsolutePath(inputPath: string): boolean {
-    try {
-        return path.isAbsolute(inputPath);
-    } catch (e) {
-        log.error('Path absolute check error', e);
-        return false;
-    }
+  try {
+    return path.isAbsolute(inputPath);
+  } catch (e) {
+    log.error('路径类型检查错误', e);
+    return false;
+  }
 }
 
 /**
- * Get directory name from path
- * @param inputPath Input path
- * @returns Directory name
- */
-export function getDirName(inputPath: string): string {
-    try {
-        return path.dirname(inputPath);
-    } catch (e) {
-        log.error('Error getting directory name', e);
-        return '';
-    }
-}
-
-/**
- * Get file name from path
- * @param inputPath Input path
- * @returns File name
- */
-export function getFileName(inputPath: string): string {
-    try {
-        return path.basename(inputPath);
-    } catch (e) {
-        log.error('Error getting file name', e);
-        return '';
-    }
-}
-
-/**
- * Extend path object with utility methods
- * @param inputPath Input path
- * @returns Path helper object with utility methods
- */
-export function createPathHelper(inputPath: string) {
-    const pathResult = analyzePath(inputPath);
-
-    return {
-        ...pathResult,
-        /**
-         * Get normalized path
-         */
-        getNormalized(): string {
-            return pathResult.normalized;
-        },
-
-        /**
-         * Get absolute path (if available)
-         */
-        getAbsolute(): string | null {
-            return pathResult.absolute;
-        },
-
-        /**
-         * Get relative path (if available)
-         */
-        getRelative(): string | null {
-            return pathResult.relative;
-        },
-
-        /**
-         * Whether path is safe
-         */
-        isSafe(): boolean {
-            return pathResult.isSafe;
-        },
-
-        /**
-         * Whether path is within project directory
-         */
-        isWithinProject(): boolean {
-            return pathResult.isWithinProject;
-        },
-
-        /**
-         * Whether path is valid (safe and can resolve absolute path)
-         */
-        isValid(): boolean {
-            return pathResult.isSafe && pathResult.absolute !== null;
-        },
-
-        /**
-         * Get filename part
-         */
-        getFileName(): string {
-            return pathResult.absolute ? path.basename(pathResult.absolute) : '';
-        },
-
-        /**
-         * Get extension
-         */
-        getExtension(): string {
-            return pathResult.absolute ? path.extname(pathResult.absolute) : '';
-        },
-
-        /**
-         * Get directory name
-         */
-        getDirName(): string {
-            return getDirName(pathResult.absolute || inputPath);
-        }
-    };
-}
-
-/**
- * Join multiple paths safely
- * @param paths Paths to join
- * @returns Joined path
+ * 连接多个路径片段为一个路径
+ * @param paths 路径片段
+ * @returns 连接后的路径
  */
 export function joinPaths(...paths: string[]): string {
-    try {
-        // Filter out empty or undefined paths
-        const validPaths = paths.filter(p => p && p !== '');
-        if (validPaths.length === 0) return '';
+  try {
+    // 过滤掉空路径
+    const validPaths = paths.filter(p => p && p !== '');
+    if (validPaths.length === 0) return '';
 
-        // Join paths and normalize
-        return normalizePath(path.join(...validPaths));
-    } catch (e) {
-        log.error('Error joining paths', e);
-        return '';
-    }
+    // 连接路径并规范化
+    return normalizePath(path.join(...validPaths));
+  } catch (e) {
+    log.error('路径连接错误', e);
+    return '';
+  }
+}
+
+/**
+ * 获取目录名
+ * @param inputPath 输入路径
+ * @returns 目录名
+ */
+export function getDirName(inputPath: string): string {
+  try {
+    return path.dirname(inputPath);
+  } catch (e) {
+    log.error('获取目录名错误', e);
+    return '';
+  }
+}
+
+/**
+ * 获取文件名
+ * @param inputPath 输入路径
+ * @returns 文件名
+ */
+export function getFileName(inputPath: string): string {
+  try {
+    return path.basename(inputPath);
+  } catch (e) {
+    log.error('获取文件名错误', e);
+    return '';
+  }
 }
