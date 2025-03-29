@@ -183,11 +183,11 @@ export class GetProjectDependenciesTool extends AbsTools<ToolParams['getProjectD
     }
 
     /**
-     * Safely read JSON file - 使用新的路径处理函数
+     * Safely read JSON file using new path processing function
      */
     private readJsonFile<R = any>(filePath: string): R | null {
         try {
-            // 使用新的 toAbsolutePath 函数
+            // Use new toAbsolutePath function
             const fullPath = toAbsolutePath(filePath);
             if (!fullPath) return null;
             if (this.fileExists(vscode.Uri.file(fullPath))) {
@@ -201,11 +201,11 @@ export class GetProjectDependenciesTool extends AbsTools<ToolParams['getProjectD
     }
 
     /**
-     * Safely read text file - 使用新的路径处理函数
+     * Safely read text file using new path processing function
      */
     private readTextFile(filePath: string): string | null {
         try {
-            // 使用新的 toAbsolutePath 函数
+            // Use new toAbsolutePath function
             const fullPath = toAbsolutePath(filePath);
             if (!fullPath) return null;
             if (this.fileExists(vscode.Uri.file(fullPath))) {

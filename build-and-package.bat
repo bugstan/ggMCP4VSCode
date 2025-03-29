@@ -13,7 +13,7 @@ call npm run compile
 
 echo.
 echo Step 3: Updating README version...
-call npm run update-readme
+call npm run version
 
 echo.
 echo Step 4: Packaging extension...

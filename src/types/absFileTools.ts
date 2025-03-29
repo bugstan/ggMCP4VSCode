@@ -55,11 +55,9 @@ export abstract class AbsFileTools<T extends Record<string, any> = any> extends 
         const startTime = performance.now();
 
         const pathArg = this.extractPathFromArgs(args);
-        this.log.error(`executeCore extractPathFromArgs 路径: ${pathArg}`);
 
         // Use base class path handling
         const {path, absolutePath, isSafe} = await this.preparePath(pathArg);
-        this.log.error(`executeCore 绝对路径: ${absolutePath}`);
 
         if (!absolutePath || !isSafe) {
             return responseHandler.failure('Invalid file path or project directory not found');

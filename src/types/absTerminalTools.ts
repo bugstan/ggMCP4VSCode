@@ -22,7 +22,7 @@ export abstract class AbsTerminalTools<T = any> extends AbsTools<T> {
      */
     protected async executeCore(args: T): Promise<Response> {
         try {
-            // 使用新的 getProjectRoot 函数
+            // Use new getProjectRoot function
             const projectRoot = getProjectRoot();
             if (!projectRoot) {
                 return responseHandler.failure('No project root found');

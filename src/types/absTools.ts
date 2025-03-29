@@ -147,22 +147,22 @@ export abstract class AbsTools<T = any> implements McpTool<T> {
             return {path: '', absolutePath: null, isSafe: false};
         }
 
-        // 使用新的规范化函数
+        // Use new normalization function
         const normalizedPath = normalizePath(inputPath);
 
-        // 检查路径安全性
+        // Check path safety
         const safetyCheck = isPathSafe(normalizedPath);
         if (!safetyCheck.safe) {
             return {path: inputPath, absolutePath: null, isSafe: false};
         }
 
-        // 转换为绝对路径  eg: D:\project\src\file.txt
+        // Convert to absolute path, e.g., D:\project\src\file.txt
         const absolutePath = toAbsolutePath(normalizedPath);
         if (!absolutePath) {
             return {path: inputPath, absolutePath: null, isSafe: false};
         }
 
-        // 转换为相对路径 eg: src/file.txt
+        // Convert to relative path, e.g., src/file.txt
         const relativePath = toRelativePath(absolutePath) || normalizedPath;
 
         return {
@@ -179,7 +179,6 @@ export abstract class AbsTools<T = any> implements McpTool<T> {
      * @returns Extracted path
      */
     protected extractPathFromArgs(args: T): string {
-        this.log.error(`extractPathFromArgs in ${this.name} (${ (args as any).pathInProject })`);
         return (args as any).pathInProject || '/';
     }
 

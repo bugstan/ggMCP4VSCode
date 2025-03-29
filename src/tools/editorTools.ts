@@ -224,13 +224,6 @@ export class OpenFileInEditorTool extends AbsEditorTools<ToolParams['openFileInE
     }
 
     /**
-     * Extract path from arguments
-     */
-    protected extractPathFromArgs(args: ToolParams['openFileInEditor']): string {
-        return args.pathInProject;
-    }
-
-    /**
      * Execute open file operation (implementing base class abstract method)
      */
     protected async execute(_editor: vscode.TextEditor | undefined, args: ToolParams['openFileInEditor']): Promise<Response> {
