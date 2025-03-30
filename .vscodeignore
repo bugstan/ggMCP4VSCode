@@ -12,10 +12,11 @@ CONTRIBUTING*
 README-zh.md
 .idea/**
 test/**
+doc/**
 
 # ------------------- Source code can be excluded, but keep compiled files -------------------
 src/**
-
+scripts/**
 # ------------------- Ensure these files/directories are not excluded -------------------
 !dist/**
 !dist/extension.js
