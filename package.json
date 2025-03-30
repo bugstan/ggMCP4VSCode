@@ -103,18 +103,18 @@
     },
     "scripts": {
         "version": "node scripts/version.js",
-        "build": "npm run version && tsc",
-        "vscode:prepublish": "npm run compile && npm run version",
+        "build": "tsc",
+        "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
         "lint": "eslint . --ext .ts",
         "test": "node ./test/run-all-tests.js",
-        "package": "vsce package"
+        "package": "npx vsce package"
     },
     "devDependencies": {
         "@types/node": "^18.16.0",
         "@types/vscode": "^1.80.0",
         "typescript": "^5.8.2",
-        "vsce": "^2.15.0"
+        "@vscode/vsce": "^3.3.0"
     }
 }

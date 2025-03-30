@@ -7,7 +7,7 @@
       "ES2022"
     ],
     "sourceMap": true,
-    "rootDir": ".",
+    "rootDir": "src",
     "strict": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
