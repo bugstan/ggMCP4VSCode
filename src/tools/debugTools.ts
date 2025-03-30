@@ -1,13 +1,15 @@
 import * as vscode from 'vscode';
-import {AbsDebugTools} from '../types/absDebugTools';
-import {Response, ToolParams} from '../types';
-import {responseHandler} from '../server/responseHandler';
+import { AbsDebugTools } from '../types/absDebugTools';
+import { Response, ToolParams } from '../types';
+import { responseHandler } from '../server/responseHandler';
 
 /**
  * Toggle debugger breakpoint tool
  * Inherits from AbstractDebugTools base class to utilize common debugging functionality
  */
-export class ToggleDebuggerBreakpointTool extends AbsDebugTools<ToolParams['toggleDebuggerBreakpoint']> {
+export class ToggleDebuggerBreakpointTool extends AbsDebugTools<
+    ToolParams['toggleDebuggerBreakpoint']
+> {
     constructor() {
         super(
             'toggle_debugger_breakpoint',
@@ -15,10 +17,10 @@ export class ToggleDebuggerBreakpointTool extends AbsDebugTools<ToolParams['togg
             {
                 type: 'object',
                 properties: {
-                    pathInProject: {type: 'string'},
-                    line: {type: 'number'}
+                    pathInProject: { type: 'string' },
+                    line: { type: 'number' },
                 },
-                required: ['pathInProject', 'line']
+                required: ['pathInProject', 'line'],
             }
         );
     }
@@ -28,7 +30,7 @@ export class ToggleDebuggerBreakpointTool extends AbsDebugTools<ToolParams['togg
      */
     protected async execute(args: ToolParams['toggleDebuggerBreakpoint']): Promise<Response> {
         try {
-            const {pathInProject, line} = args;
+            const { pathInProject, line } = args;
 
             // Use base class method to create breakpoint location
             const breakpointLocation = await this.createBreakpointLocation(pathInProject, line);
@@ -37,7 +39,10 @@ export class ToggleDebuggerBreakpointTool extends AbsDebugTools<ToolParams['togg
             }
 
             // Get breakpoints at specified location
-            const existingBreakpoints = this.getBreakpointsAtLocation(breakpointLocation.uri, breakpointLocation.position.line);
+            const existingBreakpoints = this.getBreakpointsAtLocation(
+                breakpointLocation.uri,
+                breakpointLocation.position.line
+            );
 
             // Toggle breakpoint (remove if exists, add if not)
             if (existingBreakpoints.length > 0) {
@@ -46,12 +51,17 @@ export class ToggleDebuggerBreakpointTool extends AbsDebugTools<ToolParams['togg
                 return responseHandler.success('Breakpoint removed');
             } else {
                 // Add new breakpoint
-                const breakpoint = this.addBreakpoint(breakpointLocation.uri, breakpointLocation.position);
+                const breakpoint = this.addBreakpoint(
+                    breakpointLocation.uri,
+                    breakpointLocation.position
+                );
                 this.log.info('Breakpoint added:', breakpoint);
 
                 // Open file and show breakpoint location
                 try {
-                    const document = await vscode.workspace.openTextDocument(breakpointLocation.uri);
+                    const document = await vscode.workspace.openTextDocument(
+                        breakpointLocation.uri
+                    );
                     const editor = await vscode.window.showTextDocument(document);
 
                     // Scroll to breakpoint location
@@ -68,7 +78,9 @@ export class ToggleDebuggerBreakpointTool extends AbsDebugTools<ToolParams['togg
             }
         } catch (error) {
             this.log.error('Toggle breakpoint error:', error);
-            return responseHandler.failure(`Toggle breakpoint error: ${error instanceof Error ? error.message : String(error)}`);
+            return responseHandler.failure(
+                `Toggle breakpoint error: ${error instanceof Error ? error.message : String(error)}`
+            );
         }
     }
 }
@@ -84,7 +96,7 @@ export class GetDebuggerBreakpointsTool extends AbsDebugTools<{}> {
             'Retrieves a list of all line breakpoints currently set in the project.\nUse this tool to get information about existing debugger breakpoints.\nReturns a JSON-formatted list of breakpoints, where each entry contains:\n- path: The absolute file path where the breakpoint is set\n- line: The line number (1-based) where the breakpoint is located\nReturns an empty list ([]) if no breakpoints are set.\nNote: Only includes line breakpoints, not other breakpoint types (e.g., method breakpoints)',
             {
                 type: 'object',
-                properties: {}
+                properties: {},
             }
         );
     }
@@ -99,20 +111,22 @@ export class GetDebuggerBreakpointsTool extends AbsDebugTools<{}> {
 
             // Filter and convert breakpoint information
             const breakpointInfo = allBreakpoints
-                .filter(bp => bp instanceof vscode.SourceBreakpoint)
-                .map(bp => {
+                .filter((bp) => bp instanceof vscode.SourceBreakpoint)
+                .map((bp) => {
                     const sourceBp = bp as vscode.SourceBreakpoint;
                     const location = sourceBp.location;
                     return {
                         pathInProject: this.getRelativePath(location.uri.fsPath),
-                        line: location.range.start.line + 1 // Convert to 1-based line number
+                        line: location.range.start.line + 1, // Convert to 1-based line number
                     };
                 });
 
             return responseHandler.success(breakpointInfo);
         } catch (error) {
             this.log.error('Get breakpoints error:', error);
-            return responseHandler.failure(`Get breakpoints error: ${error instanceof Error ? error.message : String(error)}`);
+            return responseHandler.failure(
+                `Get breakpoints error: ${error instanceof Error ? error.message : String(error)}`
+            );
         }
     }
 }
@@ -128,7 +142,7 @@ export class GetRunConfigurationsTool extends AbsDebugTools<{}> {
             'Returns a list of run configurations for the current project. Use this tool to query the list of available run configurations in current project. Then you shall to call "run_configuration" tool if you find anything relevant. Returns JSON list of run configuration names. Empty list if no run configurations found.',
             {
                 type: 'object',
-                properties: {}
+                properties: {},
             }
         );
     }
@@ -142,12 +156,14 @@ export class GetRunConfigurationsTool extends AbsDebugTools<{}> {
             const allConfigs = this.getAllRunConfigurations();
 
             // Extract configuration names
-            const configNames = allConfigs.map(config => config.name).filter(Boolean);
+            const configNames = allConfigs.map((config) => config.name).filter(Boolean);
 
             return responseHandler.success(configNames);
         } catch (error) {
             this.log.error('Get run configurations error:', error);
-            return responseHandler.failure(`Get run configurations error: ${error instanceof Error ? error.message : String(error)}`);
+            return responseHandler.failure(
+                `Get run configurations error: ${error instanceof Error ? error.message : String(error)}`
+            );
         }
     }
 }
@@ -164,9 +180,9 @@ export class RunConfigurationTool extends AbsDebugTools<ToolParams['runConfigura
             {
                 type: 'object',
                 properties: {
-                    configName: {type: 'string'}
+                    configName: { type: 'string' },
                 },
-                required: ['configName']
+                required: ['configName'],
             }
         );
     }
@@ -176,13 +192,15 @@ export class RunConfigurationTool extends AbsDebugTools<ToolParams['runConfigura
      */
     protected async execute(args: ToolParams['runConfiguration']): Promise<Response> {
         try {
-            const {configName} = args;
+            const { configName } = args;
 
             // Use base class method to get specific run configuration
             const targetConfig = this.getRunConfiguration(configName);
 
             if (!targetConfig) {
-                return responseHandler.failure(`Could not find run configuration named "${configName}"`);
+                return responseHandler.failure(
+                    `Could not find run configuration named "${configName}"`
+                );
             }
 
             // Use base class method to start debugging session
@@ -195,7 +213,9 @@ export class RunConfigurationTool extends AbsDebugTools<ToolParams['runConfigura
             }
         } catch (error) {
             this.log.error('Run configuration error:', error);
-            return responseHandler.failure(`Run configuration error: ${error instanceof Error ? error.message : String(error)}`);
+            return responseHandler.failure(
+                `Run configuration error: ${error instanceof Error ? error.message : String(error)}`
+            );
         }
     }
 }

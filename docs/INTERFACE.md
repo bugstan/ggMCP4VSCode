@@ -1,6 +1,6 @@
 # VSCode MCP Server Plugin Interface Documentation
 
-[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/bugstan/ggMCP4VSCode)
+[![Version](https://img.shields.io/badge/version-1.1.2-blue.svg)](https://github.com/bugstan/ggMCP4VSCode)
 
 ## Introduction
 

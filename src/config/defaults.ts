@@ -19,9 +19,9 @@ export const Defaults = {
         /** Request timeout (milliseconds) */
         requestTimeout: 30000,
         /** Server startup retry count */
-        startupRetries: 3
+        startupRetries: 3,
     },
-    
+
     /** Port scanner configuration */
     PortScanner: {
         /** Default timeout (milliseconds) */
@@ -31,9 +31,9 @@ export const Defaults = {
         /** Number of retries */
         retries: 1,
         /** Cache TTL (milliseconds) */
-        cacheTTL: 30000
+        cacheTTL: 30000,
     },
-    
+
     /** Logging configuration */
     Logger: {
         /** Whether logging is enabled */
@@ -49,9 +49,9 @@ export const Defaults = {
         /** Number of log files to retain */
         maxFiles: 5,
         /** Whether to show timestamps in console */
-        showTimestamps: true
+        showTimestamps: true,
     },
-    
+
     /** Cache configuration */
     Cache: {
         /** Whether caching is enabled */
@@ -61,9 +61,9 @@ export const Defaults = {
         /** Maximum number of cache items */
         maxItems: 1000,
         /** Whether to cache request results */
-        cacheResponses: false
+        cacheResponses: false,
     },
-    
+
     /** File watcher configuration */
     FileWatcher: {
         /** Whether file watching is enabled */
@@ -75,9 +75,9 @@ export const Defaults = {
         /** File change debounce delay (milliseconds) */
         debounceDelay: 300,
         /** Whether to watch subdirectories */
-        watchSubdirectories: true
+        watchSubdirectories: true,
     },
-    
+
     /** File reloader configuration */
     FileReloader: {
         /** Whether file auto-reload is enabled */
@@ -87,9 +87,9 @@ export const Defaults = {
         /** Reload delay (milliseconds) */
         reloadDelay: 100,
         /** Large file threshold (bytes) - use command to reload files above this size */
-        largeFileThreshold: 1024 * 1024 // 1MB
+        largeFileThreshold: 1024 * 1024, // 1MB
     },
-    
+
     /** Notification configuration */
     Notifications: {
         /** Whether to show file change notifications */
@@ -101,12 +101,12 @@ export const Defaults = {
             error: true,
             warning: true,
             info: true,
-            debug: false
+            debug: false,
         },
         /** Maximum number of notifications */
-        maxNotifications: 5
+        maxNotifications: 5,
     },
-    
+
     /** Performance monitoring configuration */
     Performance: {
         /** Whether performance monitoring is enabled */
@@ -116,9 +116,9 @@ export const Defaults = {
         /** Slow operation threshold (milliseconds) */
         slowOperationThreshold: 1000,
         /** Whether to log request processing time */
-        measureRequestTime: true
+        measureRequestTime: true,
     },
-    
+
     /** Debug configuration */
     Debug: {
         /** Whether debug mode is enabled */
@@ -128,6 +128,6 @@ export const Defaults = {
         /** Whether to print network requests in console */
         logNetworkRequests: false,
         /** Whether to capture detailed timing information */
-        captureTimingInfo: false
-    }
+        captureTimingInfo: false,
+    },
 };

@@ -11,7 +11,7 @@ export enum LogLevel {
     WARN = 2,
     ERROR = 3,
     FATAL = 4,
-    NONE = 5
+    NONE = 5,
 }
 
 /**
@@ -20,7 +20,7 @@ export enum LogLevel {
 export enum LogDestination {
     CONSOLE = 'console',
     FILE = 'file',
-    BOTH = 'both'
+    BOTH = 'both',
 }
 
 /**
@@ -55,7 +55,7 @@ export class Logger {
         includeTimestamp: true,
         includeModule: true,
         maxFileSize: Logger.DEFAULT_MAX_FILE_SIZE,
-        maxFiles: Logger.DEFAULT_MAX_FILES
+        maxFiles: Logger.DEFAULT_MAX_FILES,
     };
 
     /**
@@ -79,7 +79,10 @@ export class Logger {
                 // Get other configuration values
                 this.config.prefix = vsConfig.get<string>('logPrefix', this.DEFAULT_PREFIX);
                 this.config.filePath = vsConfig.get<string>('logFilePath', '');
-                this.config.maxFileSize = vsConfig.get<number>('logMaxFileSize', this.DEFAULT_MAX_FILE_SIZE);
+                this.config.maxFileSize = vsConfig.get<number>(
+                    'logMaxFileSize',
+                    this.DEFAULT_MAX_FILE_SIZE
+                );
                 this.config.maxFiles = vsConfig.get<number>('logMaxFiles', this.DEFAULT_MAX_FILES);
                 this.config.includeTimestamp = vsConfig.get<boolean>('logIncludeTimestamp', true);
                 this.config.includeModule = vsConfig.get<boolean>('logIncludeModule', true);
@@ -98,7 +101,10 @@ export class Logger {
                 }
             }
 
-            this.info('System', `Logger initialized with level: ${LogLevel[this.config.level]}, destination: ${this.config.destination}`);
+            this.info(
+                'System',
+                `Logger initialized with level: ${LogLevel[this.config.level]}, destination: ${this.config.destination}`
+            );
         } catch (err) {
             console.error('Failed to initialize logger:', err);
             // Use default configuration if initialization fails
@@ -118,14 +124,21 @@ export class Logger {
      */
     private static parseLogLevel(level: string): LogLevel {
         switch (level.toLowerCase()) {
-            case 'debug': return LogLevel.DEBUG;
-            case 'info': return LogLevel.INFO;
+            case 'debug':
+                return LogLevel.DEBUG;
+            case 'info':
+                return LogLevel.INFO;
             case 'warn':
-            case 'warning': return LogLevel.WARN;
-            case 'error': return LogLevel.ERROR;
-            case 'fatal': return LogLevel.FATAL;
-            case 'none': return LogLevel.NONE;
-            default: return LogLevel.INFO;
+            case 'warning':
+                return LogLevel.WARN;
+            case 'error':
+                return LogLevel.ERROR;
+            case 'fatal':
+                return LogLevel.FATAL;
+            case 'none':
+                return LogLevel.NONE;
+            default:
+                return LogLevel.INFO;
         }
     }
 
@@ -134,10 +147,14 @@ export class Logger {
      */
     private static parseLogDestination(destination: string): LogDestination {
         switch (destination.toLowerCase()) {
-            case 'console': return LogDestination.CONSOLE;
-            case 'file': return LogDestination.FILE;
-            case 'both': return LogDestination.BOTH;
-            default: return LogDestination.CONSOLE;
+            case 'console':
+                return LogDestination.CONSOLE;
+            case 'file':
+                return LogDestination.FILE;
+            case 'both':
+                return LogDestination.BOTH;
+            default:
+                return LogDestination.CONSOLE;
         }
     }
 
@@ -181,8 +198,11 @@ export class Logger {
      */
     private static writeLog(formattedMessage: string, level: LogLevel, args: any[]): void {
         // Write to console if configured
-        if (this.config.destination === LogDestination.CONSOLE || this.config.destination === LogDestination.BOTH) {
-            switch(level) {
+        if (
+            this.config.destination === LogDestination.CONSOLE ||
+            this.config.destination === LogDestination.BOTH
+        ) {
+            switch (level) {
                 case LogLevel.DEBUG:
                     console.debug(formattedMessage, ...args);
                     break;
@@ -200,8 +220,11 @@ export class Logger {
         }
 
         // Write to file if configured
-        if ((this.config.destination === LogDestination.FILE || this.config.destination === LogDestination.BOTH)
-            && this.config.filePath) {
+        if (
+            (this.config.destination === LogDestination.FILE ||
+                this.config.destination === LogDestination.BOTH) &&
+            this.config.filePath
+        ) {
             try {
                 this.writeToFile(formattedMessage, args);
             } catch (error) {
@@ -230,18 +253,20 @@ export class Logger {
             // Format the arguments for file output
             let argsStr = '';
             if (args && args.length > 0) {
-                argsStr = args.map(arg => {
-                    if (arg === null) return 'null';
-                    if (arg === undefined) return 'undefined';
-                    if (typeof arg === 'object') {
-                        try {
-                            return JSON.stringify(arg);
-                        } catch (e) {
-                            return String(arg);
+                argsStr = args
+                    .map((arg) => {
+                        if (arg === null) return 'null';
+                        if (arg === undefined) return 'undefined';
+                        if (typeof arg === 'object') {
+                            try {
+                                return JSON.stringify(arg);
+                            } catch (e) {
+                                return String(arg);
+                            }
                         }
-                    }
-                    return String(arg);
-                }).join(' ');
+                        return String(arg);
+                    })
+                    .join(' ');
                 argsStr = ' ' + argsStr;
             }
 
@@ -267,14 +292,20 @@ export class Logger {
             const baseName = path.basename(baseFilePath, this.LOG_FILE_EXT);
 
             // Delete oldest file if it exists
-            const oldestFile = path.join(dirName, `${baseName}.${maxFiles - 1}${this.LOG_FILE_EXT}`);
+            const oldestFile = path.join(
+                dirName,
+                `${baseName}.${maxFiles - 1}${this.LOG_FILE_EXT}`
+            );
             if (fs.existsSync(oldestFile)) {
                 fs.unlinkSync(oldestFile);
             }
 
             // Shift existing log files
             for (let i = maxFiles - 2; i >= 0; i--) {
-                const oldFile = path.join(dirName, `${baseName}${i > 0 ? '.' + i : ''}${this.LOG_FILE_EXT}`);
+                const oldFile = path.join(
+                    dirName,
+                    `${baseName}${i > 0 ? '.' + i : ''}${this.LOG_FILE_EXT}`
+                );
                 const newFile = path.join(dirName, `${baseName}.${i + 1}${this.LOG_FILE_EXT}`);
 
                 if (fs.existsSync(oldFile)) {
@@ -343,7 +374,7 @@ export class Logger {
                 if (error instanceof Error) {
                     this.writeLog(formattedMessage, LogLevel.ERROR, [
                         `${error.message}\nStack: ${error.stack || 'No stack trace'}`,
-                        ...args
+                        ...args,
                     ]);
                 } else {
                     this.writeLog(formattedMessage, LogLevel.ERROR, [String(error), ...args]);
@@ -369,7 +400,7 @@ export class Logger {
                 if (error instanceof Error) {
                     this.writeLog(formattedMessage, LogLevel.FATAL, [
                         `${error.message}\nStack: ${error.stack || 'No stack trace'}`,
-                        ...args
+                        ...args,
                     ]);
                 } else {
                     this.writeLog(formattedMessage, LogLevel.FATAL, [String(error), ...args]);
@@ -396,8 +427,10 @@ export class Logger {
             debug: (message: string, ...args: any[]) => this.debug(module, message, ...args),
             info: (message: string, ...args: any[]) => this.info(module, message, ...args),
             warn: (message: string, ...args: any[]) => this.warn(module, message, ...args),
-            error: (message: string, error?: any, ...args: any[]) => this.error(module, message, error, ...args),
-            fatal: (message: string, error?: any, ...args: any[]) => this.fatal(module, message, error, ...args)
+            error: (message: string, error?: any, ...args: any[]) =>
+                this.error(module, message, error, ...args),
+            fatal: (message: string, error?: any, ...args: any[]) =>
+                this.fatal(module, message, error, ...args),
         };
     }
 
@@ -454,9 +487,10 @@ export class Logger {
 
             // Read rotated log files in order (oldest first)
             for (let i = maxFiles - 1; i >= 0; i--) {
-                const logFile = i === 0
-                    ? baseFilePath
-                    : path.join(dirName, `${baseName}.${i}${this.LOG_FILE_EXT}`);
+                const logFile =
+                    i === 0
+                        ? baseFilePath
+                        : path.join(dirName, `${baseName}.${i}${this.LOG_FILE_EXT}`);
 
                 if (fs.existsSync(logFile)) {
                     allLogs += fs.readFileSync(logFile, 'utf8') + '\n';
@@ -481,7 +515,7 @@ export class Logger {
 
 // Register VS Code workspace configuration change handler if in VS Code environment
 if (vscode && vscode.workspace) {
-    vscode.workspace.onDidChangeConfiguration(e => {
+    vscode.workspace.onDidChangeConfiguration((e) => {
         if (e.affectsConfiguration('ggMCP')) {
             Logger.initialize();
         }

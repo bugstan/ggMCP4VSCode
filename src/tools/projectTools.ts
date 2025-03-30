@@ -17,7 +17,7 @@ export class GetProjectModulesTool extends AbsTools<ToolParams['getProjectModule
             {
                 type: 'object',
                 properties: {},
-                required: []
+                required: [],
             }
         );
     }
@@ -30,7 +30,7 @@ export class GetProjectModulesTool extends AbsTools<ToolParams['getProjectModule
             const projectTypes = this.detectProjectTypes();
             return responseHandler.success({
                 types: projectTypes,
-                extensions: this.getVSCodeExtensions()
+                extensions: this.getVSCodeExtensions(),
             });
         } catch (err) {
             this.log.error('Error getting project modules', err);
@@ -44,11 +44,11 @@ export class GetProjectModulesTool extends AbsTools<ToolParams['getProjectModule
     private getVSCodeExtensions(limit: number = 10): string[] {
         try {
             return vscode.extensions.all
-                .filter(ext => !ext.packageJSON.isBuiltin)
+                .filter((ext) => !ext.packageJSON.isBuiltin)
                 .slice(0, limit)
-                .map(ext => ext.id);
+                .map((ext) => ext.id);
         } catch (err) {
-            this.log.info('Error getting VS Code extensions', err);
+            this.log.error('Error getting VS Code extensions', err);
             return [];
         }
     }
@@ -61,48 +61,45 @@ export class GetProjectModulesTool extends AbsTools<ToolParams['getProjectModule
 
         // Check for Maven project
         if (this.fileExists(vscode.Uri.file('pom.xml'))) {
-            this.log.info('Maven project detected (pom.xml)');
             projectTypes.push('maven');
         }
 
         // Check for Gradle project
-        if (this.fileExists(vscode.Uri.file('build.gradle')) || this.fileExists(vscode.Uri.file('build.gradle.kts'))) {
-            this.log.info('Gradle project detected (build.gradle)');
+        if (
+            this.fileExists(vscode.Uri.file('build.gradle')) ||
+            this.fileExists(vscode.Uri.file('build.gradle.kts'))
+        ) {
             projectTypes.push('gradle');
         }
 
         // Check for Node.js project
         if (this.fileExists(vscode.Uri.file('package.json'))) {
-            this.log.info('Node.js project detected (package.json)');
             projectTypes.push('node');
         }
 
         // Check for Python project
         if (this.fileExists(vscode.Uri.file('Pipfile'))) {
-            this.log.info('Python project detected (Pipfile)');
             projectTypes.push('python-pipenv');
         } else if (this.fileExists(vscode.Uri.file('requirements.txt'))) {
-            this.log.info('Python project detected (requirements.txt)');
             projectTypes.push('python-pip');
         }
 
         // Check for .NET project
-        if (this.fileExists(vscode.Uri.file('.csproj')) ||
+        if (
+            this.fileExists(vscode.Uri.file('.csproj')) ||
             this.fileExists(vscode.Uri.file('.fsproj')) ||
-            this.fileExists(vscode.Uri.file('.vbproj'))) {
-            this.log.info('.NET project detected (.csproj/.fsproj/.vbproj)');
+            this.fileExists(vscode.Uri.file('.vbproj'))
+        ) {
             projectTypes.push('dotnet');
         }
 
         // Check for Go project
         if (this.fileExists(vscode.Uri.file('go.mod'))) {
-            this.log.info('Go project detected (go.mod)');
             projectTypes.push('go');
         }
 
         // Check for Rust project
         if (this.fileExists(vscode.Uri.file('Cargo.toml'))) {
-            this.log.info('Rust project detected (Cargo.toml)');
             projectTypes.push('rust');
         }
 
@@ -122,7 +119,7 @@ export class GetProjectDependenciesTool extends AbsTools<ToolParams['getProjectD
             {
                 type: 'object',
                 properties: {},
-                required: []
+                required: [],
             }
         );
     }
@@ -150,7 +147,7 @@ export class GetProjectDependenciesTool extends AbsTools<ToolParams['getProjectD
             return {
                 type: 'node',
                 dependencies: packageJson.dependencies || {},
-                devDependencies: packageJson.devDependencies || {}
+                devDependencies: packageJson.devDependencies || {},
             };
         }
 
@@ -159,26 +156,29 @@ export class GetProjectDependenciesTool extends AbsTools<ToolParams['getProjectD
         if (requirementsTxt) {
             const dependencies = requirementsTxt
                 .split('\n')
-                .map(line => line.trim())
-                .filter(line => line && !line.startsWith('#'))
-                .reduce((acc, line) => {
-                    const [name, version] = line.split('==');
-                    if (name) {
-                        acc[name] = version || 'latest';
-                    }
-                    return acc;
-                }, {} as Record<string, string>);
+                .map((line) => line.trim())
+                .filter((line) => line && !line.startsWith('#'))
+                .reduce(
+                    (acc, line) => {
+                        const [name, version] = line.split('==');
+                        if (name) {
+                            acc[name] = version || 'latest';
+                        }
+                        return acc;
+                    },
+                    {} as Record<string, string>
+                );
 
             return {
                 type: 'python',
-                dependencies
+                dependencies,
             };
         }
 
         // Fallback to VS Code extensions
         return {
             type: 'vscode',
-            extensions: this.getVSCodeExtensions()
+            extensions: this.getVSCodeExtensions(),
         };
     }
 
@@ -195,7 +195,7 @@ export class GetProjectDependenciesTool extends AbsTools<ToolParams['getProjectD
                 return JSON.parse(content) as R;
             }
         } catch (err) {
-            this.log.info(`Error reading JSON file: ${filePath}`, err);
+            this.log.error(`Error reading JSON file: ${filePath}`, err);
         }
         return null;
     }
@@ -212,7 +212,7 @@ export class GetProjectDependenciesTool extends AbsTools<ToolParams['getProjectD
                 return fs.readFileSync(fullPath, 'utf8');
             }
         } catch (err) {
-            this.log.info(`Error reading text file: ${filePath}`, err);
+            this.log.error(`Error reading text file: ${filePath}`, err);
         }
         return null;
     }
@@ -223,11 +223,11 @@ export class GetProjectDependenciesTool extends AbsTools<ToolParams['getProjectD
     private getVSCodeExtensions(limit: number = 10): string[] {
         try {
             return vscode.extensions.all
-                .filter(ext => !ext.packageJSON.isBuiltin)
+                .filter((ext) => !ext.packageJSON.isBuiltin)
                 .slice(0, limit)
-                .map(ext => ext.id);
+                .map((ext) => ext.id);
         } catch (err) {
-            this.log.info('Error getting VS Code extensions', err);
+            this.log.error('Error getting VS Code extensions', err);
             return [];
         }
     }

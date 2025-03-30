@@ -14,6 +14,7 @@ export interface McpTool<Args = Record<string, any>> {
     name: string;
     description: string;
     inputSchema: JsonSchemaObject;
+
     handle(args: Args): Promise<import('./index').Response>;
 }
 

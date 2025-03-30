@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { getProjectRoot } from './pathUtils';
 import { Logger } from './logger';
-import { FileCache } from '../server/cache/fileCache';
+import { FileCache } from '../server/cache';
 
 // Create module-specific logger
 const log = Logger.forModule('FileReloader');
@@ -24,13 +24,11 @@ export class FileReloader {
 
             // Find open document
             const document = vscode.workspace.textDocuments.find(
-                doc => doc.uri.fsPath === uri.fsPath
+                (doc) => doc.uri.fsPath === uri.fsPath
             );
 
             // Check if document has unsaved changes
-            const isDirty = document ? document.isDirty : false;
-            log.info(`File ${uri.fsPath} has unsaved changes: ${isDirty}`);
-            return isDirty;
+            return document ? document.isDirty : false;
         } catch (error) {
             log.error('Error checking file change status:', error);
             return false;
@@ -51,7 +49,6 @@ export class FileReloader {
             const autoReload = config.get<boolean>('autoReloadModifiedFiles', true);
 
             if (!autoReload) {
-                log.info(`Auto reload is disabled for file: ${filePath}`);
                 return false;
             }
 
@@ -61,12 +58,11 @@ export class FileReloader {
 
             // Optimization: Check if file is open in editor
             const editors = vscode.window.visibleTextEditors.filter(
-                editor => editor.document.uri.fsPath === uri.fsPath
+                (editor) => editor.document.uri.fsPath === uri.fsPath
             );
 
             if (editors.length === 0) {
                 // If file is not open in editor, just invalidate cache
-                log.info(`File not open in editor, just invalidating cache: ${uri.fsPath}`);
                 FileCache.invalidate(uri.fsPath);
                 return true;
             }
@@ -77,8 +73,10 @@ export class FileReloader {
                 const fileSizeKB = fileStat.size / 1024;
 
                 // For large files (over 1MB) use command reload instead of content replacement
-                if (fileStat.size > 1 * 1024 * 1024) {
-                    log.info(`Using command-based reload for large file (${fileSizeKB.toFixed(2)}KB): ${uri.fsPath}`);
+                if (fileStat.size > 1024 * 1024) {
+                    log.info(
+                        `Using command-based reload for large file (${fileSizeKB.toFixed(2)}KB): ${uri.fsPath}`
+                    );
 
                     // Invalidate cache
                     FileCache.invalidate(uri.fsPath);
@@ -87,24 +85,30 @@ export class FileReloader {
                     try {
                         await vscode.commands.executeCommand('workbench.action.files.revert');
                         const reloadTime = performance.now() - startTime;
-                        log.info(`Large file reloaded via command in ${reloadTime.toFixed(2)}ms: ${uri.fsPath}`);
+                        log.info(
+                            `Large file reloaded via command in ${reloadTime.toFixed(2)}ms: ${uri.fsPath}`
+                        );
                         return true;
                     } catch (cmdError) {
-                        log.warn(`Failed to reload large file via command: ${uri.fsPath}`, cmdError);
+                        log.warn(
+                            `Failed to reload large file via command: ${uri.fsPath}`,
+                            cmdError
+                        );
                         // Try standard method after failure
                     }
                 }
             } catch (statError) {
                 // File stat retrieval failed, continue with standard reload method
-                log.info(`Failed to get file stat, using standard reload: ${uri.fsPath}`);
+                log.error(`Failed to get file stat, using standard reload: ${uri.fsPath}`);
             }
 
             // Standard reload method: Use WorkspaceEdit
-            log.info(`Using edit-based reload for file: ${uri.fsPath}`);
             const success = await this.refreshEditorsContent(uri, editors, startTime);
 
             const totalTime = performance.now() - startTime;
-            log.info(`File reload ${success ? 'succeeded' : 'failed'} in ${totalTime.toFixed(2)}ms: ${uri.fsPath}`);
+            log.info(
+                `File reload ${success ? 'succeeded' : 'failed'} in ${totalTime.toFixed(2)}ms: ${uri.fsPath}`
+            );
 
             return success;
         } catch (error) {
@@ -131,14 +135,16 @@ export class FileReloader {
         // Process files in batches
         for (let i = 0; i < filePaths.length; i += batchSize) {
             const batch = filePaths.slice(i, i + batchSize);
-            const reloadPromises = batch.map(filePath => this.reloadFile(filePath));
+            const reloadPromises = batch.map((filePath) => this.reloadFile(filePath));
             const results = await Promise.all(reloadPromises);
 
-            successCount += results.filter(success => success).length;
+            successCount += results.filter((success) => success).length;
         }
 
         const totalTime = performance.now() - startTime;
-        log.info(`Successfully reloaded ${successCount}/${filePaths.length} files in ${totalTime.toFixed(2)}ms`);
+        log.info(
+            `Successfully reloaded ${successCount}/${filePaths.length} files in ${totalTime.toFixed(2)}ms`
+        );
         return successCount;
     }
 
@@ -217,10 +223,10 @@ export class FileReloader {
             }
 
             // Save editor view state
-            const editorStates = editors.map(editor => ({
+            const editorStates = editors.map((editor) => ({
                 editor,
                 selection: editor.selection,
-                visibleRanges: editor.visibleRanges
+                visibleRanges: editor.visibleRanges,
             }));
 
             // Use single WorkspaceEdit operation to replace content in all editors
@@ -229,7 +235,8 @@ export class FileReloader {
 
             // Create full range
             const fullRange = new vscode.Range(
-                0, 0,
+                0,
+                0,
                 currentDocument.lineCount - 1,
                 currentDocument.lineAt(currentDocument.lineCount - 1).range.end.character
             );
@@ -282,7 +289,10 @@ export class FileReloader {
             }
         } catch (error) {
             const errorTime = performance.now() - startTime;
-            log.error(`Error refreshing editors for file (${errorTime.toFixed(2)}ms): ${uri.fsPath}`, error);
+            log.error(
+                `Error refreshing editors for file (${errorTime.toFixed(2)}ms): ${uri.fsPath}`,
+                error
+            );
             return false;
         }
     }

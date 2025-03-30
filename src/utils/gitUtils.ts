@@ -21,7 +21,6 @@ export async function getGitAPI() {
 
     // Ensure Git extension is activated
     if (!gitExtension.isActive) {
-        log.info('Activating Git extension');
         await gitExtension.activate();
     }
 
@@ -69,9 +68,9 @@ export async function getCurrentRepository() {
  * @returns Command execution result
  */
 export async function executeGitCommand(command: string): Promise<{
-    stdout: string,
-    stderr: string,
-    exitCode: number | null
+    stdout: string;
+    stderr: string;
+    exitCode: number | null;
 }> {
     try {
         const projectRoot = getProjectRoot();
@@ -85,14 +84,14 @@ export async function executeGitCommand(command: string): Promise<{
         return {
             stdout: stdout || '',
             stderr: stderr || '',
-            exitCode: 0
+            exitCode: 0,
         };
     } catch (error) {
         log.error(`Error executing Git command: ${command}`, error);
         return {
             stdout: '',
             stderr: error instanceof Error ? error.message : String(error),
-            exitCode: error instanceof Error && 'code' in error ? Number(error.code) : -1
+            exitCode: error instanceof Error && 'code' in error ? Number(error.code) : -1,
         };
     }
 }
@@ -187,7 +186,7 @@ export async function withGitRepository<T>(action: (repository: any) => Promise<
  * Get all available branches
  * @returns List of branches or null
  */
-export async function getBranches(): Promise<{ name: string, current: boolean }[] | null> {
+export async function getBranches(): Promise<{ name: string; current: boolean }[] | null> {
     try {
         const result = await executeGitCommand('git branch');
         if (!result || result.exitCode !== 0) {
@@ -196,11 +195,11 @@ export async function getBranches(): Promise<{ name: string, current: boolean }[
 
         const branches = result.stdout
             .split('\n')
-            .filter(line => line.trim() !== '')
-            .map(line => {
+            .filter((line) => line.trim() !== '')
+            .map((line) => {
                 const current = line.startsWith('*');
                 const name = line.replace('*', '').trim();
-                return {name, current};
+                return { name, current };
             });
 
         return branches;
@@ -243,14 +242,14 @@ export async function getRepoInfo(): Promise<{
             const remotesLines = remoteResult.stdout.split('\n');
             if (remotesLines.length > 0) {
                 // const match = remotesLines[0].match(/^(\\S+)\\s+(\\S+)/);
-                const match = (remotesLines[0]!).match(/^(\\S+)\\s+(\\S+)/);
+                const match = remotesLines[0]!.match(/^(\\S+)\\s+(\\S+)/);
                 if (match && match.length >= 3 && match[2]) {
                     remote = match[2];
                 }
             }
         }
 
-        return {rootPath, currentBranch, remote};
+        return { rootPath, currentBranch, remote };
     } catch (error) {
         log.error('Error getting repo info', error);
         return null;
@@ -276,7 +275,9 @@ export async function getFileStatus(filePath: string): Promise<{
             return null;
         }
 
-        const result = await executeGitCommand(`git status --porcelain \"${escapeShellArg(relativePath)}\"`);
+        const result = await executeGitCommand(
+            `git status --porcelain \"${escapeShellArg(relativePath)}\"`
+        );
         if (!result || result.exitCode !== 0) {
             return null;
         }
@@ -288,21 +289,22 @@ export async function getFileStatus(filePath: string): Promise<{
                 isTracked: true,
                 isModified: false,
                 isStaged: false,
-                status: 'UNMODIFIED'
+                status: 'UNMODIFIED',
             };
         }
 
         // Parse status code (e.g., ' M', 'M ', 'MM', '??', etc.)
         const statusCode = statusLine.substring(0, 2);
         const isTracked = !statusCode.includes('??');
-        const isModified = statusCode.includes('M') || statusCode.includes('A') || statusCode.includes('D');
+        const isModified =
+            statusCode.includes('M') || statusCode.includes('A') || statusCode.includes('D');
         const isStaged = statusCode[0] !== ' ' && statusCode[0] !== '?';
 
         return {
             isTracked,
             isModified,
             isStaged,
-            status: getChangeStatusDescription(statusCode.trim())
+            status: getChangeStatusDescription(statusCode.trim()),
         };
     } catch (error) {
         log.error('Error getting file status', error);

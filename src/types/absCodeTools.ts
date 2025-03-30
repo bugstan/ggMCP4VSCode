@@ -18,17 +18,17 @@ export abstract class AbsCodeTools<T = any> extends AbsTools<T> {
         if (!document) {
             return responseHandler.failure('Cannot access file or position');
         }
-        
+
         // Execute specific code analysis operation
         return await this.executeCodeAnalysis(document, position, args);
     }
-    
+
     /**
      * Prepare document and position
      */
     protected async prepareDocumentAndPosition(args: T): Promise<{
-        document: vscode.TextDocument | null,
-        position: vscode.Position | null
+        document: vscode.TextDocument | null;
+        position: vscode.Position | null;
     }> {
         try {
             // Extract file path from arguments
@@ -36,40 +36,43 @@ export abstract class AbsCodeTools<T = any> extends AbsTools<T> {
             if (!filePath) {
                 return { document: null, position: null };
             }
-            
+
             // Get absolute path using new utility function
             const absolutePath = toAbsolutePath(filePath);
             if (!absolutePath) {
                 return { document: null, position: null };
             }
-            
+
             // Open document
             const fileUri = vscode.Uri.file(absolutePath);
             const document = await vscode.workspace.openTextDocument(fileUri);
-            
+
             // Get position (if applicable)
             const position = this.extractPositionFromArgs(args, document);
-            
+
             return { document, position };
         } catch (error) {
             this.log.error('Error preparing document and position', error);
             return { document: null, position: null };
         }
     }
-    
+
     /**
      * Extract file path from arguments, to be implemented by subclasses
      */
     protected abstract extractFilePathFromArgs(args: T): string;
-    
+
     /**
      * Extract position from arguments
      */
-    protected extractPositionFromArgs(args: T, document: vscode.TextDocument): vscode.Position | null {
+    protected extractPositionFromArgs(
+        args: T,
+        document: vscode.TextDocument
+    ): vscode.Position | null {
         // Default implementation, can be overridden by subclasses
         const line = (args as any).line;
         const character = (args as any).character;
-        
+
         if (typeof line === 'number' && typeof character === 'number') {
             // Ensure position is within document bounds
             const lineCount = document.lineCount;
@@ -79,10 +82,10 @@ export abstract class AbsCodeTools<T = any> extends AbsTools<T> {
                 return new vscode.Position(line, char);
             }
         }
-        
+
         return null;
     }
-    
+
     /**
      * Execute specific code analysis operation, to be implemented by subclasses
      */
@@ -91,11 +94,14 @@ export abstract class AbsCodeTools<T = any> extends AbsTools<T> {
         position: vscode.Position | null,
         args: T
     ): Promise<Response>;
-    
+
     /**
      * Show document and set cursor position
      */
-    protected async showDocumentAtPosition(document: vscode.TextDocument, position: vscode.Position): Promise<vscode.TextEditor> {
+    protected async showDocumentAtPosition(
+        document: vscode.TextDocument,
+        position: vscode.Position
+    ): Promise<vscode.TextEditor> {
         const editor = await vscode.window.showTextDocument(document);
         if (position) {
             editor.selection = new vscode.Selection(position, position);
@@ -106,12 +112,12 @@ export abstract class AbsCodeTools<T = any> extends AbsTools<T> {
         }
         return editor;
     }
-    
+
     /**
      * Execute language service command and handle result
      */
     protected async executeLanguageServiceCommand<T>(
-        command: string, 
+        command: string,
         ...args: any[]
     ): Promise<T | null> {
         try {

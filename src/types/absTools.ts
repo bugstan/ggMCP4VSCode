@@ -1,10 +1,16 @@
-import {Response} from './index';
-import {JsonSchemaObject, McpTool} from './toolInterfaces';
-import {responseHandler, formatError} from '../server/responseHandler';
-import {Logger} from '../utils/logger';
+import { Response } from './index';
+import { JsonSchemaObject, McpTool } from './toolInterfaces';
+import { formatError, responseHandler } from '../server/responseHandler';
+import { Logger } from '../utils/logger';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import {normalizePath, toAbsolutePath, isPathSafe, toRelativePath, getProjectRoot} from '../utils/pathUtils';
+import {
+    getProjectRoot,
+    isPathSafe,
+    normalizePath,
+    toAbsolutePath,
+    toRelativePath,
+} from '../utils/pathUtils';
 
 /**
  * Abstract Tool Base Class
@@ -44,6 +50,7 @@ export abstract class AbsTools<T = any> implements McpTool<T> {
 
             // Log operation completion time
             const totalTime = performance.now() - startTime;
+
             if (totalTime > 100) {
                 this.log.info(`${this.name} completed in ${totalTime.toFixed(2)}ms`);
             } else {
@@ -94,8 +101,14 @@ export abstract class AbsTools<T = any> implements McpTool<T> {
         for (const [key, value] of Object.entries(args as Record<string, any>)) {
             if (typeof value === 'string') {
                 // Truncate long strings
-                safeArgs[key] = value.length > 100 ? `${value.substring(0, 100)}... (${value.length} chars)` : value;
-            } else if (key.toLowerCase().includes('password') || key.toLowerCase().includes('token')) {
+                safeArgs[key] =
+                    value.length > 100
+                        ? `${value.substring(0, 100)}... (${value.length} chars)`
+                        : value;
+            } else if (
+                key.toLowerCase().includes('password') ||
+                key.toLowerCase().includes('token')
+            ) {
                 // Hide sensitive information
                 safeArgs[key] = '*****';
             } else {
@@ -112,9 +125,9 @@ export abstract class AbsTools<T = any> implements McpTool<T> {
      * @returns Workspace validation results
      */
     protected validateWorkspace(): {
-        valid: boolean,
-        rootPath: string | null,
-        error?: string
+        valid: boolean;
+        rootPath: string | null;
+        error?: string;
     } {
         const projectRoot = getProjectRoot();
 
@@ -123,13 +136,13 @@ export abstract class AbsTools<T = any> implements McpTool<T> {
             return {
                 valid: false,
                 rootPath: null,
-                error: 'No workspace folder found'
+                error: 'No workspace folder found',
             };
         }
 
         return {
             valid: true,
-            rootPath: projectRoot
+            rootPath: projectRoot,
         };
     }
 
@@ -139,12 +152,12 @@ export abstract class AbsTools<T = any> implements McpTool<T> {
      * @returns Processed path information
      */
     protected async preparePath(inputPath: string): Promise<{
-        path: string,  // Path relative to project root
-        absolutePath: string | null,
-        isSafe: boolean
+        path: string; // Path relative to project root
+        absolutePath: string | null;
+        isSafe: boolean;
     }> {
         if (!inputPath) {
-            return {path: '', absolutePath: null, isSafe: false};
+            return { path: '', absolutePath: null, isSafe: false };
         }
 
         // Use new normalization function
@@ -153,13 +166,13 @@ export abstract class AbsTools<T = any> implements McpTool<T> {
         // Check path safety
         const safetyCheck = isPathSafe(normalizedPath);
         if (!safetyCheck.safe) {
-            return {path: inputPath, absolutePath: null, isSafe: false};
+            return { path: inputPath, absolutePath: null, isSafe: false };
         }
 
         // Convert to absolute path, e.g., D:\project\src\file.txt
         const absolutePath = toAbsolutePath(normalizedPath);
         if (!absolutePath) {
-            return {path: inputPath, absolutePath: null, isSafe: false};
+            return { path: inputPath, absolutePath: null, isSafe: false };
         }
 
         // Convert to relative path, e.g., src/file.txt
@@ -168,7 +181,7 @@ export abstract class AbsTools<T = any> implements McpTool<T> {
         return {
             path: relativePath,
             absolutePath,
-            isSafe: true
+            isSafe: true,
         };
     }
 
@@ -198,5 +211,28 @@ export abstract class AbsTools<T = any> implements McpTool<T> {
      */
     protected getRelativePath(absolutePath: string): string {
         return toRelativePath(absolutePath) || absolutePath;
+    }
+
+    /**
+     * Open file in editor with proper error handling
+     * Common utility for file operations to show file in editor
+     * @param fileUri URI of the file to open
+     * @param absolutePath Absolute path for logging
+     * @param operation Operation description for logging (e.g., "text replacement", "creation")
+     * @returns Promise that resolves when opening is complete
+     */
+    protected async openFileInEditorTab(
+        fileUri: vscode.Uri,
+        absolutePath: string,
+        operation: string = 'operation'
+    ): Promise<boolean> {
+        try {
+            const document = await vscode.workspace.openTextDocument(fileUri);
+            await vscode.window.showTextDocument(document, { preview: false });
+            return true;
+        } catch (openErr: unknown) {
+            this.log.error(`Error opening file after ${operation}: ${absolutePath}`, openErr);
+            return false;
+        }
     }
 }

@@ -1,67 +1,44 @@
-import {AbstractMcpTool} from './types/tool';
+import { McpTool } from './types/toolInterfaces';
 import {
-    GetOpenInEditorFileTextTool,
     GetOpenInEditorFilePathTool,
-    ReplaceSelectedTextTool,
+    GetOpenInEditorFileTextTool,
+    OpenFileInEditorTool,
     ReplaceCurrentFileTextTool,
-    OpenFileInEditorTool
+    ReplaceSelectedTextTool,
 } from './tools/editorTools';
 import {
-    GetFileTextByPathTool,
-    ReplaceFileTextByPathTool,
+    AppendFileContentTool,
     CreateNewFileWithTextTool,
+    GetFileTextByPathTool,
     ListFilesInFolderTool,
     ReplaceFileContentAtPositionTool,
-    AppendFileContentTool
+    ReplaceSpecificTextTool,
+    RewriteFileContentTool,
 } from './tools/fileReadWriteTools';
+import { FindFilesByNameSubstringTool, SearchInFilesContentTool } from './tools/fileSearchTools';
 import {
-    SearchInFilesContentTool,
-    FindFilesByNameSubstringTool
-} from './tools/fileSearchTools';
-import {
-    ToggleDebuggerBreakpointTool,
     GetDebuggerBreakpointsTool,
+    GetRunConfigurationsTool,
     RunConfigurationTool,
-    GetRunConfigurationsTool
+    ToggleDebuggerBreakpointTool,
 } from './tools/debugTools';
+import { ExecuteTerminalCommandTool, RunCommandOnBackgroundTool, WaitTool } from './tools/terminalTools';
+import { ExecuteOSSpecificCommandTool, GetTerminalInfoTool } from './tools/terminalInfoTools';
+import { FindCommitByMessageTool, GetProjectVcsStatusTool } from './tools/gitTools';
 import {
-    ExecuteTerminalCommandTool,
-    RunCommandOnBackgroundTool,
-    WaitTool,
-} from './tools/terminalTools';
-import {
-    GetTerminalInfoTool,
-    ExecuteOSSpecificCommandTool
-} from './tools/terminalInfoTools';
-import {
-    GetProjectVcsStatusTool,
-    FindCommitByMessageTool
-} from './tools/gitTools';
-import {
-    GetFileHistoryTool,
-    GetFileDiffTool,
+    CommitChangesTool,
+    CreateBranchTool,
     GetBranchInfoTool,
     GetCommitDetailsTool,
-    CommitChangesTool,
+    GetFileDiffTool,
+    GetFileHistoryTool,
     PullChangesTool,
     SwitchBranchTool,
-    CreateBranchTool
 } from './tools/gitAdvancedTools';
-import {
-    ListAvailableActionsTool,
-    ExecuteActionByIdTool,
-    GetProgressIndicatorsTool
-} from './tools/actionTools';
-import {
-    GetProjectModulesTool,
-    GetProjectDependenciesTool
-} from './tools/projectTools';
-import {
-    GetSymbolsInFileTool,
-    FindReferencesTool,
-    RefactorCodeAtLocationTool
-} from './tools/codeAnalysisTools';
-import {Logger} from './utils/logger';
+import { ExecuteActionByIdTool, GetProgressIndicatorsTool, ListAvailableActionsTool } from './tools/actionTools';
+import { GetProjectDependenciesTool, GetProjectModulesTool } from './tools/projectTools';
+import { FindReferencesTool, GetSymbolsInFileTool, RefactorCodeAtLocationTool } from './tools/codeAnalysisTools';
+import { Logger } from './utils/logger';
 
 // Create module-specific logger
 const log = Logger.forModule('ToolManager');
@@ -72,7 +49,7 @@ const log = Logger.forModule('ToolManager');
  */
 export class ToolManager {
     private static instance: ToolManager;
-    private tools: Map<string, AbstractMcpTool> = new Map();
+    private tools: Map<string, McpTool> = new Map();
 
     private constructor() {
         this.registerBuiltInTools();
@@ -91,14 +68,14 @@ export class ToolManager {
     /**
      * Get all registered tools
      */
-    public getAllTools(): AbstractMcpTool[] {
+    public getAllTools(): McpTool[] {
         return Array.from(this.tools.values());
     }
 
     /**
      * Get tool by name
      */
-    public getToolByName(name: string): AbstractMcpTool | undefined {
+    public getToolByName(name: string): McpTool | undefined {
         const tool = this.tools.get(name);
         if (!tool) {
             log.warn(`Tool not found: ${name}`);
@@ -109,7 +86,7 @@ export class ToolManager {
     /**
      * Register a tool
      */
-    public registerTool(tool: AbstractMcpTool): void {
+    public registerTool(tool: McpTool): void {
         this.tools.set(tool.name, tool);
         log.info(`Registered tool: ${tool.name}`);
     }
@@ -132,9 +109,10 @@ export class ToolManager {
             new CreateNewFileWithTextTool(),
             new FindFilesByNameSubstringTool(),
             new GetFileTextByPathTool(),
-            new ReplaceFileTextByPathTool(),
+            new RewriteFileContentTool(),
             new ListFilesInFolderTool(),
             new ReplaceFileContentAtPositionTool(),
+            new ReplaceSpecificTextTool(),
             new SearchInFilesContentTool(),
             new AppendFileContentTool(),
 
@@ -179,10 +157,10 @@ export class ToolManager {
             // Code analysis tools
             new GetSymbolsInFileTool(),
             new FindReferencesTool(),
-            new RefactorCodeAtLocationTool()
+            new RefactorCodeAtLocationTool(),
         ];
 
-        builtInTools.forEach(tool => this.registerTool(tool));
+        builtInTools.forEach((tool) => this.registerTool(tool));
         log.info(`Registered ${builtInTools.length} built-in tools`);
     }
 }

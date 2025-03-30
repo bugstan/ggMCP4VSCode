@@ -36,6 +36,5 @@
   "editor.renderWhitespace": "boundary",
   "files.trimTrailingWhitespace": true,
   "files.insertFinalNewline": true,
-  "files.trimFinalNewlines": true,
-  "commentTranslate.hover.enabled": false
+  "files.trimFinalNewlines": true
 }

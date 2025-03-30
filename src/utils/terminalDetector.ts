@@ -18,11 +18,11 @@ export enum TerminalType {
     Zsh = 'zsh',
     Fish = 'fish',
     Terminal = 'terminal', // macOS Terminal.app
-    ITerm = 'iterm',       // macOS iTerm2
+    ITerm = 'iterm', // macOS iTerm2
     Gnome = 'gnome-terminal',
     Konsole = 'konsole',
     Xterm = 'xterm',
-    Other = 'other'
+    Other = 'other',
 }
 
 /**
@@ -32,7 +32,7 @@ export enum OSType {
     Windows = 'windows',
     macOS = 'macos',
     Linux = 'linux',
-    Other = 'other'
+    Other = 'other',
 }
 
 /**
@@ -83,9 +83,7 @@ export class TerminalDetector {
         // In VS Code API there's not a direct way to check,
         // but we can infer it from the name or use a command detection trick
         const name = terminal.name.toLowerCase();
-        const isIntegrated = !name.includes('external');
-
-        return isIntegrated;
+        return !name.includes('external');
     }
 
     /**
@@ -153,7 +151,10 @@ export class TerminalDetector {
      * @param terminal VS Code terminal instance (optional)
      * @param callback Callback function that receives terminal information
      */
-    public static getTerminalInfo(terminal?: vscode.Terminal, callback?: (info: TerminalInfo) => void): void {
+    public static getTerminalInfo(
+        terminal?: vscode.Terminal,
+        callback?: (info: TerminalInfo) => void
+    ): void {
         try {
             if (!callback) {
                 log.warn('No callback provided to getTerminalInfo');
@@ -174,7 +175,7 @@ export class TerminalDetector {
                     osVersion,
                     terminalType,
                     isIntegratedTerminal: isIntegrated,
-                    isDefault
+                    isDefault,
                 };
 
                 callback(info);
@@ -188,7 +189,7 @@ export class TerminalDetector {
                     osType: this.getOSType(),
                     terminalType: TerminalType.Other,
                     isIntegratedTerminal: false,
-                    isDefault: false
+                    isDefault: false,
                 });
             }
         }

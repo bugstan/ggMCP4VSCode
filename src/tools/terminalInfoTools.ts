@@ -12,7 +12,7 @@ export class GetTerminalInfoTool extends AbsTerminalTools {
         super(
             'get_terminal_info',
             'Retrieve information about the current terminal and operating system environment. ' +
-            'Returns data about OS type, terminal type, and whether it is the default terminal.',
+                'Returns data about OS type, terminal type, and whether it is the default terminal.',
             { type: 'object', properties: {} }
         );
     }
@@ -33,8 +33,6 @@ export class GetTerminalInfoTool extends AbsTerminalTools {
             const osType = TerminalDetector.getOSType();
             const osVersion = await this.getOSVersion(osType);
 
-            this.log.info(`Detecting terminal information (OS: ${osType}, Version: ${osVersion})`);
-
             // Get terminal type information
             const terminalType = await this.getTerminalType();
             const isDefault = TerminalDetector.isDefaultTerminal(terminalType);
@@ -44,14 +42,15 @@ export class GetTerminalInfoTool extends AbsTerminalTools {
                 osVersion,
                 terminalType,
                 isIntegratedTerminal: false, // Since we're not using VSCode terminal
-                isDefault
+                isDefault,
             };
 
-            this.log.info('Terminal information detected', info);
             return responseHandler.success(info);
         } catch (error) {
             this.log.error('Error getting terminal information', error);
-            return responseHandler.failure(`Error getting terminal information: ${error instanceof Error ? error.message : String(error)}`);
+            return responseHandler.failure(
+                `Error getting terminal information: ${error instanceof Error ? error.message : String(error)}`
+            );
         }
     }
 
@@ -131,21 +130,21 @@ export class ExecuteOSSpecificCommandTool extends AbsTerminalTools<{
     windowsCommand?: string;
     unixCommand?: string;
     macCommand?: string;
-    command?: string
+    command?: string;
 }> {
     constructor() {
         super(
             'execute_os_specific_command',
             'Execute a command with syntax adjusted for the detected operating system and terminal. ' +
-            'You can provide different command versions for different platforms, or a generic command.',
+                'You can provide different command versions for different platforms, or a generic command.',
             {
                 type: 'object',
                 properties: {
                     windowsCommand: { type: 'string' },
                     unixCommand: { type: 'string' },
                     macCommand: { type: 'string' },
-                    command: { type: 'string' }
-                }
+                    command: { type: 'string' },
+                },
             }
         );
     }
@@ -153,12 +152,15 @@ export class ExecuteOSSpecificCommandTool extends AbsTerminalTools<{
     /**
      * Execute OS-specific command operation (implementing base class abstract method)
      */
-    protected async executeTerminalOperation(_projectRoot: string, args: {
-        windowsCommand?: string;
-        unixCommand?: string;
-        macCommand?: string;
-        command?: string
-    }): Promise<Response> {
+    protected async executeTerminalOperation(
+        _projectRoot: string,
+        args: {
+            windowsCommand?: string;
+            unixCommand?: string;
+            macCommand?: string;
+            command?: string;
+        }
+    ): Promise<Response> {
         try {
             const { windowsCommand, unixCommand, macCommand, command } = args;
 
@@ -195,10 +197,10 @@ export class ExecuteOSSpecificCommandTool extends AbsTerminalTools<{
             }
 
             if (!commandToExecute) {
-                return responseHandler.failure(`No command specified for ${osType} operating system`);
+                return responseHandler.failure(
+                    `No command specified for ${osType} operating system`
+                );
             }
-
-            this.log.info(`Executing OS-specific command for ${osType}: ${commandToExecute}`);
 
             // Get terminal
             const terminal = await this.prepareTerminal();
@@ -212,11 +214,13 @@ export class ExecuteOSSpecificCommandTool extends AbsTerminalTools<{
             return responseHandler.success({
                 osType,
                 command: commandToExecute,
-                executed: true
+                executed: true,
             });
         } catch (error) {
             this.log.error('Error executing OS-specific command', error);
-            return responseHandler.failure(`Error executing OS-specific command: ${error instanceof Error ? error.message : String(error)}`);
+            return responseHandler.failure(
+                `Error executing OS-specific command: ${error instanceof Error ? error.message : String(error)}`
+            );
         }
     }
 }

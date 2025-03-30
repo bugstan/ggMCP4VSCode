@@ -42,7 +42,7 @@ export class ServerManager {
                 timeout,
                 concurrency,
                 retries,
-                preferredPorts: config.getPreferredPorts()
+                preferredPorts: config.getPreferredPorts(),
             });
 
             if (!port) {
@@ -64,13 +64,15 @@ export class ServerManager {
             });
 
             // Set up error handling
-            this.server.on('error', (err: Error) => this.handleServerError(err, portStart, portEnd));
+            this.server.on('error', (err: Error) =>
+                this.handleServerError(err, portStart, portEnd)
+            );
 
             // Start listening on the port
             await this.startListening(port);
 
             return {
-                dispose: () => this.dispose()
+                dispose: () => this.dispose(),
             };
         } catch (error) {
             this.handleStartupError(error);
@@ -132,7 +134,7 @@ export class ServerManager {
                     log.info('Attempting to automatically restart MCP server...');
                     this.server.close();
                     this.server = null;
-                    this.startServer(portStart, portEnd).catch(restartErr => {
+                    this.startServer(portStart, portEnd).catch((restartErr) => {
                         log.error('Failed to restart server:', restartErr);
                     });
                 }

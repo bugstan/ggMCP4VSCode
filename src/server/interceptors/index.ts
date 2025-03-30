@@ -1,6 +1,6 @@
 /**
  * Interceptors index
- * 
+ *
  * Exports all interceptor implementations and interceptor chain manager
  */
 
@@ -18,11 +18,11 @@ import { OperationInterceptor } from './operationInterceptor';
  * Initialize interceptor system and register default interceptors
  */
 export function initializeInterceptors(): void {
-  const chain = InterceptorChain.getInstance();
-  
-  // Register cache interceptor (high priority)
-  chain.register(new CacheInterceptor());
-  
-  // Register operation interceptor (medium priority)
-  chain.register(new OperationInterceptor());
+    const chain = InterceptorChain.getInstance();
+
+    // Register cache interceptor (high priority)
+    chain.register(new CacheInterceptor());
+
+    // Register operation interceptor (medium priority)
+    chain.register(new OperationInterceptor());
 }

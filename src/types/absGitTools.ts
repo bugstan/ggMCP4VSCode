@@ -1,7 +1,7 @@
-import {Response} from './index';
-import {AbsTools} from './absTools';
-import {responseHandler} from '../server/responseHandler';
-import {withGitRepository, executeGitCommand, escapeShellArg} from '../utils/gitUtils';
+import { Response } from './index';
+import { AbsTools } from './absTools';
+import { responseHandler } from '../server/responseHandler';
+import { withGitRepository, executeGitCommand, escapeShellArg } from '../utils/gitUtils';
 
 /**
  * Base class for Git operation tools
@@ -17,7 +17,7 @@ export abstract class AbsGitTools<T = any> extends AbsTools<T> {
         if (!workspace.valid) {
             return responseHandler.failure(workspace.error || 'No valid workspace found');
         }
-        
+
         // Use withGitRepository helper function
         return await withGitRepository(async (repository) => {
             if (!repository) {
@@ -44,7 +44,9 @@ export abstract class AbsGitTools<T = any> extends AbsTools<T> {
         const result = await executeGitCommand(command);
 
         if (result.exitCode !== 0) {
-            this.log.error(`Git command failed with exit code ${result.exitCode}: ${result.stderr}`);
+            this.log.error(
+                `Git command failed with exit code ${result.exitCode}: ${result.stderr}`
+            );
             return responseHandler.failure(`Git command failed: ${result.stderr}`);
         }
 
@@ -55,24 +57,26 @@ export abstract class AbsGitTools<T = any> extends AbsTools<T> {
      * Safely execute Git command
      */
     protected async executeGitCommand(command: string): Promise<{
-        stdout: string,
-        stderr: string,
-        exitCode: number | null
+        stdout: string;
+        stderr: string;
+        exitCode: number | null;
     }> {
         try {
             // return await executeGitCommand(command);
             const result = await executeGitCommand(command);
-            return result ?? {
-                stdout: '',
-                stderr: 'Unknown error: executeGitCommand returned null',
-                exitCode: null
-            };
+            return (
+                result ?? {
+                    stdout: '',
+                    stderr: 'Unknown error: executeGitCommand returned null',
+                    exitCode: null,
+                }
+            );
         } catch (error) {
             this.log.error(`Error executing Git command: ${command}`, error);
             return {
                 stdout: '',
                 stderr: error instanceof Error ? error.message : String(error),
-                exitCode: -1
+                exitCode: -1,
             };
         }
     }
@@ -122,7 +126,10 @@ export abstract class AbsGitTools<T = any> extends AbsTools<T> {
         if (statusCode !== null && typeof statusCode !== 'string') {
             try {
                 // First try using toString method
-                if (typeof statusCode.toString === 'function' && statusCode.toString() !== '[object Object]') {
+                if (
+                    typeof statusCode.toString === 'function' &&
+                    statusCode.toString() !== '[object Object]'
+                ) {
                     return statusCode.toString();
                 }
                 // If toString is not available or returns [object Object], use JSON.stringify
@@ -168,13 +175,16 @@ export abstract class AbsGitTools<T = any> extends AbsTools<T> {
     /**
      * Parse Git command line output
      */
-    protected parseCommandOutput(stdout: string, errorMessage: string = 'Command execution failed'): Response {
+    protected parseCommandOutput(
+        stdout: string,
+        errorMessage: string = 'Command execution failed'
+    ): Response {
         if (!stdout || stdout.trim() === '') {
             return responseHandler.success([]);
         }
 
         try {
-            const lines = stdout.split('\n').filter(line => line.trim() !== '');
+            const lines = stdout.split('\n').filter((line) => line.trim() !== '');
             return responseHandler.success(lines);
         } catch (error) {
             this.log.error('Error parsing command output', error);

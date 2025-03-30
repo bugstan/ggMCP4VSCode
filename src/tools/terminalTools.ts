@@ -12,13 +12,13 @@ export class ExecuteTerminalCommandTool extends AbsTerminalTools<{
     constructor() {
         super(
             'execute_terminal_command',
-            'Execute a shell command in the IDE\'s integrated terminal. The command will be visible to the user and only returns execution status.',
+            "Execute a shell command in the IDE's integrated terminal. The command will be visible to the user and only returns execution status.",
             {
                 type: 'object',
                 properties: {
-                    command: { type: 'string' }
+                    command: { type: 'string' },
                 },
-                required: ['command']
+                required: ['command'],
             }
         );
     }
@@ -26,13 +26,14 @@ export class ExecuteTerminalCommandTool extends AbsTerminalTools<{
     /**
      * Execute terminal command operation (implementing base class abstract method)
      */
-    protected async executeTerminalOperation(_projectRoot: string, args: {
-        command: string;
-    }): Promise<Response> {
+    protected async executeTerminalOperation(
+        _projectRoot: string,
+        args: {
+            command: string;
+        }
+    ): Promise<Response> {
         try {
             const { command } = args;
-
-            this.log.info(`Executing terminal command: ${command}`);
 
             // Get terminal
             const terminal = await this.prepareTerminal();
@@ -44,11 +45,13 @@ export class ExecuteTerminalCommandTool extends AbsTerminalTools<{
             terminal.sendText(command);
 
             return responseHandler.success({
-                status: 'executed'
+                status: 'executed',
             });
         } catch (error) {
             this.log.error('Error executing terminal command', error);
-            return responseHandler.failure(`Error executing terminal command: ${error instanceof Error ? error.message : String(error)}`);
+            return responseHandler.failure(
+                `Error executing terminal command: ${error instanceof Error ? error.message : String(error)}`
+            );
         }
     }
 }
@@ -61,40 +64,39 @@ export class WaitTool extends AbsTerminalTools<{
     milliseconds: number;
 }> {
     constructor() {
-        super(
-            'wait',
-            'Wait for a specified number of milliseconds before continuing.',
-            {
-                type: 'object',
-                properties: {
-                    milliseconds: { type: 'number' }
-                },
-                required: ['milliseconds']
-            }
-        );
+        super('wait', 'Wait for a specified number of milliseconds before continuing.', {
+            type: 'object',
+            properties: {
+                milliseconds: { type: 'number' },
+            },
+            required: ['milliseconds'],
+        });
     }
 
     /**
      * Wait operation (implementing base class abstract method)
      */
-    protected async executeTerminalOperation(_projectRoot: string, args: {
-        milliseconds: number;
-    }): Promise<Response> {
+    protected async executeTerminalOperation(
+        _projectRoot: string,
+        args: {
+            milliseconds: number;
+        }
+    ): Promise<Response> {
         try {
             const { milliseconds } = args;
 
-            this.log.info(`Waiting for ${milliseconds} milliseconds`);
-
             // Wait for the specified time
-            await new Promise(resolve => setTimeout(resolve, milliseconds));
+            await new Promise((resolve) => setTimeout(resolve, milliseconds));
 
             return responseHandler.success({
                 status: 'completed',
-                message: `Waited for ${milliseconds} milliseconds`
+                message: `Waited for ${milliseconds} milliseconds`,
             });
         } catch (error) {
             this.log.error('Error during wait operation', error);
-            return responseHandler.failure(`Error during wait operation: ${error instanceof Error ? error.message : String(error)}`);
+            return responseHandler.failure(
+                `Error during wait operation: ${error instanceof Error ? error.message : String(error)}`
+            );
         }
     }
 }
@@ -119,9 +121,9 @@ export class RunCommandOnBackgroundTool extends AbsTerminalTools<{
                     command: { type: 'string' },
                     cwd: { type: 'string' },
                     env: { type: 'object' },
-                    timeout: { type: 'number' }
+                    timeout: { type: 'number' },
                 },
-                required: ['command']
+                required: ['command'],
             }
         );
     }
@@ -129,28 +131,31 @@ export class RunCommandOnBackgroundTool extends AbsTerminalTools<{
     /**
      * Run command in background operation (implementing base class abstract method)
      */
-    protected async executeTerminalOperation(projectRoot: string, args: {
-        command: string;
-        cwd?: string;
-        env?: Record<string, string | undefined>;
-        timeout?: number;
-    }): Promise<Response> {
+    protected async executeTerminalOperation(
+        projectRoot: string,
+        args: {
+            command: string;
+            cwd?: string;
+            env?: Record<string, string | undefined>;
+            timeout?: number;
+        }
+    ): Promise<Response> {
         try {
             const { command, cwd, env, timeout } = args;
-
-            this.log.info(`Executing background command: ${command}`);
 
             // Execute command in background
             const result = await this.executeCommandInBackground(command, {
                 cwd: cwd || projectRoot,
                 env,
-                timeout
+                timeout,
             });
 
             return responseHandler.success(result);
         } catch (error) {
             this.log.error('Error executing background command', error);
-            return responseHandler.failure(`Error executing background command: ${error instanceof Error ? error.message : String(error)}`);
+            return responseHandler.failure(
+                `Error executing background command: ${error instanceof Error ? error.message : String(error)}`
+            );
         }
     }
 }

@@ -33,7 +33,7 @@ export class FileCache {
         const now = Date.now();
 
         // If cache exists and has not expired, return it
-        if (cacheEntry && (now - cacheEntry.timestamp) < this.CACHE_EXPIRY_MS) {
+        if (cacheEntry && now - cacheEntry.timestamp < this.CACHE_EXPIRY_MS) {
             log.info(`Cache hit for file: ${filePath}`);
             return cacheEntry.content;
         }
@@ -62,7 +62,7 @@ export class FileCache {
             this.cache.set(filePath, {
                 content: text,
                 timestamp: now,
-                size: text.length
+                size: text.length,
             });
             log.info(`Added to cache: ${filePath}, size: ${text.length} characters`);
         } else {
@@ -93,7 +93,7 @@ export class FileCache {
     /**
      * Get cache size info
      */
-    public static getCacheInfo(): { entries: number, sizeBytes: number } {
+    public static getCacheInfo(): { entries: number; sizeBytes: number } {
         let totalSize = 0;
         for (const entry of this.cache.values()) {
             totalSize += entry.size;
@@ -101,7 +101,7 @@ export class FileCache {
 
         return {
             entries: this.cache.size,
-            sizeBytes: totalSize
+            sizeBytes: totalSize,
         };
     }
 
@@ -112,7 +112,7 @@ export class FileCache {
         const entry = this.cache.get(filePath);
         if (!entry) return false;
 
-        return (Date.now() - entry.timestamp) < this.CACHE_EXPIRY_MS;
+        return Date.now() - entry.timestamp < this.CACHE_EXPIRY_MS;
     }
 
     /**
@@ -131,7 +131,9 @@ export class FileCache {
                     // Remove oldest entry
                     const entries = Array.from(this.cache.entries());
                     if (entries.length > 0) {
-                        const oldestEntry = entries.sort((a, b) => a[1].timestamp - b[1].timestamp)[0]!;
+                        const oldestEntry = entries.sort(
+                            (a, b) => a[1].timestamp - b[1].timestamp
+                        )[0]!;
                         const oldestKey = oldestEntry[0];
                         this.cache.delete(oldestKey);
                     }
@@ -141,7 +143,7 @@ export class FileCache {
                 this.cache.set(filePath, {
                     content,
                     timestamp: now,
-                    size
+                    size,
                 });
             }
         } catch (err) {

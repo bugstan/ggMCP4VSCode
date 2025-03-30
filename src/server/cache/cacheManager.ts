@@ -1,6 +1,6 @@
 /**
  * Cache Manager
- * 
+ *
  * A general-purpose cache manager that can be used for various caching needs
  * throughout the application. Supports key expiration, size limits, and
  * automatic cache invalidation strategies.
@@ -46,7 +46,7 @@ export class CacheManager<T> {
         maxSize: 100,
         maxBytes: 10 * 1024 * 1024, // 10MB
         ttl: 60 * 1000, // 1 minute
-        name: 'default'
+        name: 'default',
     };
 
     /**
@@ -58,7 +58,7 @@ export class CacheManager<T> {
         log.info(`Created cache manager "${this.options.name}" with options:`, {
             maxSize: this.options.maxSize,
             maxBytes: this.options.maxBytes,
-            ttl: this.options.ttl
+            ttl: this.options.ttl,
         });
     }
 
@@ -116,10 +116,12 @@ export class CacheManager<T> {
         try {
             // Calculate approximate size of the data
             const size = this.getObjectSize(data);
-            
+
             // First, check if this would exceed the max bytes limit
             if (size > this.options.maxBytes) {
-                log.warn(`Cache entry for "${key}" exceeds max bytes limit (${size} > ${this.options.maxBytes}), skipping`);
+                log.warn(
+                    `Cache entry for "${key}" exceeds max bytes limit (${size} > ${this.options.maxBytes}), skipping`
+                );
                 return false;
             }
 
@@ -133,7 +135,7 @@ export class CacheManager<T> {
                 data,
                 timestamp: Date.now(),
                 size,
-                metadata
+                metadata,
             };
 
             // If adding this would exceed maxBytes, evict entries
@@ -150,7 +152,9 @@ export class CacheManager<T> {
             this.cache.set(key, entry);
             this.totalSize += size;
 
-            log.info(`Cache set: "${key}" (${size} bytes), total size: ${this.totalSize} bytes, entries: ${this.cache.size}`);
+            log.info(
+                `Cache set: "${key}" (${size} bytes), total size: ${this.totalSize} bytes, entries: ${this.cache.size}`
+            );
             return true;
         } catch (error) {
             log.error(`Error setting cache entry for key "${key}":`, error);
@@ -166,7 +170,7 @@ export class CacheManager<T> {
     public get(key: string): T | undefined {
         try {
             const entry = this.cache.get(key);
-            
+
             // Return undefined if not found
             if (!entry) {
                 log.info(`Cache miss: "${key}"`);
@@ -197,7 +201,7 @@ export class CacheManager<T> {
     public getWithMetadata(key: string): CacheEntry<T> | undefined {
         try {
             const entry = this.cache.get(key);
-            
+
             // Return undefined if not found
             if (!entry) {
                 log.info(`Cache miss: "${key}"`);
@@ -231,7 +235,9 @@ export class CacheManager<T> {
             if (entry) {
                 this.totalSize -= entry.size;
                 this.cache.delete(key);
-                log.info(`Cache delete: "${key}", total size: ${this.totalSize} bytes, entries: ${this.cache.size}`);
+                log.info(
+                    `Cache delete: "${key}", total size: ${this.totalSize} bytes, entries: ${this.cache.size}`
+                );
                 return true;
             }
             return false;
@@ -276,7 +282,9 @@ export class CacheManager<T> {
                 const size = this.cache.get(oldestKey)!.size;
                 this.cache.delete(oldestKey);
                 this.totalSize -= size;
-                log.info(`Cache evicted oldest entry: "${oldestKey}", age: ${Date.now() - oldestTime}ms`);
+                log.info(
+                    `Cache evicted oldest entry: "${oldestKey}", age: ${Date.now() - oldestTime}ms`
+                );
                 return true;
             }
 
@@ -346,7 +354,7 @@ export class CacheManager<T> {
             if (count > 0) {
                 log.info(`Pruned ${count} expired cache entries`);
             }
-            
+
             return count;
         } catch (error) {
             log.error(`Error pruning expired cache entries:`, error);
@@ -376,13 +384,13 @@ export class CacheManager<T> {
             if (cached !== undefined) {
                 return cached;
             }
-            
+
             // Run the function
             const result = await fn();
-            
+
             // Cache the result
             this.set(key, result);
-            
+
             return result;
         } catch (error) {
             log.error(`Error in getOrCompute for key "${key}":`, error);
@@ -403,10 +411,13 @@ export class CacheFactory {
      */
     public static getCache<T>(name: string, options: CacheOptions = {}): CacheManager<T> {
         if (!this.instances.has(name)) {
-            this.instances.set(name, new CacheManager<T>({
-                ...options,
-                name
-            }));
+            this.instances.set(
+                name,
+                new CacheManager<T>({
+                    ...options,
+                    name,
+                })
+            );
         }
         return this.instances.get(name) as CacheManager<T>;
     }

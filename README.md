@@ -1,11 +1,11 @@
-# ggMCP4VSCode
+# GG MCP for VSCode
 
-[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/bugstan/ggMCP4VSCode)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/bugstan/ggMCP4VSCode/blob/main/LICENSE)
+[![Version](https://img.shields.io/badge/version-1.1.2-blue.svg)](https://github.com/bugstan/gg-mcp-for-vscode)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/bugstan/gg-mcp-for-vscode/blob/main/LICENSE)
 
 Supercharge your AI assistants for VSCode! This extension enables a Model Context Protocol (MCP) server that allows AI assistants to directly interact with your VSCode environment.
 
-![MCP Server Status](https://raw.githubusercontent.com/bugstan/ggMCP4VSCode/main/images/status-bar.png)
+![MCP Server Status](https://raw.githubusercontent.com/bugstan/gg-mcp-for-vscode/main/images/status-bar.png)
 
 ## ✨ Key Features
 
@@ -13,27 +13,36 @@ Supercharge your AI assistants for VSCode! This extension enables a Model Contex
 - **AI Assistant Enhancement** - Enable AI tools to read, modify, and analyze your code
 - **Code Operations** - Let AI assistants create, edit files, and search through code
 - **Debugging Integration** - AI assistants can help manage breakpoints and run configurations
-- **Terminal Operations** - Allow AI assistants to run terminal commands and get results (**Now with output capture in VS Code 1.93+**)
+- **Terminal Operations** - Allow AI assistants to run terminal commands and get results
 - **Git Integration** - Check change status, commit history
+- **Claude Desktop Compatible** - Fully compatible with Claude Desktop, enabling AI-driven automated development
 
-## 🆕 What's New in 1.1.0
+## 🆕 What's New in 1.1.2
 
+- **New Display Name** - Renamed to "GG MCP for VSCode" for better clarity and recognition
 - **Improved Path Handling** - Better cross-platform compatibility and path standardization with the new `pathInProject` parameter
-- **Terminal Shell Integration API Support** - Takes advantage of VS Code 1.93+'s new Shell Integration API
 - **Command Output Capture** - AI assistants can now execute commands and get their output
 - **Enhanced Terminal Tools** - Better terminal text access and command execution
+- **File Partial Replacement Interface** - Added new `replace_specific_text` API for replacing specific text in files
+  - Provides the ability to replace specific code content locally
+  - Supports replacing text within a single line or multiple lines
+  - Preserves the original formatting (such as line endings and indents)
+- **File Caching Mechanism** - Introduced an efficient file caching system to improve performance and reduce redundant file reads
 
 ## 🚀 Quick Start
 
 ### 1. Install the Extension
 
-- Search for "ggMCP4VSCode" in the VS Code marketplace and install
-- Or [click here to install](vscode:extension/bugstan.ggMCP4VSCode)
+- Search for "GG MCP for VSCode" in the VS Code marketplace and install
+- Or [click here to install](vscode:extension/bugstan.gg-mcp-for-vscode)
 
 ### 2. Recommended Setup
 
-- Recommended to use with Claude Desktop and [MCPxHub](https://github.com/bugstan/MCPxHub) plugin for the best interactive experience
-- **For Terminal Output Capture: Use VS Code 1.93 or later**
+- **Claude Desktop Integration**: This extension is fully compatible with Claude Desktop, allowing you to:
+  - Accept and execute development instructions from Claude
+  - Enable automated coding assistance through Claude's AI capabilities
+  - Let Claude read and modify your codebase directly with proper permissions
+- **MCPxHub**: For enhanced experience, use with [MCPxHub](https://github.com/bugstan/MCPxHub) plugin
 
 ### 3. Verify Server Is Running
 
@@ -47,20 +56,39 @@ Click on the status bar item to see details or restart the server.
 
 ### 4. Use with AI Assistants
 
-When interacting with AI assistants that support the MCP protocol, you can now:
+When interacting with AI assistants that support the MCP protocol (like Claude Desktop), you can now:
 - Ask the assistant to look at your currently open files
 - Request the assistant to modify code
 - Have the assistant perform project tasks
-- Execute terminal commands and get their output (VS Code 1.93+)
+- Let Claude automatically develop features based on your requirements
+- Execute terminal commands and get their output
+
+## 💻 Automated Development with Claude Desktop
+
+With GG MCP for VSCode and Claude Desktop, you can:
+
+- Instruct Claude to analyze your entire codebase
+- Have Claude automatically implement new features or fix bugs
+- Ask Claude to refactor code while maintaining functionality
+- Let Claude suggest improvements to your code architecture
+- Use natural language to describe coding tasks and let Claude handle the implementation
 
 ## ⚙️ Configuration Options
+
+### File Caching
+
+The extension now includes an intelligent file caching mechanism:
+- Reduces file system read operations
+- Improves performance for repeated file access
+- Automatically invalidates cache when files are modified
+- Can be configured in extension settings
 
 Find all options by searching for "ggMCP" in VS Code settings:
 
 - Port range
 - Terminal timeout
-- Output capture settings (VS Code 1.93+)
 - File auto-reload options
+- File caching behavior
 
 ## 📄 Commands
 
@@ -69,8 +97,8 @@ Find all options by searching for "ggMCP" in VS Code settings:
 
 ## 🔗 Links
 
-- [GitHub Repository](https://github.com/bugstan/ggMCP4VSCode)
-- [Report Issues](https://github.com/bugstan/ggMCP4VSCode/issues)
+- [GitHub Repository](https://github.com/bugstan/gg-mcp-for-vscode)
+- [Report Issues](https://github.com/bugstan/gg-mcp-for-vscode/issues)
 - [Model Context Protocol Specification](https://github.com/microsoft/model-context-protocol)
 
 ## 📝 License
@@ -81,4 +109,4 @@ Find all options by searching for "ggMCP" in VS Code settings:
 
 ### Detailed Documentation
 
-For more technical details and API documentation, please visit our [GitHub repository](https://github.com/bugstan/ggMCP4VSCode).
+For more technical details and API documentation, please visit our [GitHub repository](https://github.com/bugstan/gg-mcp-for-vscode).

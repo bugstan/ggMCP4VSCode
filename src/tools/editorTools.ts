@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import {AbsEditorTools} from '../types/absEditorTools';
-import {Response, ToolParams} from '../types';
-import {responseHandler} from '../server/responseHandler';
+import { AbsEditorTools } from '../types/absEditorTools';
+import { Response, ToolParams } from '../types';
+import { responseHandler } from '../server/responseHandler';
 
 /**
  * Get current open file content tool
@@ -14,8 +14,8 @@ export class GetOpenInEditorFileTextTool extends AbsEditorTools {
             'Retrieves the complete text content of the currently active file in the VSCode IDE editor.\nUse this tool to access and analyze the file\'s contents for tasks such as code review, content inspection, or text processing.\nReturns empty string if no file is currently open.',
             {
                 type: 'object',
-                properties: {}
-            }
+                properties: {},
+            },
         );
     }
 
@@ -33,7 +33,7 @@ export class GetOpenInEditorFileTextTool extends AbsEditorTools {
     protected async execute(editor: vscode.TextEditor | undefined, _args: any): Promise<Response> {
         try {
             if (!editor) {
-                return responseHandler.success('');
+                return responseHandler.failure('editor not found');
             }
 
             const document = editor.document;
@@ -42,7 +42,9 @@ export class GetOpenInEditorFileTextTool extends AbsEditorTools {
             return responseHandler.success(text);
         } catch (error) {
             this.log.error('Error getting file content', error);
-            return responseHandler.failure(`Error getting file content: ${error instanceof Error ? error.message : String(error)}`);
+            return responseHandler.failure(
+                `Error getting file content: ${error instanceof Error ? error.message : String(error)}`,
+            );
         }
     }
 }
@@ -58,8 +60,8 @@ export class GetOpenInEditorFilePathTool extends AbsEditorTools {
             'Retrieves the absolute path of the currently active file in the VSCode IDE editor.\nUse this tool to get the file location for tasks requiring file path information.\nReturns an empty string if no file is currently open.',
             {
                 type: 'object',
-                properties: {}
-            }
+                properties: {},
+            },
         );
     }
 
@@ -77,7 +79,7 @@ export class GetOpenInEditorFilePathTool extends AbsEditorTools {
     protected async execute(editor: vscode.TextEditor | undefined, _args: any): Promise<Response> {
         try {
             if (!editor) {
-                return responseHandler.success('');
+                return responseHandler.failure('editor not found');
             }
 
             const filePath = editor.document.uri.fsPath;
@@ -86,7 +88,9 @@ export class GetOpenInEditorFilePathTool extends AbsEditorTools {
             return responseHandler.success(relativePath);
         } catch (error) {
             this.log.error('Error getting file path', error);
-            return responseHandler.failure(`Error getting file path: ${error instanceof Error ? error.message : String(error)}`);
+            return responseHandler.failure(
+                `Error getting file path: ${error instanceof Error ? error.message : String(error)}`,
+            );
         }
     }
 }
@@ -103,19 +107,22 @@ export class ReplaceSelectedTextTool extends AbsEditorTools<ToolParams['replaceS
             {
                 type: 'object',
                 properties: {
-                    text: {type: 'string'}
+                    text: { type: 'string' },
                 },
-                required: ['text']
-            }
+                required: ['text'],
+            },
         );
     }
 
     /**
      * Execute replace selected text operation (implementing base class abstract method)
      */
-    protected async execute(editor: vscode.TextEditor | undefined, args: ToolParams['replaceSelectedText']): Promise<Response> {
+    protected async execute(
+        editor: vscode.TextEditor | undefined,
+        args: ToolParams['replaceSelectedText'],
+    ): Promise<Response> {
         try {
-            const {text} = args;
+            const { text } = args;
 
             if (!editor) {
                 // This part should not be executed, as the base class executeCore checks if the editor exists
@@ -128,8 +135,8 @@ export class ReplaceSelectedTextTool extends AbsEditorTools<ToolParams['replaceS
             }
 
             // Use base class applyEdit method to replace selected content
-            const success = await this.applyEdit(editor, editBuilder => {
-                editor.selections.forEach(selection => {
+            const success = await this.applyEdit(editor, (editBuilder) => {
+                editor.selections.forEach((selection) => {
                     editBuilder.replace(selection, text);
                 });
             });
@@ -141,7 +148,9 @@ export class ReplaceSelectedTextTool extends AbsEditorTools<ToolParams['replaceS
             }
         } catch (error) {
             this.log.error('Error replacing selected text', error);
-            return responseHandler.failure(`Error replacing selected text: ${error instanceof Error ? error.message : String(error)}`);
+            return responseHandler.failure(
+                `Error replacing selected text: ${error instanceof Error ? error.message : String(error)}`,
+            );
         }
     }
 }
@@ -150,7 +159,9 @@ export class ReplaceSelectedTextTool extends AbsEditorTools<ToolParams['replaceS
  * Replace current file content tool
  * Inherits from AbstractEditorTools base class to utilize common editor operation functionality
  */
-export class ReplaceCurrentFileTextTool extends AbsEditorTools<ToolParams['replaceCurrentFileText']> {
+export class ReplaceCurrentFileTextTool extends AbsEditorTools<
+    ToolParams['replaceCurrentFileText']
+> {
     constructor() {
         super(
             'replace_current_file_text',
@@ -158,19 +169,22 @@ export class ReplaceCurrentFileTextTool extends AbsEditorTools<ToolParams['repla
             {
                 type: 'object',
                 properties: {
-                    text: {type: 'string'}
+                    text: { type: 'string' },
                 },
-                required: ['text']
-            }
+                required: ['text'],
+            },
         );
     }
 
     /**
      * Execute replace file content operation (implementing base class abstract method)
      */
-    protected async execute(editor: vscode.TextEditor | undefined, args: ToolParams['replaceCurrentFileText']): Promise<Response> {
+    protected async execute(
+        editor: vscode.TextEditor | undefined,
+        args: ToolParams['replaceCurrentFileText'],
+    ): Promise<Response> {
         try {
-            const {text} = args;
+            const { text } = args;
 
             if (!editor) {
                 // This part should not be executed, as the base class executeCore checks if the editor exists
@@ -181,7 +195,7 @@ export class ReplaceCurrentFileTextTool extends AbsEditorTools<ToolParams['repla
             const fullRange = this.getDocumentFullRange(editor.document);
 
             // Use base class applyEdit method to replace entire file content
-            const success = await this.applyEdit(editor, editBuilder => {
+            const success = await this.applyEdit(editor, (editBuilder) => {
                 editBuilder.replace(fullRange, text);
             });
 
@@ -192,7 +206,9 @@ export class ReplaceCurrentFileTextTool extends AbsEditorTools<ToolParams['repla
             }
         } catch (error) {
             this.log.error('Error replacing file content', error);
-            return responseHandler.failure(`Error replacing file content: ${error instanceof Error ? error.message : String(error)}`);
+            return responseHandler.failure(
+                `Error replacing file content: ${error instanceof Error ? error.message : String(error)}`,
+            );
         }
     }
 }
@@ -203,17 +219,13 @@ export class ReplaceCurrentFileTextTool extends AbsEditorTools<ToolParams['repla
  */
 export class OpenFileInEditorTool extends AbsEditorTools<ToolParams['openFileInEditor']> {
     constructor() {
-        super(
-            'open_file_in_editor',
-            'Opens the specified file in the VSCode IDE editor.',
-            {
-                type: 'object',
-                properties: {
-                    pathInProject: {type: 'string'}
-                },
-                required: ['pathInProject']
-            }
-        );
+        super('open_file_in_editor', 'Opens the specified file in the VSCode IDE editor.', {
+            type: 'object',
+            properties: {
+                pathInProject: { type: 'string' },
+            },
+            required: ['pathInProject'],
+        });
     }
 
     /**
@@ -226,10 +238,13 @@ export class OpenFileInEditorTool extends AbsEditorTools<ToolParams['openFileInE
     /**
      * Execute open file operation (implementing base class abstract method)
      */
-    protected async execute(_editor: vscode.TextEditor | undefined, args: ToolParams['openFileInEditor']): Promise<Response> {
+    protected async execute(
+        _editor: vscode.TextEditor | undefined,
+        args: ToolParams['openFileInEditor'],
+    ): Promise<Response> {
         try {
             // Use base class path handling
-            const {absolutePath, isSafe} = await this.preparePath(this.extractPathFromArgs(args));
+            const { absolutePath, isSafe } = await this.preparePath(this.extractPathFromArgs(args));
             if (!absolutePath || !isSafe) {
                 return responseHandler.failure('Invalid file path or project directory not found');
             }

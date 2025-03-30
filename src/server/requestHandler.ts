@@ -4,7 +4,7 @@ import { ToolManager } from '../toolManager';
 import { getProjectRoot, getDirName } from '../utils/pathUtils';
 import { Logger } from '../utils/logger';
 import { responseHandler } from './responseHandler';
-import { RequestContext, ResponseContext } from './interceptors/types';
+import { RequestContext, ResponseContext } from './interceptors';
 import { InterceptorChain, initializeInterceptors } from './interceptors';
 
 // Create module-specific logger
@@ -33,10 +33,10 @@ export class RequestHandler {
      */
     public async handleListTools(res: http.ServerResponse): Promise<void> {
         try {
-            const toolsList = this.toolManager.getAllTools().map(tool => ({
+            const toolsList = this.toolManager.getAllTools().map((tool) => ({
                 name: tool.name,
                 description: tool.description,
-                inputSchema: tool.inputSchema
+                inputSchema: tool.inputSchema,
             }));
 
             log.info('Tools list requested', { count: toolsList.length });
@@ -61,9 +61,10 @@ export class RequestHandler {
             const rootPath = getProjectRoot() || '';
             const activeFile = vscode.window.activeTextEditor?.document.uri.fsPath || '';
 
-            const response = type === 'initialize'
-                ? this.createInitializeResponse(rootPath, activeFile, requestId)
-                : this.createStatusResponse(rootPath, activeFile, requestId);
+            const response =
+                type === 'initialize'
+                    ? this.createInitializeResponse(rootPath, activeFile, requestId)
+                    : this.createStatusResponse(rootPath, activeFile, requestId);
 
             log.info(`Processing ${type} request`, { requestId });
             responseHandler.sendJsonResponse(res, 200, response);
@@ -83,26 +84,27 @@ export class RequestHandler {
         activeFile: string,
         requestId: string | string[] | undefined
     ) {
-        const currentDirectory = activeFile
-            ? getDirName(activeFile)
-            : rootPath;
+        const currentDirectory = activeFile ? getDirName(activeFile) : rootPath;
 
-        return responseHandler.createJsonRpcResponse({
-            protocolVersion: "2024-11-05",
-            capabilities: {
-                tools: { listChanged: true },
-                resources: {}
+        return responseHandler.createJsonRpcResponse(
+            {
+                protocolVersion: '2024-11-05',
+                capabilities: {
+                    tools: { listChanged: true },
+                    resources: {},
+                },
+                serverInfo: {
+                    name: 'vscode-mcp-server',
+                    version: '1.0.0',
+                },
+                environment: {
+                    workspaceRoot: rootPath,
+                    activeFile: activeFile,
+                    currentDirectory: currentDirectory,
+                },
             },
-            serverInfo: {
-                name: "vscode-mcp-server",
-                version: "1.0.0"
-            },
-            environment: {
-                workspaceRoot: rootPath,
-                activeFile: activeFile,
-                currentDirectory: currentDirectory
-            }
-        }, requestId);
+            requestId
+        );
     }
 
     /**
@@ -116,21 +118,22 @@ export class RequestHandler {
         activeFile: string,
         requestId: string | string[] | undefined
     ) {
-        const currentDirectory = activeFile
-            ? getDirName(activeFile)
-            : rootPath;
+        const currentDirectory = activeFile ? getDirName(activeFile) : rootPath;
 
-        return responseHandler.createJsonRpcResponse({
-            status: "running",
-            environment: {
-                workspaceRoot: rootPath,
-                activeFile: activeFile,
-                currentDirectory: currentDirectory,
-                openFiles: vscode.workspace.textDocuments
-                    .filter(doc => doc.uri.scheme === 'file')
-                    .map(doc => doc.uri.fsPath)
-            }
-        }, requestId);
+        return responseHandler.createJsonRpcResponse(
+            {
+                status: 'running',
+                environment: {
+                    workspaceRoot: rootPath,
+                    activeFile: activeFile,
+                    currentDirectory: currentDirectory,
+                    openFiles: vscode.workspace.textDocuments
+                        .filter((doc) => doc.uri.scheme === 'file')
+                        .map((doc) => doc.uri.fsPath),
+                },
+            },
+            requestId
+        );
     }
 
     /**
@@ -165,18 +168,23 @@ export class RequestHandler {
                 toolName,
                 params,
                 method,
-                path
+                path,
             };
 
             // Execute before request interceptor chain
             const startTime = performance.now();
-            const processedContext = await this.interceptorChain.processBeforeRequest(requestContext);
+            const processedContext =
+                await this.interceptorChain.processBeforeRequest(requestContext);
             const beforeTime = performance.now() - startTime;
 
             // If interceptor returns null, terminate request processing
             if (processedContext === null) {
                 log.info(`Request processing terminated by interceptor for tool: ${toolName}`);
-                responseHandler.sendJsonResponse(res, 200, responseHandler.failure('Request cancelled by interceptor'));
+                responseHandler.sendJsonResponse(
+                    res,
+                    200,
+                    responseHandler.failure('Request cancelled by interceptor')
+                );
                 return;
             }
 
@@ -200,18 +208,23 @@ export class RequestHandler {
             // Create response context
             let responseContext: ResponseContext = {
                 response: result,
-                statusCode: 200
+                statusCode: 200,
             };
 
             // Execute after response interceptor chain
             const afterStartTime = performance.now();
-            responseContext = await this.interceptorChain.processAfterResponse(requestContext, responseContext);
+            responseContext = await this.interceptorChain.processAfterResponse(
+                requestContext,
+                responseContext
+            );
             const afterTime = performance.now() - afterStartTime;
 
             // Log interceptor performance
             const totalTime = performance.now() - startTime;
             if (totalTime > 50) {
-                log.info(`Interceptor chain processing: before=${beforeTime.toFixed(2)}ms, after=${afterTime.toFixed(2)}ms, total=${totalTime.toFixed(2)}ms`);
+                log.info(
+                    `Interceptor chain processing: before=${beforeTime.toFixed(2)}ms, after=${afterTime.toFixed(2)}ms, total=${totalTime.toFixed(2)}ms`
+                );
             }
 
             // Send response using responseHandler

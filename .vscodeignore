@@ -5,7 +5,6 @@ node_modules/**
 .gitignore
 tsconfig.json
 *.vsix
-update-readme.js
 *.log
 .github/**
 CONTRIBUTING*
@@ -13,6 +12,11 @@ README-zh.md
 .idea/**
 test/**
 doc/**
+x-plan/**
+docs/**
+.cursor/**
+clear.bat
+build-and-package.bat
 
 # ------------------- Source code can be excluded, but keep compiled files -------------------
 src/**

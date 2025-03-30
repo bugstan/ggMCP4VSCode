@@ -1,6 +1,6 @@
-import {AbsGitTools} from '../types/absGitTools';
-import {Response, ToolParams} from '../types';
-import {responseHandler} from '../server/responseHandler';
+import { AbsGitTools } from '../types/absGitTools';
+import { Response, ToolParams } from '../types';
+import { responseHandler } from '../server/responseHandler';
 
 /**
  * Get file modification history tool
@@ -14,10 +14,10 @@ export class GetFileHistoryTool extends AbsGitTools<ToolParams['getFileHistory']
             {
                 type: 'object',
                 properties: {
-                    pathInProject: {type: 'string'},
-                    maxCount: {type: 'number'}
+                    pathInProject: { type: 'string' },
+                    maxCount: { type: 'number' },
                 },
-                required: ['pathInProject']
+                required: ['pathInProject'],
             }
         );
     }
@@ -25,17 +25,18 @@ export class GetFileHistoryTool extends AbsGitTools<ToolParams['getFileHistory']
     /**
      * Execute Git get file history operation (implementing base class abstract method)
      */
-    protected async executeGitOperation(_repository: any, args: ToolParams['getFileHistory']): Promise<Response> {
+    protected async executeGitOperation(
+        _repository: any,
+        args: ToolParams['getFileHistory']
+    ): Promise<Response> {
         try {
-            const {pathInProject, maxCount = 10} = args;
+            const { pathInProject, maxCount = 10 } = args;
 
             // Prepare and validate path
             const { path: relativePath, isSafe } = await this.preparePath(pathInProject);
             if (!isSafe) {
                 return responseHandler.failure('Path is outside project directory');
             }
-
-            this.log.info(`Getting file history for: ${relativePath}, max count: ${maxCount}`);
 
             // Check if file exists in Git repository
             const checkCommand = `git ls-files --error-unmatch "${relativePath}"`;
@@ -55,7 +56,9 @@ export class GetFileHistoryTool extends AbsGitTools<ToolParams['getFileHistory']
             return this.parseCommandOutput(result.stdout, 'Failed to parse git log output');
         } catch (error) {
             this.log.error('Error getting file history', error);
-            return responseHandler.failure(`Error getting file history: ${error instanceof Error ? error.message : String(error)}`);
+            return responseHandler.failure(
+                `Error getting file history: ${error instanceof Error ? error.message : String(error)}`
+            );
         }
     }
 }
@@ -74,9 +77,9 @@ export class GetFileDiffTool extends AbsGitTools<ToolParams['getFileDiff']> {
                 properties: {
                     pathInProject: { type: 'string' },
                     hash1: { type: 'string', optional: true },
-                    hash2: { type: 'string', optional: true }
+                    hash2: { type: 'string', optional: true },
                 },
-                required: ['pathInProject']
+                required: ['pathInProject'],
             }
         );
     }
@@ -84,12 +87,19 @@ export class GetFileDiffTool extends AbsGitTools<ToolParams['getFileDiff']> {
     /**
      * Execute git operation (implementing base class abstract method)
      */
-    protected async executeGitOperation(_repository: any, args: ToolParams['getFileDiff']): Promise<Response> {
+    protected async executeGitOperation(
+        _repository: any,
+        args: ToolParams['getFileDiff']
+    ): Promise<Response> {
         try {
             const { pathInProject, hash1, hash2 } = args;
 
             // Prepare and validate path
-            const { path: relativePath, absolutePath, isSafe } = await this.preparePath(pathInProject);
+            const {
+                path: relativePath,
+                absolutePath,
+                isSafe,
+            } = await this.preparePath(pathInProject);
             if (!absolutePath || !isSafe) {
                 return responseHandler.failure('Path is outside project directory or invalid');
             }
@@ -131,7 +141,7 @@ export class GetBranchInfoTool extends AbsGitTools {
             'Get current branch information and a list of all available branches. Includes local and remote branches.',
             {
                 type: 'object',
-                properties: {}
+                properties: {},
             }
         );
     }
@@ -141,9 +151,8 @@ export class GetBranchInfoTool extends AbsGitTools {
      */
     protected async executeGitOperation(_repository: any, _args: any): Promise<Response> {
         try {
-            this.log.info('Getting branch information');
-
-            const command = 'git branch -a --format="%(refname:short)|%(upstream:short)|%(objectname:short)"';
+            const command =
+                'git branch -a --format="%(refname:short)|%(upstream:short)|%(objectname:short)"';
             const result = await this.executeGitCommand(command);
 
             if (result.exitCode !== 0 || !result.stdout) {
@@ -154,7 +163,9 @@ export class GetBranchInfoTool extends AbsGitTools {
             return this.parseCommandOutput(result.stdout, 'Failed to get branch information');
         } catch (error) {
             this.log.error('Error getting branch info', error);
-            return responseHandler.failure(`Error getting branch info: ${error instanceof Error ? error.message : String(error)}`);
+            return responseHandler.failure(
+                `Error getting branch info: ${error instanceof Error ? error.message : String(error)}`
+            );
         }
     }
 }
@@ -171,9 +182,9 @@ export class GetCommitDetailsTool extends AbsGitTools<ToolParams['getCommitDetai
             {
                 type: 'object',
                 properties: {
-                    hash: {type: 'string'}
+                    hash: { type: 'string' },
                 },
-                required: ['hash']
+                required: ['hash'],
             }
         );
     }
@@ -181,10 +192,12 @@ export class GetCommitDetailsTool extends AbsGitTools<ToolParams['getCommitDetai
     /**
      * Execute Git get commit details operation (implementing base class abstract method)
      */
-    protected async executeGitOperation(_repository: any, args: ToolParams['getCommitDetails']): Promise<Response> {
+    protected async executeGitOperation(
+        _repository: any,
+        args: ToolParams['getCommitDetails']
+    ): Promise<Response> {
         try {
-            const {hash} = args;
-            this.log.info(`Getting commit details for hash: ${hash}`);
+            const { hash } = args;
 
             if (!hash) {
                 this.log.warn('Empty commit hash provided');
@@ -199,7 +212,6 @@ export class GetCommitDetailsTool extends AbsGitTools<ToolParams['getCommitDetai
             }
 
             const command = `git show --format="%H|%an|%ae|%ad|%s|%b" --name-status --date=iso ${hash}`;
-            this.log.info(`Executing Git command: ${command}`);
 
             const result = await this.executeGitCommand(command);
 
@@ -211,7 +223,9 @@ export class GetCommitDetailsTool extends AbsGitTools<ToolParams['getCommitDetai
             return this.parseCommandOutput(result.stdout, 'Failed to get commit details');
         } catch (error) {
             this.log.error('Error getting commit details', error);
-            return responseHandler.failure(`Error getting commit details: ${error instanceof Error ? error.message : String(error)}`);
+            return responseHandler.failure(
+                `Error getting commit details: ${error instanceof Error ? error.message : String(error)}`
+            );
         }
     }
 }
@@ -228,10 +242,10 @@ export class CommitChangesTool extends AbsGitTools<ToolParams['commitChanges']> 
             {
                 type: 'object',
                 properties: {
-                    message: {type: 'string'},
-                    amend: {type: 'boolean'}
+                    message: { type: 'string' },
+                    amend: { type: 'boolean' },
                 },
-                required: ['message']
+                required: ['message'],
             }
         );
     }
@@ -239,10 +253,12 @@ export class CommitChangesTool extends AbsGitTools<ToolParams['commitChanges']> 
     /**
      * Execute Git commit changes operation (implementing base class abstract method)
      */
-    protected async executeGitOperation(_repository: any, args: ToolParams['commitChanges']): Promise<Response> {
+    protected async executeGitOperation(
+        _repository: any,
+        args: ToolParams['commitChanges']
+    ): Promise<Response> {
         try {
-            const {message, amend = false} = args;
-            this.log.info(`Committing changes with message: "${message}", amend: ${amend}`);
+            const { message, amend = false } = args;
 
             if (!message && !amend) {
                 this.log.warn('Empty commit message provided');
@@ -253,22 +269,30 @@ export class CommitChangesTool extends AbsGitTools<ToolParams['commitChanges']> 
             const statusResult = await this.executeGitCommand('git status --porcelain');
 
             if (statusResult.exitCode !== 0) {
-                this.log.error(`Failed to check repository status: ${statusResult.stderr || 'Unknown error'}`);
-                return responseHandler.failure(`Failed to check repository status: ${statusResult.stderr}`);
+                this.log.error(
+                    `Failed to check repository status: ${statusResult.stderr || 'Unknown error'}`
+                );
+                return responseHandler.failure(
+                    `Failed to check repository status: ${statusResult.stderr}`
+                );
             }
 
-            const hasUnstagedChanges = statusResult.stdout.split('\n')
-                .some(line => line.trim() !== '' && line.startsWith('??'));
+            const hasUnstagedChanges = statusResult.stdout
+                .split('\n')
+                .some((line) => line.trim() !== '' && line.startsWith('??'));
 
             const hasChanges = statusResult.stdout.trim() !== '';
 
             // Stage changes if needed
             if (hasUnstagedChanges) {
-                this.log.info('Staging untracked files');
                 const stageResult = await this.executeGitCommand('git add .');
                 if (stageResult.exitCode !== 0) {
-                    this.log.error(`Failed to stage changes: ${stageResult.stderr || 'Unknown error'}`);
-                    return responseHandler.failure(`Failed to stage changes: ${stageResult.stderr}`);
+                    this.log.error(
+                        `Failed to stage changes: ${stageResult.stderr || 'Unknown error'}`
+                    );
+                    return responseHandler.failure(
+                        `Failed to stage changes: ${stageResult.stderr}`
+                    );
                 }
             }
 
@@ -283,8 +307,6 @@ export class CommitChangesTool extends AbsGitTools<ToolParams['commitChanges']> 
                 ? `git commit --amend -m "${message}"`
                 : `git commit -m "${message}"`;
 
-            this.log.info(`Executing Git command: ${commitCommand}`);
-
             // Execute commit
             const commitResult = await this.executeGitCommand(commitCommand);
 
@@ -295,14 +317,21 @@ export class CommitChangesTool extends AbsGitTools<ToolParams['commitChanges']> 
                 if (commitResult.stderr?.includes('no changes added to commit')) {
                     return responseHandler.failure('No changes staged for commit');
                 }
-                this.log.error(`Failed to commit changes: ${commitResult.stderr || 'Unknown error'}`);
+                this.log.error(
+                    `Failed to commit changes: ${commitResult.stderr || 'Unknown error'}`
+                );
                 return responseHandler.failure(`Failed to commit changes: ${commitResult.stderr}`);
             }
 
-            return responseHandler.success(commitResult.stdout || (amend ? 'Modified previous commit' : 'Successfully committed changes'));
+            return responseHandler.success(
+                commitResult.stdout ||
+                    (amend ? 'Modified previous commit' : 'Successfully committed changes')
+            );
         } catch (error) {
             this.log.error('Error committing changes', error);
-            return responseHandler.failure(`Error committing changes: ${error instanceof Error ? error.message : String(error)}`);
+            return responseHandler.failure(
+                `Error committing changes: ${error instanceof Error ? error.message : String(error)}`
+            );
         }
     }
 }
@@ -319,17 +348,19 @@ export class PullChangesTool extends AbsGitTools<ToolParams['pullChanges']> {
             {
                 type: 'object',
                 properties: {
-                    remote: {type: 'string'},
-                    branch: {type: 'string'}
-                }
+                    remote: { type: 'string' },
+                    branch: { type: 'string' },
+                },
             }
         );
     }
 
-    protected async executeGitOperation(_repository: any, args: ToolParams['pullChanges']): Promise<Response> {
+    protected async executeGitOperation(
+        _repository: any,
+        args: ToolParams['pullChanges']
+    ): Promise<Response> {
         try {
-            const {remote = 'origin', branch} = args;
-            this.log.info(`Pulling changes from remote: ${remote}${branch ? `, branch: ${branch}` : ''}`);
+            const { remote = 'origin', branch } = args;
 
             // Check if remote exists
             const remoteCheckCommand = `git remote get-url ${remote}`;
@@ -355,7 +386,9 @@ export class PullChangesTool extends AbsGitTools<ToolParams['pullChanges']> {
                 const branchCheckResult = await this.executeGitCommand(branchCheckCommand);
 
                 if (branchCheckResult.exitCode !== 0 || !branchCheckResult.stdout) {
-                    return responseHandler.failure(`Branch '${targetBranch}' does not exist in remote '${remote}'`);
+                    return responseHandler.failure(
+                        `Branch '${targetBranch}' does not exist in remote '${remote}'`
+                    );
                 }
             }
 
@@ -364,7 +397,9 @@ export class PullChangesTool extends AbsGitTools<ToolParams['pullChanges']> {
             const statusResult = await this.executeGitCommand(statusCommand);
 
             if (statusResult.exitCode === 0 && statusResult.stdout.trim() !== '') {
-                return responseHandler.failure('Cannot pull changes: You have uncommitted changes. Please commit or stash them first.');
+                return responseHandler.failure(
+                    'Cannot pull changes: You have uncommitted changes. Please commit or stash them first.'
+                );
             }
 
             // Prepare pull command
@@ -372,16 +407,18 @@ export class PullChangesTool extends AbsGitTools<ToolParams['pullChanges']> {
                 ? `git pull ${remote} ${targetBranch}`
                 : `git pull ${remote}`;
 
-            this.log.info(`Executing Git command: ${pullCommand}`);
-
             const result = await this.executeGitCommand(pullCommand);
 
             if (result.exitCode !== 0) {
                 if (result.stderr?.includes('CONFLICT')) {
-                    return responseHandler.failure('Pull failed due to merge conflicts. Please resolve conflicts manually.');
+                    return responseHandler.failure(
+                        'Pull failed due to merge conflicts. Please resolve conflicts manually.'
+                    );
                 }
-                if (result.stderr?.includes('fatal: couldn\'t find remote ref')) {
-                    return responseHandler.failure(`Remote branch '${targetBranch}' not found in remote '${remote}'`);
+                if (result.stderr?.includes("fatal: couldn't find remote ref")) {
+                    return responseHandler.failure(
+                        `Remote branch '${targetBranch}' not found in remote '${remote}'`
+                    );
                 }
                 this.log.error(`Failed to pull changes: ${result.stderr || 'Unknown error'}`);
                 return responseHandler.failure(`Failed to pull changes: ${result.stderr}`);
@@ -390,7 +427,9 @@ export class PullChangesTool extends AbsGitTools<ToolParams['pullChanges']> {
             return responseHandler.success(result.stdout || 'Successfully pulled changes');
         } catch (error) {
             this.log.error('Error pulling changes', error);
-            return responseHandler.failure(`Error pulling changes: ${error instanceof Error ? error.message : String(error)}`);
+            return responseHandler.failure(
+                `Error pulling changes: ${error instanceof Error ? error.message : String(error)}`
+            );
         }
     }
 }
@@ -407,17 +446,19 @@ export class SwitchBranchTool extends AbsGitTools<ToolParams['switchBranch']> {
             {
                 type: 'object',
                 properties: {
-                    branch: {type: 'string'}
+                    branch: { type: 'string' },
                 },
-                required: ['branch']
+                required: ['branch'],
             }
         );
     }
 
-    protected async executeGitOperation(_repository: any, args: ToolParams['switchBranch']): Promise<Response> {
+    protected async executeGitOperation(
+        _repository: any,
+        args: ToolParams['switchBranch']
+    ): Promise<Response> {
         try {
-            const {branch} = args;
-            this.log.info(`Switching to branch: ${branch}`);
+            const { branch } = args;
 
             if (!branch) {
                 this.log.warn('Empty branch name provided');
@@ -429,7 +470,9 @@ export class SwitchBranchTool extends AbsGitTools<ToolParams['switchBranch']> {
             const statusResult = await this.executeGitCommand(statusCommand);
 
             if (statusResult.exitCode === 0 && statusResult.stdout.trim() !== '') {
-                return responseHandler.failure('Cannot switch branch: You have uncommitted changes. Please commit or stash them first.');
+                return responseHandler.failure(
+                    'Cannot switch branch: You have uncommitted changes. Please commit or stash them first.'
+                );
             }
 
             // Check if branch exists
@@ -459,7 +502,9 @@ export class SwitchBranchTool extends AbsGitTools<ToolParams['switchBranch']> {
             return responseHandler.success(result.stdout || `Switched to branch '${branch}'`);
         } catch (error) {
             this.log.error('Error switching branch', error);
-            return responseHandler.failure(`Error switching branch: ${error instanceof Error ? error.message : String(error)}`);
+            return responseHandler.failure(
+                `Error switching branch: ${error instanceof Error ? error.message : String(error)}`
+            );
         }
     }
 }
@@ -476,17 +521,20 @@ export class CreateBranchTool extends AbsGitTools<ToolParams['createBranch']> {
             {
                 type: 'object',
                 properties: {
-                    branch: {type: 'string'},
-                    startPoint: {type: 'string'}
+                    branch: { type: 'string' },
+                    startPoint: { type: 'string' },
                 },
-                required: ['branch']
+                required: ['branch'],
             }
         );
     }
 
-    protected async executeGitOperation(_repository: any, args: ToolParams['createBranch']): Promise<Response> {
+    protected async executeGitOperation(
+        _repository: any,
+        args: ToolParams['createBranch']
+    ): Promise<Response> {
         try {
-            const {branch, startPoint} = args;
+            const { branch, startPoint } = args;
             this.log.info(`Creating branch: ${branch}${startPoint ? ` from ${startPoint}` : ''}`);
 
             if (!branch) {
@@ -496,7 +544,9 @@ export class CreateBranchTool extends AbsGitTools<ToolParams['createBranch']> {
 
             // Validate branch name
             if (!/^[a-zA-Z0-9\-_/\.]+$/.test(branch)) {
-                return responseHandler.failure('Invalid branch name. Branch names can only contain letters, numbers, hyphens, underscores, forward slashes, and dots.');
+                return responseHandler.failure(
+                    'Invalid branch name. Branch names can only contain letters, numbers, hyphens, underscores, forward slashes, and dots.'
+                );
             }
 
             // Create branch command
@@ -519,10 +569,14 @@ export class CreateBranchTool extends AbsGitTools<ToolParams['createBranch']> {
                 return responseHandler.failure(`Failed to create branch: ${result.stderr}`);
             }
 
-            return responseHandler.success(result.stdout || `Created and switched to new branch '${branch}'`);
+            return responseHandler.success(
+                result.stdout || `Created and switched to new branch '${branch}'`
+            );
         } catch (error) {
             this.log.error('Error creating branch', error);
-            return responseHandler.failure(`Error creating branch: ${error instanceof Error ? error.message : String(error)}`);
+            return responseHandler.failure(
+                `Error creating branch: ${error instanceof Error ? error.message : String(error)}`
+            );
         }
     }
 }

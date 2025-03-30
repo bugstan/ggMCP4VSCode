@@ -1,6 +1,6 @@
 import path from 'path';
 import * as vscode from 'vscode';
-import {Logger} from './logger';
+import { Logger } from './logger';
 
 // Create a module-specific logger
 const log = Logger.forModule('PathUtils');
@@ -18,7 +18,7 @@ const CACHE_TTL = 10000; // 10 seconds cache validity
 export function getProjectRoot(): string | null {
     // First check if cache is valid
     const now = Date.now();
-    if (cachedProjectRoot && (now - cachedProjectRootTimestamp < CACHE_TTL)) {
+    if (cachedProjectRoot && now - cachedProjectRootTimestamp < CACHE_TTL) {
         return cachedProjectRoot;
     }
 
@@ -87,7 +87,10 @@ export function normalizePath(inputPath: string): string {
  * @param projectRoot Project root directory (optional)
  * @returns Object containing safety and reason
  */
-export function isPathSafe(normalizedPath: string, projectRoot?: string | null): {
+export function isPathSafe(
+    normalizedPath: string,
+    projectRoot?: string | null
+): {
     safe: boolean;
     withinProject: boolean;
     reason?: string;
@@ -110,20 +113,20 @@ export function isPathSafe(normalizedPath: string, projectRoot?: string | null):
             return {
                 safe: false,
                 withinProject,
-                reason: 'Path contains directory traversal pattern (../)'
+                reason: 'Path contains directory traversal pattern (../)',
             };
         }
 
         return {
             safe: true,
-            withinProject
+            withinProject,
         };
     } catch (e) {
         log.error('Path safety check error', e);
         return {
             safe: false,
             withinProject: false,
-            reason: `Safety check error: ${e instanceof Error ? e.message : String(e)}`
+            reason: `Safety check error: ${e instanceof Error ? e.message : String(e)}`,
         };
     }
 }
@@ -234,7 +237,7 @@ export function isAbsolutePath(inputPath: string): boolean {
 export function joinPaths(...paths: string[]): string {
     try {
         // Filter out empty paths
-        const validPaths = paths.filter(p => p && p !== '');
+        const validPaths = paths.filter((p) => p && p !== '');
         if (validPaths.length === 0) return '';
 
         // Join paths and normalize

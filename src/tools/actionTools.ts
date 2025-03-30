@@ -12,7 +12,7 @@ export class ListAvailableActionsTool extends AbsTools<Record<string, never>> {
         super(
             'list_available_actions',
             'Lists all available actions in VSCode IDE editor.\nReturns a JSON array of objects containing action information:\n- id: The action ID\n- text: The action presentation text\nUse this tool to discover available actions for execution with execute_action_by_id.',
-            {type: 'object', properties: {}}
+            { type: 'object', properties: {} }
         );
     }
 
@@ -24,22 +24,27 @@ export class ListAvailableActionsTool extends AbsTools<Record<string, never>> {
             // Note: VS Code API does not provide a method to directly get all available actions
             // Returns a set of the most common commands
             const commonCommands = [
-                {id: 'workbench.action.files.save', text: 'Save File'},
-                {id: 'workbench.action.files.saveAll', text: 'Save All Files'},
-                {id: 'editor.action.formatDocument', text: 'Format Document'},
-                {id: 'workbench.action.openSettings', text: 'Open Settings'},
-                {id: 'workbench.action.tasks.build', text: 'Run Build Task'},
-                {id: 'workbench.action.tasks.test', text: 'Run Test Task'},
-                {id: 'workbench.action.debug.start', text: 'Start Debugging'},
-                {id: 'editor.action.revealDefinition', text: 'Go to Definition'},
-                {id: 'editor.action.goToReferences', text: 'Find All References'},
-                {id: 'workbench.action.terminal.toggleTerminal', text: 'Toggle Terminal'}
+                { id: 'workbench.action.files.save', text: 'Save File' },
+                { id: 'workbench.action.files.saveAll', text: 'Save All Files' },
+                { id: 'editor.action.formatDocument', text: 'Format Document' },
+                { id: 'workbench.action.openSettings', text: 'Open Settings' },
+                { id: 'workbench.action.tasks.build', text: 'Run Build Task' },
+                { id: 'workbench.action.tasks.test', text: 'Run Test Task' },
+                { id: 'workbench.action.debug.start', text: 'Start Debugging' },
+                { id: 'editor.action.revealDefinition', text: 'Go to Definition' },
+                { id: 'editor.action.goToReferences', text: 'Find All References' },
+                {
+                    id: 'workbench.action.terminal.toggleTerminal',
+                    text: 'Toggle Terminal',
+                },
             ];
-            
+
             return responseHandler.success(commonCommands);
         } catch (error) {
             this.log.error('Error listing actions', error);
-            return responseHandler.failure(`Error listing actions: ${error instanceof Error ? error.message : String(error)}`);
+            return responseHandler.failure(
+                `Error listing actions: ${error instanceof Error ? error.message : String(error)}`
+            );
         }
     }
 }
@@ -56,9 +61,9 @@ export class ExecuteActionByIdTool extends AbsTools<ToolParams['executeActionByI
             {
                 type: 'object',
                 properties: {
-                    actionId: {type: 'string'}
+                    actionId: { type: 'string' },
                 },
-                required: ['actionId']
+                required: ['actionId'],
             }
         );
     }
@@ -68,7 +73,7 @@ export class ExecuteActionByIdTool extends AbsTools<ToolParams['executeActionByI
      */
     protected validateArgs(args: ToolParams['executeActionById']): void {
         super.validateArgs(args);
-        
+
         if (!args.actionId || args.actionId.trim() === '') {
             throw new Error('Action ID cannot be empty');
         }
@@ -79,7 +84,7 @@ export class ExecuteActionByIdTool extends AbsTools<ToolParams['executeActionByI
      */
     protected async executeCore(args: ToolParams['executeActionById']): Promise<Response> {
         try {
-            const {actionId} = args;
+            const { actionId } = args;
 
             // Execute command
             try {
@@ -105,7 +110,7 @@ export class GetProgressIndicatorsTool extends AbsTools<Record<string, never>> {
         super(
             'get_progress_indicators',
             'Retrieves the status of all running progress indicators in VSCode IDE editor.\nReturns a JSON array of objects containing progress information:\n- text: The progress text/description\n- fraction: The progress ratio (0.0 to 1.0)\n- indeterminate: Whether the progress is indeterminate\nReturns an empty array if no progress indicators are running.',
-            {type: 'object', properties: {}}
+            { type: 'object', properties: {} }
         );
     }
 

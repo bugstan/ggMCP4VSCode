@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import {Response} from './index';
-import {AbsTools} from './absTools';
-import {responseHandler} from '../server/responseHandler';
-import {TerminalManager} from '../utils/terminalManager';
+import { Response } from './index';
+import { AbsTools } from './absTools';
+import { responseHandler } from '../server/responseHandler';
+import { TerminalManager } from '../utils/terminalManager';
 import child_process from 'child_process';
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -44,7 +44,6 @@ export abstract class AbsTerminalTools<T = any> extends AbsTools<T> {
             let terminal = vscode.window.activeTerminal;
             if (!terminal && this.requiresTerminal()) {
                 terminal = this.terminalManager.getOutputTerminal();
-                this.log.info('Created new terminal for operation');
             }
 
             // Show terminal
@@ -89,26 +88,28 @@ export abstract class AbsTerminalTools<T = any> extends AbsTools<T> {
     /**
      * Execute command and capture output
      */
-    protected async executeCommand(command: string, cwd: string): Promise<{
-        stdout: string,
-        stderr: string,
-        exitCode: number | null
+    protected async executeCommand(
+        command: string,
+        cwd: string
+    ): Promise<{
+        stdout: string;
+        stderr: string;
+        exitCode: number | null;
     }> {
         try {
-            this.log.info(`Executing command in ${cwd}: ${command}`);
             const { stdout, stderr } = await execAsync(command, { cwd });
 
             return {
                 stdout: stdout || '',
                 stderr: stderr || '',
-                exitCode: 0
+                exitCode: 0,
             };
         } catch (error: unknown) {
             this.log.error(`Error executing command: ${command}`, error);
             return {
                 stdout: '',
                 stderr: error instanceof Error ? error.message : String(error),
-                exitCode: error instanceof Error && 'code' in error ? Number(error.code) : -1
+                exitCode: error instanceof Error && 'code' in error ? Number(error.code) : -1,
             };
         }
     }
@@ -149,23 +150,27 @@ export abstract class AbsTerminalTools<T = any> extends AbsTools<T> {
                 reject(new Error(`Command execution timed out after ${timeout}ms`));
             }, timeout);
 
-            childProcess = child_process.exec(command, {
-                cwd: options.cwd,
-                env: options.env,
-                maxBuffer: 1024 * 1024, // 1MB buffer
-                windowsHide: true // Hide window on Windows
-            }, (error: Error | null, stdout: string, stderr: string) => {
-                clearTimeout(timer);
-                if (error) {
-                    reject(error);
-                } else {
-                    resolve({
-                        stdout: stdout || '',
-                        stderr: stderr || '',
-                        exitCode: childProcess.exitCode || 0
-                    });
+            childProcess = child_process.exec(
+                command,
+                {
+                    cwd: options.cwd,
+                    env: options.env,
+                    maxBuffer: 1024 * 1024, // 1MB buffer
+                    windowsHide: true, // Hide window on Windows
+                },
+                (error: Error | null, stdout: string, stderr: string) => {
+                    clearTimeout(timer);
+                    if (error) {
+                        reject(error);
+                    } else {
+                        resolve({
+                            stdout: stdout || '',
+                            stderr: stderr || '',
+                            exitCode: childProcess.exitCode || 0,
+                        });
+                    }
                 }
-            });
+            );
         });
     }
 }

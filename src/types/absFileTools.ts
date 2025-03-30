@@ -1,12 +1,12 @@
 import * as vscode from 'vscode';
-import {Response} from './index';
-import {AbsTools} from './absTools';
-import {responseHandler} from '../server/responseHandler';
-import {FileOperationPerformance} from '../utils/performanceMonitor';
-import {FileCache} from '../server/cache/fileCache';
-import {FileReloader} from '../utils/fileReloader';
+import { Response } from './index';
+import { AbsTools } from './absTools';
+import { responseHandler } from '../server/responseHandler';
+import { FileOperationPerformance } from '../utils/performanceMonitor';
+import { FileCache } from '../server/cache';
+import { FileReloader } from '../utils/fileReloader';
 import path from 'path';
-import {EventEmitter} from 'events';
+import { EventEmitter } from 'events';
 
 /**
  * Base class for file operation tools
@@ -18,11 +18,7 @@ export abstract class AbsFileTools<T extends Record<string, any> = any> extends 
     private static readonly textDecoder = new TextDecoder();
     protected eventEmitter: EventEmitter;
 
-    constructor(
-        name: string,
-        description: string,
-        parameters: any
-    ) {
+    constructor(name: string, description: string, parameters: any) {
         super(name, description, parameters);
         this.eventEmitter = new EventEmitter();
     }
@@ -57,7 +53,7 @@ export abstract class AbsFileTools<T extends Record<string, any> = any> extends 
         const pathArg = this.extractPathFromArgs(args);
 
         // Use base class path handling
-        const {path, absolutePath, isSafe} = await this.preparePath(pathArg);
+        const { path, absolutePath, isSafe } = await this.preparePath(pathArg);
 
         if (!absolutePath || !isSafe) {
             return responseHandler.failure('Invalid file path or project directory not found');
@@ -106,9 +102,10 @@ export abstract class AbsFileTools<T extends Record<string, any> = any> extends 
         uri: vscode.Uri,
         content: string,
         options?: {
-            checkExists?: boolean,
-            mustExist?: boolean
-        }
+            checkExists?: boolean;
+            mustExist?: boolean;
+            skipCacheUpdate?: boolean;
+        },
     ): Promise<void> {
         try {
             // Check file existence if needed
@@ -126,20 +123,22 @@ export abstract class AbsFileTools<T extends Record<string, any> = any> extends 
             const data = AbsFileTools.textEncoder.encode(content);
             await vscode.workspace.fs.writeFile(uri, data);
 
-            // Handle cache update and file reload asynchronously
-            setImmediate(() => {
-                // Update cache with new content
-                FileCache.updateCache(uri.fsPath, content).catch(err => {
-                    this.log.error(`Error updating cache for file: ${uri.fsPath}`, err);
-                    // If cache update fails, invalidate the cache to ensure consistency
-                    FileCache.invalidate(uri.fsPath);
-                });
+            // Handle cache update and file reload asynchronously if not skipped
+            if (!options?.skipCacheUpdate) {
+                setImmediate(() => {
+                    // Update cache with new content
+                    FileCache.updateCache(uri.fsPath, content).catch((err) => {
+                        this.log.error(`Error updating cache for file: ${uri.fsPath}`, err);
+                        // If cache update fails, invalidate the cache to ensure consistency
+                        FileCache.invalidate(uri.fsPath);
+                    });
 
-                // Reload file in editor
-                FileReloader.reloadFile(uri.fsPath).catch(err => {
-                    this.log.error(`Error reloading file: ${uri.fsPath}`, err);
+                    // Reload file in editor
+                    FileReloader.reloadFile(uri.fsPath).catch((err) => {
+                        this.log.error(`Error reloading file: ${uri.fsPath}`, err);
+                    });
                 });
-            });
+            }
         } catch (error) {
             // If file write fails, invalidate the cache
             FileCache.invalidate(uri.fsPath);
@@ -150,7 +149,10 @@ export abstract class AbsFileTools<T extends Record<string, any> = any> extends 
     /**
      * Get file content (with cache support)
      */
-    protected async getFileContent(absolutePath: string, useCache: boolean = true): Promise<string> {
+    protected async getFileContent(
+        absolutePath: string,
+        useCache: boolean = true,
+    ): Promise<string> {
         if (useCache) {
             return FileCache.getFileContent(absolutePath);
         } else {
@@ -172,10 +174,38 @@ export abstract class AbsFileTools<T extends Record<string, any> = any> extends 
     protected isProbablyBinaryFile(filePath: string): boolean {
         const ext = path.extname(filePath).toLowerCase();
         const binaryExtensions = [
-            '.exe', '.dll', '.so', '.dylib', '.bin', '.dat', '.zip', '.rar', '.7z', '.tar', '.gz',
-            '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.ico', '.tiff', '.webp',
-            '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
-            '.mp3', '.mp4', '.wav', '.avi', '.mov', '.mkv'
+            '.exe',
+            '.dll',
+            '.so',
+            '.dylib',
+            '.bin',
+            '.dat',
+            '.zip',
+            '.rar',
+            '.7z',
+            '.tar',
+            '.gz',
+            '.jpg',
+            '.jpeg',
+            '.png',
+            '.gif',
+            '.bmp',
+            '.ico',
+            '.tiff',
+            '.webp',
+            '.pdf',
+            '.doc',
+            '.docx',
+            '.xls',
+            '.xlsx',
+            '.ppt',
+            '.pptx',
+            '.mp3',
+            '.mp4',
+            '.wav',
+            '.avi',
+            '.mov',
+            '.mkv',
         ];
         return binaryExtensions.includes(ext);
     }
@@ -183,44 +213,60 @@ export abstract class AbsFileTools<T extends Record<string, any> = any> extends 
     /**
      * Handle file system errors with specific error messages
      * @param error The error object
-     * @param absolutePath The file path where the error occurred
+     * @param pathInProject The file path where the error occurred
      * @param operation The operation that failed (e.g., 'reading', 'writing', 'deleting')
      * @param isDirectory Whether the operation was on a directory
      * @returns Response with appropriate error message
      */
     protected handleFileSystemError(
         error: unknown,
-        absolutePath: string,
+        pathInProject: string,
         operation: string = 'accessing',
-        isDirectory: boolean = false
+        isDirectory: boolean = false,
     ): Response {
         const itemType = isDirectory ? 'directory' : 'file';
-        this.log.error(`Error ${operation} ${itemType}: ${absolutePath}`, error);
+        this.log.error(`Error ${operation} ${itemType}: ${pathInProject}`, error);
 
         if (error instanceof vscode.FileSystemError) {
             switch (error.code) {
                 case 'FileNotFound':
-                    return responseHandler.failure(`${itemType.charAt(0).toUpperCase() + itemType.slice(1)} does not exist`);
+                    return responseHandler.failure(
+                        `${itemType.charAt(0).toUpperCase() + itemType.slice(1)} does not exist`,
+                    );
                 case 'NoPermissions':
                     return responseHandler.failure(`No permission to ${operation} the ${itemType}`);
                 case 'FileIsADirectory':
                     return isDirectory
-                        ? responseHandler.failure(`Internal error: Unexpected FileIsADirectory error`)
-                        : responseHandler.failure(`Cannot ${operation} a directory as a file. Use the appropriate directory tool instead.`);
+                        ? responseHandler.failure(
+                            `Internal error: Unexpected FileIsADirectory error`,
+                        )
+                        : responseHandler.failure(
+                            `Cannot ${operation} a directory as a file. Use the appropriate directory tool instead.`,
+                        );
                 case 'FileNotADirectory':
                     return isDirectory
-                        ? responseHandler.failure(`Cannot ${operation} a file as a directory. Use the appropriate file tool instead.`)
-                        : responseHandler.failure(`Internal error: Unexpected FileNotADirectory error`);
+                        ? responseHandler.failure(
+                            `Cannot ${operation} a file as a directory. Use the appropriate file tool instead.`,
+                        )
+                        : responseHandler.failure(
+                            `Internal error: Unexpected FileNotADirectory error`,
+                        );
                 case 'FileIsLocked':
-                    return responseHandler.failure(`${itemType.charAt(0).toUpperCase() + itemType.slice(1)} is locked by another process`);
+                    return responseHandler.failure(
+                        `${itemType.charAt(0).toUpperCase() + itemType.slice(1)} is locked by another process`,
+                    );
                 case 'FileExists':
-                    return responseHandler.failure(`${itemType.charAt(0).toUpperCase() + itemType.slice(1)} already exists`);
+                    return responseHandler.failure(
+                        `${itemType.charAt(0).toUpperCase() + itemType.slice(1)} already exists`,
+                    );
                 default:
                     return responseHandler.failure(`File system error: ${error.message}`);
             }
         }
 
-        return responseHandler.failure(`Error ${operation} ${itemType}: ${error instanceof Error ? error.message : String(error)}`);
+        return responseHandler.failure(
+            `Error ${operation} ${itemType}: ${error instanceof Error ? error.message : String(error)}`,
+        );
     }
 
     /**
@@ -229,8 +275,8 @@ export abstract class AbsFileTools<T extends Record<string, any> = any> extends 
     protected async measurePerformance<R>(
         operation: string,
         callback: () => Promise<R>,
-        logThresholdMs: number = 200
-    ): Promise<{ result: R, timeMs: number }> {
+        logThresholdMs: number = 200,
+    ): Promise<{ result: R; timeMs: number }> {
         const startTime = performance.now();
         const result = await callback();
         const timeMs = performance.now() - startTime;
@@ -239,7 +285,7 @@ export abstract class AbsFileTools<T extends Record<string, any> = any> extends 
             this.log.info(`${operation} took ${timeMs.toFixed(2)}ms`);
         }
 
-        return {result, timeMs};
+        return { result, timeMs };
     }
 
     /**
@@ -249,11 +295,11 @@ export abstract class AbsFileTools<T extends Record<string, any> = any> extends 
         absolutePath: string,
         content: string,
         options?: {
-            reloadAfterWrite?: boolean,
-            delayReloadMs?: number,
-            useCache?: boolean
-        }
-    ): Promise<{ writeTimeMs: number, size: number }> {
+            reloadAfterWrite?: boolean;
+            delayReloadMs?: number;
+            useCache?: boolean;
+        },
+    ): Promise<{ writeTimeMs: number; size: number }> {
         const startTime = performance.now();
         const textLength = content?.length || 0;
         const isLargeFile = textLength > 1024 * 1024; // Consider files larger than 1MB as large files
@@ -274,19 +320,19 @@ export abstract class AbsFileTools<T extends Record<string, any> = any> extends 
         }
 
         // Encode text and measure performance
-        const {timeMs: encodeTimeMs, result: bytes} = await this.measurePerformance(
+        const { timeMs: encodeTimeMs, result: bytes } = await this.measurePerformance(
             'Text encoding',
             async () => AbsFileTools.textEncoder.encode(content),
-            100
+            100,
         );
 
         this.log.info('Text encoding -- encodeTimeMs:', encodeTimeMs, 'bytes:', bytes);
 
         // Write file and measure performance
-        const {timeMs: writeTimeMs} = await this.measurePerformance(
+        const { timeMs: writeTimeMs } = await this.measurePerformance(
             'File write',
             async () => vscode.workspace.fs.writeFile(fileUri, bytes),
-            200
+            200,
         );
 
         // Invalidate cache
@@ -299,12 +345,18 @@ export abstract class AbsFileTools<T extends Record<string, any> = any> extends 
             const delayMs = options?.delayReloadMs || (isLargeFile ? 100 : 10);
             setTimeout(async () => {
                 try {
-                    const {timeMs: reloadTimeMs, result: reloadSuccess} = await this.measurePerformance(
-                        'File reload',
-                        async () => FileReloader.reloadFile(absolutePath),
-                        200
+                    const { timeMs: reloadTimeMs, result: reloadSuccess } =
+                        await this.measurePerformance(
+                            'File reload',
+                            async () => FileReloader.reloadFile(absolutePath),
+                            200,
+                        );
+                    this.log.info(
+                        'reloadAfterWrite -- timeMs:',
+                        reloadTimeMs,
+                        'reloadSuccess:',
+                        reloadSuccess,
                     );
-                    this.log.info('reloadAfterWrite -- timeMs:', reloadTimeMs, 'reloadSuccess:', reloadSuccess);
                 } catch (reloadErr) {
                     this.log.error(`Error reloading file: ${absolutePath}`, reloadErr);
                 }
@@ -317,7 +369,7 @@ export abstract class AbsFileTools<T extends Record<string, any> = any> extends 
 
         return {
             writeTimeMs: Math.round(writeTimeMs),
-            size: textLength
+            size: textLength,
         };
     }
 
@@ -328,9 +380,9 @@ export abstract class AbsFileTools<T extends Record<string, any> = any> extends 
         files: vscode.Uri[],
         processor: (file: vscode.Uri) => Promise<R | null>,
         options?: {
-            maxConcurrent?: number,
-            skipErrors?: boolean
-        }
+            maxConcurrent?: number;
+            skipErrors?: boolean;
+        },
     ): Promise<R[]> {
         const maxConcurrent = options?.maxConcurrent || 10;
         const results: R[] = [];
@@ -369,43 +421,5 @@ export abstract class AbsFileTools<T extends Record<string, any> = any> extends 
         // Wait for all tasks to complete
         await Promise.all(running);
         return results;
-    }
-
-    protected async writeFileWithResponse(
-        absolutePath: string,
-        content: string,
-        options: {
-            createDirectory?: boolean,
-            mustExist?: boolean,
-            includeSize?: boolean
-        } = {}
-    ): Promise<Response> {
-        try {
-            const fileUri = vscode.Uri.file(absolutePath);
-
-            // Create directory if needed
-            if (options.createDirectory) {
-                const dirUri = vscode.Uri.file(path.dirname(absolutePath));
-                await vscode.workspace.fs.createDirectory(dirUri);
-            }
-
-            // Write file
-            await this.writeFileSimple(fileUri, content, {
-                checkExists: true,
-                mustExist: options.mustExist
-            });
-
-            // Build result
-            const result: any = {
-                path: absolutePath,
-            };
-            if (options.includeSize) {
-                result.size = content.length;
-            }
-
-            return responseHandler.success(result);
-        } catch (err) {
-            return this.handleFileSystemError(err, absolutePath, 'writing');
-        }
     }
 }

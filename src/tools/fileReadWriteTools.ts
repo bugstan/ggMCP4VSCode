@@ -3,10 +3,7 @@ import { AbsFileTools } from '../types/absFileTools';
 import { Response, ToolParams } from '../types';
 import { responseHandler } from '../server/responseHandler';
 import { getDirName, joinPaths } from '../utils/pathUtils';
-import { CacheManager } from '../utils/cacheManager';
-
-// Create file cache instance
-const fileCache = new CacheManager<string>();
+import { FileCache } from '../server/cache';
 
 /**
  * Get file content tool
@@ -20,9 +17,9 @@ export class GetFileTextByPathTool extends AbsFileTools<ToolParams['getFileTextB
             {
                 type: 'object',
                 properties: {
-                    pathInProject: { type: 'string' }
+                    pathInProject: { type: 'string' },
                 },
-                required: ['pathInProject']
+                required: ['pathInProject'],
             }
         );
     }
@@ -30,61 +27,90 @@ export class GetFileTextByPathTool extends AbsFileTools<ToolParams['getFileTextB
     /**
      * Execute file read operation (implementing base class abstract method)
      */
-    protected async execute(absolutePath: string, _args: ToolParams['getFileTextByPath']): Promise<Response> {
+    protected async execute(
+        absolutePath: string,
+        _args: ToolParams['getFileTextByPath']
+    ): Promise<Response> {
         try {
             // Use base class cached file read method
             const text = await this.getFileContent(absolutePath, true);
-            this.log.info(`Successfully read file content: ${absolutePath}, size: ${text.length} characters`);
+            this.log.info(
+                `Successfully read file content: ${absolutePath}, size: ${text.length} characters`
+            );
 
             return responseHandler.success({
                 content: text,
-                pathInProject: this.getRelativePath(absolutePath)
+                pathInProject: this.getRelativePath(absolutePath),
             });
-        } catch (err) {
+        } catch (err: unknown) {
             return this.handleFileSystemError(err, absolutePath, 'reading');
         }
     }
 }
 
 /**
- * Replace file content tool
+ * Rewrite file content tool
  * Inherits from AbstractFileTools base class to utilize common file operation functionality
  */
-export class ReplaceFileTextByPathTool extends AbsFileTools<ToolParams['replaceFileTextByPath']> {
+export class RewriteFileContentTool extends AbsFileTools<ToolParams['rewriteFileContent']> {
     constructor() {
         super(
-            'replace_file_text_by_path',
-            'Replace the entire content of a specified project file with new text. Returns an error if the file does not exist or cannot be accessed.',
+            'rewrite_file_content',
+            'Replace the entire content of a specified project file with new text. This completely overwrites the file with the provided content.',
             {
                 type: 'object',
                 properties: {
                     pathInProject: { type: 'string' },
-                    text: { type: 'string' }
+                    text: { type: 'string' },
                 },
-                required: ['pathInProject', 'text']
+                required: ['pathInProject', 'text'],
             }
         );
     }
 
     /**
-     * Execute file replace operation (implementing base class abstract method)
+     * Execute file rewrite operation (implementing base class abstract method)
      */
-    protected async execute(absolutePath: string, args: ToolParams['replaceFileTextByPath']): Promise<Response> {
+    protected async execute(
+        absolutePath: string,
+        args: ToolParams['rewriteFileContent']
+    ): Promise<Response> {
         const { text } = args;
 
         try {
             const fileUri = vscode.Uri.file(absolutePath);
+
+            // Step 1: Complete file operation
             await this.writeFileSimple(fileUri, text, {
                 checkExists: true,
-                mustExist: true
+                mustExist: true,
+                skipCacheUpdate: true, // Skip automatic cache update
             });
 
-            return responseHandler.success({
+            // Step 2: Prepare response to send to client
+            const response = responseHandler.success({
                 pathInProject: this.getRelativePath(absolutePath),
-                size: text.length
+                size: text.length,
             });
-        } catch (err) {
-            return this.handleFileSystemError(err, absolutePath, 'writing');
+
+            // Step 3: Asynchronously update cache and open file
+            setTimeout(() => {
+                // Update cache
+                FileCache.updateCache(absolutePath, text).catch((err: unknown) => {
+                    this.log.error(`Error updating cache for file: ${absolutePath}`, err);
+                    FileCache.invalidate(absolutePath);
+                });
+
+                // Open file in editor
+                setTimeout(async () => {
+                    this.openFileInEditorTab(fileUri, absolutePath, 'rewrite_file_content');
+                }, 0);
+            }, 0);
+
+            // Step 4: Return response immediately
+            return response;
+        } catch (err: unknown) {
+            return this.handleFileSystemError(err, absolutePath, 'rewriting');
         }
     }
 }
@@ -102,9 +128,9 @@ export class CreateNewFileWithTextTool extends AbsFileTools<ToolParams['createNe
                 type: 'object',
                 properties: {
                     pathInProject: { type: 'string' },
-                    text: { type: 'string' }
+                    text: { type: 'string' },
                 },
-                required: ['pathInProject', 'text']
+                required: ['pathInProject', 'text'],
             }
         );
     }
@@ -112,10 +138,14 @@ export class CreateNewFileWithTextTool extends AbsFileTools<ToolParams['createNe
     /**
      * Execute file creation operation (implementing base class abstract method)
      */
-    protected async execute(absolutePath: string, args: ToolParams['createNewFileWithText']): Promise<Response> {
+    protected async execute(
+        absolutePath: string,
+        args: ToolParams['createNewFileWithText']
+    ): Promise<Response> {
         const { text } = args;
 
         try {
+            // Step 1: Complete file operation
             // Ensure directory exists
             const dirUri = vscode.Uri.file(getDirName(absolutePath));
             await vscode.workspace.fs.createDirectory(dirUri);
@@ -124,13 +154,32 @@ export class CreateNewFileWithTextTool extends AbsFileTools<ToolParams['createNe
             const fileUri = vscode.Uri.file(absolutePath);
             await this.writeFileSimple(fileUri, text, {
                 checkExists: true,
-                mustExist: false
+                mustExist: false,
+                skipCacheUpdate: true, // Skip automatic cache update
             });
 
-            return responseHandler.success({
-                pathInProject: this.getRelativePath(absolutePath)
+            // Step 2: Prepare response to send to client
+            const response = responseHandler.success({
+                pathInProject: this.getRelativePath(absolutePath),
             });
-        } catch (err) {
+
+            // Step 3: Asynchronously update cache and open file
+            setTimeout(() => {
+                // Update cache
+                FileCache.updateCache(absolutePath, text).catch((err: unknown) => {
+                    this.log.error(`Error updating cache for file: ${absolutePath}`, err);
+                    FileCache.invalidate(absolutePath);
+                });
+
+                // Open file in editor
+                setTimeout(async () => {
+                    this.openFileInEditorTab(fileUri, absolutePath, 'create_new_file_with_text');
+                }, 0);
+            }, 0);
+
+            // Step 4: Return response immediately
+            return response;
+        } catch (err: unknown) {
             return this.handleFileSystemError(err, absolutePath, 'creating');
         }
     }
@@ -148,9 +197,9 @@ export class ListFilesInFolderTool extends AbsFileTools<ToolParams['listFilesInF
             {
                 type: 'object',
                 properties: {
-                    pathInProject: { type: 'string' }
+                    pathInProject: { type: 'string' },
                 },
-                required: ['pathInProject']
+                required: ['pathInProject'],
             }
         );
     }
@@ -158,7 +207,10 @@ export class ListFilesInFolderTool extends AbsFileTools<ToolParams['listFilesInF
     /**
      * Execute directory list operation (implementing base class abstract method)
      */
-    protected async execute(absolutePath: string, _args: ToolParams['listFilesInFolder']): Promise<Response> {
+    protected async execute(
+        absolutePath: string,
+        _args: ToolParams['listFilesInFolder']
+    ): Promise<Response> {
         try {
             // Check if path is safe and within project directory
             const { isSafe } = await this.preparePath(absolutePath);
@@ -176,9 +228,8 @@ export class ListFilesInFolderTool extends AbsFileTools<ToolParams['listFilesInF
             }
 
             // Use performance measurement method to read directory contents
-            const { result: entries, timeMs } = await this.measurePerformance(
-                'Directory read',
-                async () => vscode.workspace.fs.readDirectory(dirUri)
+            const { result: entries } = await this.measurePerformance('Directory read', async () =>
+                vscode.workspace.fs.readDirectory(dirUri)
             );
 
             // Format results
@@ -192,9 +243,9 @@ export class ListFilesInFolderTool extends AbsFileTools<ToolParams['listFilesInF
                     result.push({
                         name: name,
                         type: fileType === vscode.FileType.Directory ? 'directory' : 'file',
-                        pathInProject: entryRelPath
+                        pathInProject: entryRelPath,
                     });
-                } catch (entryErr) {
+                } catch (entryErr: unknown) {
                     // Skip entries that cannot be processed
                     this.log.warn(`Error processing entry: ${name}`, entryErr);
                 }
@@ -207,10 +258,8 @@ export class ListFilesInFolderTool extends AbsFileTools<ToolParams['listFilesInF
                 }
                 return a.name.localeCompare(b.name);
             });
-
-            this.log.info(`Found ${result.length} items in directory: ${absolutePath}, time: ${timeMs.toFixed(2)}ms`);
             return responseHandler.success(result);
-        } catch (err) {
+        } catch (err: unknown) {
             return this.handleFileSystemError(err, absolutePath, 'listing', true);
         }
     }
@@ -220,7 +269,9 @@ export class ListFilesInFolderTool extends AbsFileTools<ToolParams['listFilesInF
  * Replace file content at specific position tool
  * Inherits from AbstractFileTools base class to utilize common file operation functionality
  */
-export class ReplaceFileContentAtPositionTool extends AbsFileTools<ToolParams['replace_file_content_at_position']> {
+export class ReplaceFileContentAtPositionTool extends AbsFileTools<
+    ToolParams['replaceFileContentAtPosition']
+> {
     constructor() {
         super(
             'replace_file_content_at_position',
@@ -232,9 +283,9 @@ export class ReplaceFileContentAtPositionTool extends AbsFileTools<ToolParams['r
                     startLine: { type: 'number' },
                     endLine: { type: 'number' },
                     content: { type: 'string' },
-                    offset: { type: 'number', optional: true }
+                    offset: { type: 'number', optional: true },
                 },
-                required: ['pathInProject', 'startLine', 'endLine', 'content']
+                required: ['pathInProject', 'startLine', 'endLine', 'content'],
             }
         );
     }
@@ -242,10 +293,14 @@ export class ReplaceFileContentAtPositionTool extends AbsFileTools<ToolParams['r
     /**
      * Execute file content replacement operation (implementing base class abstract method)
      */
-    protected async execute(absolutePath: string, args: ToolParams['replace_file_content_at_position']): Promise<Response> {
+    protected async execute(
+        absolutePath: string,
+        args: ToolParams['replaceFileContentAtPosition']
+    ): Promise<Response> {
         const { startLine, endLine, content, offset = 0 } = args;
 
         try {
+            // Step 1: Complete file operation
             const fileUri = vscode.Uri.file(absolutePath);
 
             // Read current file content
@@ -265,8 +320,9 @@ export class ReplaceFileContentAtPositionTool extends AbsFileTools<ToolParams['r
             if (startLine === endLine) {
                 // Single line replacement
                 const lineToModify = lines[startIndex] as string;
-                const newLine = lineToModify.substring(0, offset) + content + lineToModify.substring(offset + content.length);
-                lines[startIndex] = newLine;
+                lines[startIndex] = lineToModify.substring(0, offset) +
+                    content +
+                    lineToModify.substring(offset + content.length);
             } else {
                 // Multi-line replacement
                 const newLines = content.split('\n');
@@ -279,11 +335,34 @@ export class ReplaceFileContentAtPositionTool extends AbsFileTools<ToolParams['r
             // Write updated content
             await this.writeFileSimple(fileUri, newContent, {
                 checkExists: true,
-                mustExist: true
+                mustExist: true,
+                skipCacheUpdate: true, // Skip automatic cache update
             });
 
-            return responseHandler.success('ok');
-        } catch (err) {
+            // Step 2: Prepare response to send to client
+            const response = responseHandler.success('ok');
+
+            // Step 3: Asynchronously update cache and open file
+            setTimeout(() => {
+                // Update cache
+                FileCache.updateCache(absolutePath, newContent).catch((err: unknown) => {
+                    this.log.error(`Error updating cache for file: ${absolutePath}`, err);
+                    FileCache.invalidate(absolutePath);
+                });
+
+                // Open file in editor
+                setTimeout(async () => {
+                    this.openFileInEditorTab(
+                        fileUri,
+                        absolutePath,
+                        'replace_file_content_at_position'
+                    );
+                }, 0);
+            }, 0);
+
+            // Step 4: Return response immediately
+            return response;
+        } catch (err: unknown) {
             return this.handleFileSystemError(err, absolutePath, 'replacing content in');
         }
     }
@@ -301,10 +380,10 @@ export class AppendFileContentTool extends AbsFileTools<ToolParams['appendFileCo
             {
                 type: 'object',
                 properties: {
-                    pathInProject: {type: 'string'},
-                    content: {type: 'string'}
+                    pathInProject: { type: 'string' },
+                    content: { type: 'string' },
                 },
-                required: ['pathInProject', 'content']
+                required: ['pathInProject', 'content'],
             }
         );
     }
@@ -312,10 +391,14 @@ export class AppendFileContentTool extends AbsFileTools<ToolParams['appendFileCo
     /**
      * Execute file append operation (implementing base class abstract method)
      */
-    protected async execute(absolutePath: string, args: ToolParams['appendFileContent']): Promise<Response> {
-        const {content} = args;
+    protected async execute(
+        absolutePath: string,
+        args: ToolParams['appendFileContent']
+    ): Promise<Response> {
+        const { content } = args;
 
         try {
+            // Step 1: Complete file operation
             const fileUri = vscode.Uri.file(absolutePath);
 
             // Check if file exists
@@ -332,20 +415,144 @@ export class AppendFileContentTool extends AbsFileTools<ToolParams['appendFileCo
             // Write back to file
             await this.writeFileSimple(fileUri, newContent, {
                 checkExists: true,
-                mustExist: true
+                mustExist: true,
+                skipCacheUpdate: true, // Skip automatic cache update
             });
 
-            // Handle cache update asynchronously
-            setImmediate(() => {
-                fileCache.delete(absolutePath);
-            });
-
-            return responseHandler.success({
+            // Step 2: Prepare response to send to client
+            const response = responseHandler.success({
                 pathInProject: this.getRelativePath(absolutePath),
-                size: newContent.length
+                size: newContent.length,
             });
-        } catch (err) {
+
+            // Step 3: Asynchronously update cache and open file
+            setTimeout(() => {
+                // Update cache
+                FileCache.updateCache(absolutePath, newContent).catch((err: unknown) => {
+                    this.log.error(`Error updating cache for file: ${absolutePath}`, err);
+                    FileCache.invalidate(absolutePath);
+                });
+
+                // Open file in editor
+                setTimeout(async () => {
+                    this.openFileInEditorTab(fileUri, absolutePath, 'append_file_content');
+                }, 0);
+            }, 0);
+
+            // Step 4: Return response immediately
+            return response;
+        } catch (err: unknown) {
             return this.handleFileSystemError(err, absolutePath, 'appending to');
         }
+    }
+}
+
+/**
+ * Replace specific text occurrences in a file
+ * Inherits from AbstractFileTools base class to utilize common file operation functionality
+ */
+export class ReplaceSpecificTextTool extends AbsFileTools<ToolParams['replaceSpecificText']> {
+    constructor() {
+        super(
+            'replace_specific_text',
+            'Replaces specific text occurrences in a file with new text and automatically opens the file after replacement.',
+            {
+                type: 'object',
+                properties: {
+                    pathInProject: { type: 'string' },
+                    oldText: { type: 'string' },
+                    newText: { type: 'string' },
+                },
+                required: ['pathInProject', 'oldText', 'newText'],
+            }
+        );
+    }
+
+    /**
+     * Execute text replacement operation (implementing base class abstract method)
+     */
+    protected async execute(
+        absolutePath: string,
+        args: ToolParams['replaceSpecificText']
+    ): Promise<Response> {
+        const { oldText, newText } = args;
+
+        try {
+            const fileUri = vscode.Uri.file(absolutePath);
+
+            // read the file content
+            const fileData = await vscode.workspace.fs.readFile(fileUri);
+            let currentContent = new TextDecoder().decode(fileData);
+
+            // check line endings
+            const originalLineEnding = currentContent.includes('\r\n') ? '\r\n' : '\n';
+
+            // replace line endings for consistency
+            currentContent = currentContent.replace(/\r\n|\r/g, '\n');
+            const normalizedOldText = oldText.replace(/\r\n|\r/g, '\n');
+            const normalizedNewText = newText.replace(/\r\n|\r/g, '\n');
+
+            // build regex for replacement
+            const escapedOldText = this.escapeRegExp(normalizedOldText);
+            const regex = new RegExp(escapedOldText, 'gs'); // 's' flag for global and dotAll mode
+
+            // search for occurrences of the specified text
+            if (!regex.test(currentContent)) {
+                this.log.error(
+                    `No occurrences of the specified text found in file: ${absolutePath}`
+                );
+                return responseHandler.failure('no occurrences found');
+            }
+
+            // execute replacement
+            const newContent = currentContent.replace(regex, normalizedNewText);
+
+            // count the number of replacements
+            const replacementCount = (currentContent.match(regex) || []).length;
+
+            // restore original line endings
+            const finalContent = newContent.replace(/\n/g, originalLineEnding);
+
+            // write the new content back to the file
+            // const encodedNewContent = new TextEncoder().encode(finalContent);
+            // await vscode.workspace.fs.writeFile(fileUri, encodedNewContent);
+
+            // write the content back to the file
+            await this.writeFileSimple(fileUri, finalContent, {
+                checkExists: true,
+                mustExist: true,
+                skipCacheUpdate: true,
+            });
+
+            // make response
+            const response = responseHandler.success({
+                pathInProject: this.getRelativePath(absolutePath),
+                replacedCount: replacementCount,
+            });
+
+            // asynchronously update cache and open file in editor
+            setTimeout(() => {
+                FileCache.updateCache(absolutePath, finalContent).catch((err: unknown) => {
+                    this.log.error(`Error updating cache for file: ${absolutePath}`, err);
+                    FileCache.invalidate(absolutePath);
+                });
+
+                setTimeout(async () => {
+                    this.openFileInEditorTab(fileUri, absolutePath, 'replace_specific_text');
+                }, 0);
+            }, 0);
+
+            return response;
+        } catch (error) {
+            this.log.error(`Error replacing text: ${error}`);
+            return responseHandler.failure('replacement failed');
+        }
+    }
+
+    /**
+     * Escape special characters in a string for use in a regular expression
+     */
+    private escapeRegExp(string: string): string {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
 }

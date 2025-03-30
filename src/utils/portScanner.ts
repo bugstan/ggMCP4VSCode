@@ -32,7 +32,7 @@ interface NodeJSNetworkError extends Error {
 }
 
 // Shared cache: stores known available/unavailable ports
-const portStatusCache: Map<number, { available: boolean, timestamp: number }> = new Map();
+const portStatusCache: Map<number, { available: boolean; timestamp: number }> = new Map();
 // Cache validity period (milliseconds)
 const CACHE_TTL = 30000; // 30 seconds
 
@@ -62,7 +62,7 @@ function getCachedPortStatus(port: number): boolean | null {
 function cachePortStatus(port: number, available: boolean): void {
     portStatusCache.set(port, {
         available,
-        timestamp: Date.now()
+        timestamp: Date.now(),
     });
 }
 
@@ -90,15 +90,16 @@ export async function findAvailablePort(
         exclude = [],
         randomize = false,
         retries = 1,
-        fromHighToLow = false
+        fromHighToLow = false,
     } = options;
 
     const startTime = Date.now();
     log.info(`Scanning for available port in range: ${start}-${end}, concurrency: ${concurrency}`);
 
     // Create ports to check list
-    let ports = Array.from({ length: end - start + 1 }, (_, i) => start + i)
-        .filter(port => !exclude.includes(port));
+    let ports = Array.from({ length: end - start + 1 }, (_, i) => start + i).filter(
+        (port) => !exclude.includes(port)
+    );
 
     // First check cached available ports
     for (const port of ports) {
@@ -116,7 +117,7 @@ export async function findAvailablePort(
     }
 
     // Filter out known unavailable ports
-    ports = ports.filter(port => {
+    ports = ports.filter((port) => {
         const cached = getCachedPortStatus(port);
         return cached !== false;
     });
@@ -136,11 +137,13 @@ export async function findAvailablePort(
 
         try {
             // Parallel check multiple ports
-            const portCheckPromises = batch.map(port => checkPortWithRetries(port, timeout, retries));
+            const portCheckPromises = batch.map((port) =>
+                checkPortWithRetries(port, timeout, retries)
+            );
             const results = await Promise.all(portCheckPromises);
 
             // Find first available port
-            const availablePortIndex = results.findIndex(available => available);
+            const availablePortIndex = results.findIndex((available) => available);
             if (availablePortIndex !== -1) {
                 const port = batch[availablePortIndex];
                 if (port !== undefined) {
@@ -177,7 +180,11 @@ export async function findAvailablePort(
  * @param retries Number of retries
  * @returns Whether the port is available
  */
-async function checkPortWithRetries(port: number, timeout: number, retries: number): Promise<boolean> {
+async function checkPortWithRetries(
+    port: number,
+    timeout: number,
+    retries: number
+): Promise<boolean> {
     // First check cache
     const cached = getCachedPortStatus(port);
     if (cached !== null) return cached;
@@ -191,7 +198,7 @@ async function checkPortWithRetries(port: number, timeout: number, retries: numb
 
             // If not available and there are retries left, wait briefly before retrying
             if (i < retries) {
-                await new Promise(resolve => setTimeout(resolve, 50));
+                await new Promise((resolve) => setTimeout(resolve, 50));
             }
         } catch (error) {
             if (i === retries) {
@@ -303,7 +310,7 @@ export async function findPreferredPort(options: PortScanOptions = {}): Promise<
     // First optimization: Use Promise.all to parallel check all preferred ports
     try {
         const results = await Promise.all(
-            preferredPorts.map(async port => {
+            preferredPorts.map(async (port) => {
                 try {
                     const available = await checkPortWithRetries(
                         port,
@@ -318,7 +325,7 @@ export async function findPreferredPort(options: PortScanOptions = {}): Promise<
         );
 
         // Find first available port
-        const firstAvailable = results.find(r => r.available);
+        const firstAvailable = results.find((r) => r.available);
         if (firstAvailable) {
             log.info(`Found available preferred port: ${firstAvailable.port}`);
             return firstAvailable.port;
@@ -354,25 +361,27 @@ export async function isPortInUse(port: number, timeout = 400): Promise<boolean>
  * @param options Scan options
  * @returns Port status mapping
  */
-export async function getCommonPortsStatus(options: PortScanOptions = {}): Promise<Record<string, boolean>> {
+export async function getCommonPortsStatus(
+    options: PortScanOptions = {}
+): Promise<Record<string, boolean>> {
     const commonPorts: Record<string, number> = {
-        'HTTP': 80,
-        'HTTPS': 443,
-        'SSH': 22,
-        'FTP': 21,
-        'SMTP': 25,
-        'POP3': 110,
-        'IMAP': 143,
-        'MySQL': 3306,
-        'PostgreSQL': 5432,
-        'MongoDB': 27017,
-        'Redis': 6379,
-        'Elasticsearch': 9200,
+        HTTP: 80,
+        HTTPS: 443,
+        SSH: 22,
+        FTP: 21,
+        SMTP: 25,
+        POP3: 110,
+        IMAP: 143,
+        MySQL: 3306,
+        PostgreSQL: 5432,
+        MongoDB: 27017,
+        Redis: 6379,
+        Elasticsearch: 9200,
         'Node Default': 3000,
         'React Default': 5173,
         'Angular Default': 4200,
         'Django Default': 8000,
-        'Flask Default': 5000
+        'Flask Default': 5000,
     };
 
     const startTime = Date.now();

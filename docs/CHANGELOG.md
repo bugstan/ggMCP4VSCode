@@ -1,6 +1,16 @@
 # Changelog
 
-All notable changes to the ggMCP4VSCode extension will be documented in this file.
+All notable changes to the GG MCP for VSCode extension will be documented in this file.
+
+## [1.1.1] - 2025-03-30
+
+### Added
+- Updated display name to "GG MCP for VSCode" for better clarity
+- Enhanced README with Claude Desktop integration details
+
+### Changed
+- Updated documentation to reflect new display name
+- Improved Chinese localization support
 
 ## [1.1.0] - 2025-03-26
 

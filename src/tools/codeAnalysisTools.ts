@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import {Response} from '../types';
-import {AbsCodeTools} from '../types/absCodeTools';
-import {responseHandler} from '../server/responseHandler';
+import { Response } from '../types';
+import { AbsCodeTools } from '../types/absCodeTools';
+import { responseHandler } from '../server/responseHandler';
 
 /**
  * Symbol information interface definition
@@ -38,9 +38,9 @@ export class GetSymbolsInFileTool extends AbsCodeTools {
             {
                 type: 'object',
                 properties: {
-                    pathInProject: {type: 'string'}
+                    pathInProject: { type: 'string' },
                 },
-                required: ['pathInProject']
+                required: ['pathInProject'],
             }
         );
     }
@@ -68,24 +68,29 @@ export class GetSymbolsInFileTool extends AbsCodeTools {
             );
 
             if (!symbols || symbols.length === 0) {
-                return responseHandler.success(JSON.stringify({symbols: []}));
+                return responseHandler.success(JSON.stringify({ symbols: [] }));
             }
 
             // Convert symbols to a more usable format
             const formattedSymbols = this.formatSymbols(symbols, document);
 
-            return responseHandler.success(JSON.stringify({symbols: formattedSymbols}));
+            return responseHandler.success(JSON.stringify({ symbols: formattedSymbols }));
         } catch (error) {
             this.log.error('Error getting file symbols', error);
-            return responseHandler.failure(`Error getting file symbols: ${error instanceof Error ? error.message : String(error)}`);
+            return responseHandler.failure(
+                `Error getting file symbols: ${error instanceof Error ? error.message : String(error)}`
+            );
         }
     }
 
     /**
      * Recursively format symbol tree
      */
-    private formatSymbols(symbols: vscode.DocumentSymbol[], document: vscode.TextDocument): SymbolInfo[] {
-        return symbols.map(symbol => {
+    private formatSymbols(
+        symbols: vscode.DocumentSymbol[],
+        document: vscode.TextDocument
+    ): SymbolInfo[] {
+        return symbols.map((symbol) => {
             const range = symbol.range;
             const selectionRange = symbol.selectionRange;
 
@@ -99,16 +104,16 @@ export class GetSymbolsInFileTool extends AbsCodeTools {
                     startLine: range.start.line,
                     startCharacter: range.start.character,
                     endLine: range.end.line,
-                    endCharacter: range.end.character
+                    endCharacter: range.end.character,
                 },
                 selectionRange: {
                     startLine: selectionRange.start.line,
                     startCharacter: selectionRange.start.character,
                     endLine: selectionRange.end.line,
-                    endCharacter: selectionRange.end.character
+                    endCharacter: selectionRange.end.character,
                 },
                 text,
-                detail: symbol.detail
+                detail: symbol.detail,
             };
 
             // Recursively process child symbols
@@ -150,7 +155,7 @@ export class GetSymbolsInFileTool extends AbsCodeTools {
             [vscode.SymbolKind.Struct]: 'Struct',
             [vscode.SymbolKind.Event]: 'Event',
             [vscode.SymbolKind.Operator]: 'Operator',
-            [vscode.SymbolKind.TypeParameter]: 'TypeParameter'
+            [vscode.SymbolKind.TypeParameter]: 'TypeParameter',
         };
 
         return kindMap[kind] || 'Unknown';
@@ -163,19 +168,15 @@ export class GetSymbolsInFileTool extends AbsCodeTools {
  */
 export class FindReferencesTool extends AbsCodeTools {
     constructor() {
-        super(
-            'find_references',
-            'Find all reference locations of a symbol.',
-            {
-                type: 'object',
-                properties: {
-                    pathInProject: {type: 'string'},
-                    line: {type: 'number'},
-                    character: {type: 'number'}
-                },
-                required: ['pathInProject', 'line', 'character']
-            }
-        );
+        super('find_references', 'Find all reference locations of a symbol.', {
+            type: 'object',
+            properties: {
+                pathInProject: { type: 'string' },
+                line: { type: 'number' },
+                character: { type: 'number' },
+            },
+            required: ['pathInProject', 'line', 'character'],
+        });
     }
 
     /**
@@ -206,11 +207,11 @@ export class FindReferencesTool extends AbsCodeTools {
             );
 
             if (!locations || locations.length === 0) {
-                return responseHandler.success(JSON.stringify({references: []}));
+                return responseHandler.success(JSON.stringify({ references: [] }));
             }
 
             // Convert locations to a more usable format
-            const references = locations.map(location => {
+            const references = locations.map((location) => {
                 const uri = location.uri;
                 const range = location.range;
                 const relativePath = vscode.workspace.asRelativePath(uri.fsPath);
@@ -220,14 +221,16 @@ export class FindReferencesTool extends AbsCodeTools {
                     line: range.start.line,
                     character: range.start.character,
                     endLine: range.end.line,
-                    endCharacter: range.end.character
+                    endCharacter: range.end.character,
                 };
             });
 
-            return responseHandler.success(JSON.stringify({references}));
+            return responseHandler.success(JSON.stringify({ references }));
         } catch (error) {
             this.log.error('Error finding references', error);
-            return responseHandler.failure(`Error finding references: ${error instanceof Error ? error.message : String(error)}`);
+            return responseHandler.failure(
+                `Error finding references: ${error instanceof Error ? error.message : String(error)}`
+            );
         }
     }
 }
@@ -244,18 +247,18 @@ export class RefactorCodeAtLocationTool extends AbsCodeTools {
             {
                 type: 'object',
                 properties: {
-                    pathInProject: {type: 'string'},
-                    line: {type: 'number'},
-                    character: {type: 'number'},
-                    refactorType: {type: 'string'},
+                    pathInProject: { type: 'string' },
+                    line: { type: 'number' },
+                    character: { type: 'number' },
+                    refactorType: { type: 'string' },
                     options: {
                         type: 'object',
                         properties: {
-                            newName: {type: 'string'}
-                        }
-                    }
+                            newName: { type: 'string' },
+                        },
+                    },
                 },
-                required: ['pathInProject', 'line', 'character', 'refactorType']
+                required: ['pathInProject', 'line', 'character', 'refactorType'],
             }
         );
     }
@@ -285,7 +288,7 @@ export class RefactorCodeAtLocationTool extends AbsCodeTools {
             this.log.info(`Found ${editor}`);
 
             // Get refactoring type and options
-            const {refactorType, options} = args;
+            const { refactorType, options } = args;
 
             // Get available refactoring actions
             const actions = await this.executeLanguageServiceCommand<vscode.CodeAction[]>(
@@ -296,7 +299,7 @@ export class RefactorCodeAtLocationTool extends AbsCodeTools {
             );
 
             if (!actions || actions.length === 0) {
-                return responseHandler.failure("no refactoring actions available at this location");
+                return responseHandler.failure('no refactoring actions available at this location');
             }
 
             // Find matching refactoring action
@@ -306,62 +309,71 @@ export class RefactorCodeAtLocationTool extends AbsCodeTools {
                 case 'rename':
                     // Renaming symbol is a special case, use dedicated API
                     if (!options || !options.newName) {
-                        return responseHandler.failure("newName is required for rename refactoring");
+                        return responseHandler.failure(
+                            'newName is required for rename refactoring'
+                        );
                     }
 
                     // Use RenameProvider to get edits
-                    const workspaceEdit = await this.executeLanguageServiceCommand<vscode.WorkspaceEdit>(
-                        'vscode.executeDocumentRenameProvider',
-                        document.uri,
-                        position,
-                        options.newName
-                    );
+                    const workspaceEdit =
+                        await this.executeLanguageServiceCommand<vscode.WorkspaceEdit>(
+                            'vscode.executeDocumentRenameProvider',
+                            document.uri,
+                            position,
+                            options.newName
+                        );
 
                     if (!workspaceEdit) {
-                        return responseHandler.failure("Failed to generate rename edits");
+                        return responseHandler.failure('Failed to generate rename edits');
                     }
 
                     // Apply edits directly, without UI command dependency
                     const success = await vscode.workspace.applyEdit(workspaceEdit);
 
                     if (!success) {
-                        return responseHandler.failure("Failed to apply rename edits");
+                        return responseHandler.failure('Failed to apply rename edits');
                     }
 
-                    return responseHandler.success(JSON.stringify({
-                        success: true,
-                        message: `Successfully renamed to ${options.newName}`
-                    }));
+                    return responseHandler.success(
+                        JSON.stringify({
+                            success: true,
+                            message: `Successfully renamed to ${options.newName}`,
+                        })
+                    );
 
                 case 'extract_function':
                 case 'extractfunction':
                 case 'extract-function':
-                    matchedAction = actions.find(action =>
-                        action.title.toLowerCase().includes('extract') &&
-                        action.title.toLowerCase().includes('function')
+                    matchedAction = actions.find(
+                        (action) =>
+                            action.title.toLowerCase().includes('extract') &&
+                            action.title.toLowerCase().includes('function')
                     );
                     break;
 
                 case 'extract_variable':
                 case 'extractvariable':
                 case 'extract-variable':
-                    matchedAction = actions.find(action =>
-                        action.title.toLowerCase().includes('extract') &&
-                        action.title.toLowerCase().includes('variable')
+                    matchedAction = actions.find(
+                        (action) =>
+                            action.title.toLowerCase().includes('extract') &&
+                            action.title.toLowerCase().includes('variable')
                     );
                     break;
 
                 default:
                     // Try to match by title
-                    matchedAction = actions.find(action =>
+                    matchedAction = actions.find((action) =>
                         action.title.toLowerCase().includes(refactorType.toLowerCase())
                     );
             }
 
             if (!matchedAction) {
                 // Return available refactoring types as part of the error message
-                const availableRefactorings = actions.map(action => action.title).join(', ');
-                return responseHandler.failure(`refactoring type '${refactorType}' not available at this location. Available types: ${availableRefactorings}`);
+                const availableRefactorings = actions.map((action) => action.title).join(', ');
+                return responseHandler.failure(
+                    `refactoring type '${refactorType}' not available at this location. Available types: ${availableRefactorings}`
+                );
             }
 
             // Execute refactoring operation
@@ -376,13 +388,17 @@ export class RefactorCodeAtLocationTool extends AbsCodeTools {
                 );
             }
 
-            return responseHandler.success(JSON.stringify({
-                success: true,
-                message: `Successfully applied '${matchedAction.title}' refactoring`
-            }));
+            return responseHandler.success(
+                JSON.stringify({
+                    success: true,
+                    message: `Successfully applied '${matchedAction.title}' refactoring`,
+                })
+            );
         } catch (error) {
             this.log.error('Error refactoring code', error);
-            return responseHandler.failure(`Error refactoring code: ${error instanceof Error ? error.message : String(error)}`);
+            return responseHandler.failure(
+                `Error refactoring code: ${error instanceof Error ? error.message : String(error)}`
+            );
         }
     }
 }

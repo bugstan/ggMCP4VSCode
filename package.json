@@ -1,8 +1,8 @@
 {
     "name": "gg-mcp-for-vscode",
-    "displayName": "ggMCP4VSCode",
+    "displayName": "GG MCP for VSCode",
     "description": "A Model Context Protocol (MCP) Server extension for VSCode. Enables AI assistants to read, write, and analyze code in your workspace.",
-    "version": "1.1.0",
+    "version": "1.1.2",
     "publisher": "bugstan",
     "repository": {
         "type": "git",
@@ -49,7 +49,7 @@
             }
         ],
         "configuration": {
-            "title": "ggMCP4VSCode",
+            "title": "GG MCP for VSCode",
             "properties": {
                 "ggMCP.portStart": {
                     "type": "number",
@@ -68,7 +68,7 @@
                 },
                 "ggMCP.enableLogging": {
                     "type": "boolean",
-                    "default": true,
+                    "default": false,
                     "description": "Enable logging"
                 },
                 "ggMCP.autoReloadModifiedFiles": {
@@ -80,11 +80,6 @@
                     "type": "boolean",
                     "default": false,
                     "description": "Whether to automatically open files that are modified by AI assistants but not already open in editor"
-                },
-                "ggMCP.terminalOutputCaptureEnabled": {
-                    "type": "boolean",
-                    "default": true,
-                    "description": "Enable terminal output capture feature (requires VS Code 1.93+)"
                 },
                 "ggMCP.terminalMaxOutputLines": {
                     "type": "number",
@@ -103,6 +98,7 @@
     },
     "scripts": {
         "version": "node scripts/version.js",
+        "format": "prettier --write \"src/**/*.ts\"",
         "build": "tsc",
         "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",

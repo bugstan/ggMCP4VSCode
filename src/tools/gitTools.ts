@@ -1,7 +1,7 @@
-import {AbsGitTools} from '../types/absGitTools';
-import {Response, ToolParams} from '../types';
-import {responseHandler} from '../server/responseHandler';
-import {toRelativePath} from '../utils/pathUtils';
+import { AbsGitTools } from '../types/absGitTools';
+import { Response, ToolParams } from '../types';
+import { responseHandler } from '../server/responseHandler';
+import { toRelativePath } from '../utils/pathUtils';
 
 /**
  * Get project version control status tool
@@ -14,7 +14,7 @@ export class GetProjectVcsStatusTool extends AbsGitTools {
             'Retrieves the current version control status of files in the project.\nUse this tool to get information about modified, added, deleted, and moved files in your VCS (e.g., Git).\nReturns a JSON-formatted list of changed files, where each entry contains:\n- path: The file path relative to project root\n- type: The type of change (e.g., MODIFICATION, ADDITION, DELETION, MOVED)\nReturns an empty list ([]) if no changes are detected or VCS is not configured.\nReturns error "project dir not found" if project directory cannot be determined.\nNote: Works with any VCS supported by the IDE, but is most commonly used with Git',
             {
                 type: 'object',
-                properties: {}
+                properties: {},
             }
         );
     }
@@ -24,8 +24,6 @@ export class GetProjectVcsStatusTool extends AbsGitTools {
      */
     protected async executeGitOperation(repository: any, _args: any): Promise<Response> {
         try {
-            this.log.info('Getting project VCS status');
-
             // Use base class getWorkingTreeChanges method to get changes
             const changes = this.getWorkingTreeChanges(repository);
 
@@ -52,16 +50,17 @@ export class GetProjectVcsStatusTool extends AbsGitTools {
                 const statusDesc = this.formatGitStatus(statusCode);
 
                 return {
-                    pathInProject: relativePath || path,
-                    type: statusDesc
+                    pathInProject: relativePath,
+                    type: statusDesc,
                 };
             });
 
-            this.log.info(`Found ${result.length} changed files in VCS`);
             return responseHandler.success(result);
         } catch (error) {
             this.log.error('Error getting version control status:', error);
-            return responseHandler.failure(`Error getting version control status: ${error instanceof Error ? error.message : String(error)}`);
+            return responseHandler.failure(
+                `Error getting version control status: ${error instanceof Error ? error.message : String(error)}`
+            );
         }
     }
 }
@@ -78,9 +77,9 @@ export class FindCommitByMessageTool extends AbsGitTools<ToolParams['findCommitB
             {
                 type: 'object',
                 properties: {
-                    text: {type: 'string'}
+                    text: { type: 'string' },
                 },
-                required: ['text']
+                required: ['text'],
             }
         );
     }
@@ -88,10 +87,12 @@ export class FindCommitByMessageTool extends AbsGitTools<ToolParams['findCommitB
     /**
      * Execute Git find commit operation (implementing base class abstract method)
      */
-    protected async executeGitOperation(_repository: any, args: ToolParams['findCommitByMessage']): Promise<Response> {
+    protected async executeGitOperation(
+        _repository: any,
+        args: ToolParams['findCommitByMessage']
+    ): Promise<Response> {
         try {
-            const {text} = args;
-            this.log.info(`Searching for commits with text: ${text}`);
+            const { text } = args;
 
             // Use base class escapeArg method to prevent command injection
             const escapedText = this.escapeArg(text);
@@ -104,15 +105,16 @@ export class FindCommitByMessageTool extends AbsGitTools<ToolParams['findCommitB
 
             if (result.exitCode !== 0 || !result.stdout) {
                 this.log.warn(`Git command failed with exit code: ${result.exitCode || 'N/A'}`);
-                this.log.info(`Error output: ${result.stderr || 'N/A'}`);
-                return responseHandler.success([]);
+                return responseHandler.failure(`Error output: ${result.stderr || 'N/A'}`);
             }
 
             // Use base class parseCommandOutput method to process command output
             return this.parseCommandOutput(result.stdout, 'Error parsing git log output');
         } catch (error) {
             this.log.error('Error finding commits:', error);
-            return responseHandler.failure(`Error finding commits: ${error instanceof Error ? error.message : String(error)}`);
+            return responseHandler.failure(
+                `Error finding commits: ${error instanceof Error ? error.message : String(error)}`
+            );
         }
     }
 }

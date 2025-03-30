@@ -1,13 +1,13 @@
 /**
  * Response Cache System
- * 
+ *
  * This module provides a caching mechanism for HTTP responses to improve the performance
  * of frequently requested endpoints. It implements time-based expiration and selective
  * caching for safe (read-only) requests.
  */
 
 import { Logger } from '../../utils/logger';
-import { CacheManager } from '../cache/cacheManager';
+import { CacheManager } from './cacheManager';
 
 // Create module-specific logger
 const log = Logger.forModule('ResponseCache');
@@ -42,17 +42,17 @@ export class ResponseCache {
         'execute_terminal_command',
         'execute_action_by_id',
         'refactor_code_at_location',
-        
+
         // Non-deterministic tools or tools with side effects
         'wait',
         'get_terminal_text',
-        
+
         // Tools that should always return fresh data
         'read_graph',
         'get_progress_indicators',
-        'get_file_diff'
+        'get_file_diff',
     ]);
-    
+
     /**
      * Get a cached response for a tool request
      * @param toolName The name of the tool
@@ -64,21 +64,21 @@ export class ResponseCache {
         if (this.UNCACHEABLE_TOOLS.has(toolName)) {
             return null;
         }
-        
+
         // Create hash from args to use as a cache key component
         const requestHash = this.hashRequest(args);
         const cacheKey = `${toolName}:${requestHash}`;
-        
+
         const cachedData = responseCache.get(cacheKey);
         if (!cachedData) {
             log.info(`Cache miss for ${toolName}`);
             return null;
         }
-        
+
         log.info(`Cache hit for ${toolName}`);
         return cachedData;
     }
-    
+
     /**
      * Store a response in the cache
      * @param toolName The name of the tool
@@ -90,33 +90,33 @@ export class ResponseCache {
         if (this.UNCACHEABLE_TOOLS.has(toolName)) {
             return;
         }
-        
+
         // Skip caching if data indicates an error
         if (data && data.error) {
             log.info(`Not caching error response for ${toolName}`);
             return;
         }
-        
+
         // Create hash from args to use as a cache key component
         const requestHash = this.hashRequest(args);
         const cacheKey = `${toolName}:${requestHash}`;
-        
+
         // Store the data in cache
         responseCache.set(cacheKey, data, {
             requestHash,
-            toolName
+            toolName,
         });
-        
+
         log.info(`Cached response for ${toolName}`);
     }
-    
+
     /**
      * Invalidate specific cache entries by tool name
      * @param toolName The name of the tool to invalidate
      */
     public static invalidate(toolName: string): void {
         let count = 0;
-        
+
         // Find and delete all entries for the specified tool
         for (const key of responseCache.keys()) {
             if (key.startsWith(`${toolName}:`)) {
@@ -124,12 +124,12 @@ export class ResponseCache {
                 count++;
             }
         }
-        
+
         if (count > 0) {
             log.info(`Invalidated ${count} cache entries for ${toolName}`);
         }
     }
-    
+
     /**
      * Clear all cache entries
      */
@@ -138,14 +138,18 @@ export class ResponseCache {
         responseCache.clear();
         log.info(`Cleared entire response cache (${cacheSize} entries)`);
     }
-    
+
     /**
      * Get cache statistics
      * @returns Object with cache statistics
      */
-    public static getStats(): { entries: number, tools: string[], bytes: number } {
+    public static getStats(): {
+        entries: number;
+        tools: string[];
+        bytes: number;
+    } {
         const tools = new Set<string>();
-        
+
         // Extract unique tool names from cache keys
         for (const key of responseCache.keys()) {
             const toolName = key.split(':')[0];
@@ -153,14 +157,14 @@ export class ResponseCache {
                 tools.add(toolName);
             }
         }
-        
+
         return {
             entries: responseCache.size,
             tools: Array.from(tools),
-            bytes: responseCache.bytes
+            bytes: responseCache.bytes,
         };
     }
-    
+
     /**
      * Create a hash of the request arguments for cache key
      * @param args The arguments to hash
@@ -170,7 +174,7 @@ export class ResponseCache {
         try {
             // Ensure args is a valid value
             const safeArgs = args || {};
-            
+
             // Ensure Object.keys is only used on object types
             if (typeof safeArgs === 'object' && safeArgs !== null) {
                 // Use type assertion to ensure TypeScript knows safeArgs is definitely an object at this point

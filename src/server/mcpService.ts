@@ -1,6 +1,6 @@
 import http from 'http';
 import url from 'url';
-import { NoArgs } from '../types/tool';
+import { NoArgs } from '../types/toolBases';
 import { Logger } from '../utils/logger';
 import { requestHandler } from './requestHandler';
 import { responseHandler } from './responseHandler';
@@ -82,7 +82,7 @@ export class MCPService {
                         args,
                         req.method || 'GET',
                         pathname || '/',
-                        res
+                        res,
                     );
             }
         } catch (error) {
@@ -115,7 +115,9 @@ export class MCPService {
 
                 // Log large request reception progress
                 if (totalLength > 1024 * 1024 && chunks.length % 10 === 0) {
-                    log.info(`Received ${Math.floor(totalLength / (1024 * 1024))}MB of data so far`);
+                    log.info(
+                        `Received ${Math.floor(totalLength / (1024 * 1024))}MB of data so far`,
+                    );
                 }
             });
 
@@ -135,7 +137,8 @@ export class MCPService {
                 }
 
                 // Log large request body size
-                if (totalLength > 100 * 1024) { // Only log if larger than 100KB
+                if (totalLength > 100 * 1024) {
+                    // Only log if larger than 100KB
                     log.info(`Received large request: ${totalLength} characters`);
                 }
 
@@ -145,14 +148,15 @@ export class MCPService {
                     const parsed = JSON.parse(body);
                     const parseTime = performance.now() - parseStartTime;
 
-                    if (parseTime > 100) { // Log warning if parsing takes more than 100ms
-                        log.warn(`Slow JSON parsing: ${parseTime.toFixed(2)}ms for ${totalLength} chars`);
+                    if (parseTime > 100) {
+                        // Log warning if parsing takes more than 100ms
+                        log.warn(
+                            `Slow JSON parsing: ${parseTime.toFixed(2)}ms for ${totalLength} chars`,
+                        );
                     }
 
                     resolve(
-                        parsed.jsonrpc && parsed.params
-                            ? parsed.params.arguments || {}
-                            : parsed
+                        parsed.jsonrpc && parsed.params ? parsed.params.arguments || {} : parsed,
                     );
                 } catch (error) {
                     log.error(`JSON parse error for ${totalLength} character request`, error);
