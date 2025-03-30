@@ -17,7 +17,9 @@ jobs:
           node-version: '22.14.0'
           
       - name: Install dependencies
-        run: npm install
+        run: |
+          npm install
+          npm install -g @vscode/vsce@3.3.0
         
       - name: Build
         run: npm run compile
