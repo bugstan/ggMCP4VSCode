@@ -159,16 +159,32 @@ Content-Type: application/json
 
 | 方面 | MCP 规范 | 本项目 | 兼容性 |
 |------|---------|--------|--------|
-| 请求格式 | JSON-RPC 2.0 | REST 风格 | ⚠️ 不同 |
-| 工具名位置 | params.name | URL 路径 | ⚠️ 不同 |
-| 参数位置 | params.arguments | 请求体 | ⚠️ 不同 |
-| 响应包装 | content[] 数组 | status/error 对象 | ⚠️ 不同 |
-| 错误标识 | isError 布尔值 | error 字段 | ⚠️ 类似 |
+| 请求格式 | JSON-RPC 2.0 | JSON-RPC 2.0 | ✅ 合规 |
+| 工具名位置 | params.name | params.name | ✅ 合规 |
+| 参数位置 | params.arguments | params.arguments | ✅ 合规 |
+| 响应包装 | content[] 数组 | content[] 数组 | ✅ 合规 |
+| 错误标识 | isError 布尔值 | isError 布尔值 | ✅ 合规 |
 
-**注意**: 本项目支持解析标准 JSON-RPC 格式的请求：
-```typescript
-resolve(parsed.jsonrpc && parsed.params ? parsed.params.arguments || {} : parsed);
-```
+**结论**: 本项目现在完全使用标准的 JSON-RPC 2.0 格式进行工具调用。
+
+### 3.4 剩余功能差距（可选部分）
+
+虽然核心功能已完全合规，但为完整起见，以下列出 MCP 规范中定义但本项目尚未实现的可选功能：
+
+| 功能模块 | 端点/方法 | 说明 | 现状 |
+|---------|----------|------|-----|
+| **Resources** | `resources/list` | 列出可用的资源（如文件） | ❌ 未实现 (使用 Tools 代替) |
+| **Resources** | `resources/read` | 读取具体资源内容 | ❌ 未实现 (使用 Tools 代替) |
+| **Prompts** | `prompts/list` | 列出可用的提示词模板 | ❌ 未实现 |
+| **Prompts** | `prompts/get` | 获取提示词模板内容 | ❌ 未实现 |
+| **Completion**| `completion/complete`| 参数自动补全 | ❌ 未实现 |
+| **Logging** | `notifications/message`| 服务器向客户端发送日志 | ❌ 未实现 (依赖控制台输出) |
+| **Ping** | `ping` | 简单的健康检查 | ❌ 未实现 |
+
+这些功能对于 VSCode 扩展场景并非必需，因为：
+1. **文件访问**：已通过 `get_file_content` 等工具提供，比 `resources` 更灵活。
+2. **提示词**：通常由 AI 客户端管理，而非服务器提供。
+3. **补全**：VSCode 自身处理补全。
 
 ---
 
@@ -195,12 +211,9 @@ resolve(parsed.jsonrpc && parsed.params ? parsed.params.arguments || {} : parsed
     protocolVersion: '2024-11-05',
     capabilities: {
         tools: { listChanged: true },
-        resources: {},
+        resources: {}, // 声明但未实现具体方法
     },
-    serverInfo: {
-        name: 'vscode-mcp-server',
-        version: '1.0.0',
-    },
+    // ...
 }
 ```
 
@@ -208,6 +221,7 @@ resolve(parsed.jsonrpc && parsed.params ? parsed.params.arguments || {} : parsed
 - ✅ 协议版本声明正确
 - ✅ 工具能力声明正确
 - ✅ 服务器信息完整
+- ⚠️ 声明了 `resources` 能力但未实现相关端点（技术上合规，为空集合）
 
 ---
 
@@ -220,7 +234,7 @@ resolve(parsed.jsonrpc && parsed.params ? parsed.params.arguments || {} : parsed
 
 ### 5.2 本项目传输实现
 
-本项目使用 **纯 HTTP 服务器**，现在已符合安全规范：
+本项目使用 **纯 HTTP 服务器 (Direct HTTP)**，不包含 SSE。
 
 ```typescript
 // serverManager.ts - 安全的服务器启动
@@ -292,6 +306,8 @@ SSE 传输方式在以下场景特别有用：
 | 收益 | 🟡 **中等** - 主要用于长时间操作 |
 | 建议 | 📋 **暂缓** - 可作为未来增强 |
 
+我们**不需要**在 "JSON-RPC" 和 "SSE" 之间二选一。目前的实现是 **JSON-RPC over Direct HTTP**。未来可以添加 SSE 支持作为**增强传输层**，以支持进度通知等高级功能，但这不影响协议层（JSON-RPC）的合规性。
+
 ### 6.5 如果要实现 SSE
 
 如果未来决定实现 SSE 支持，需要：
@@ -347,26 +363,19 @@ static async handleStreamableRequest(req: http.IncomingMessage, res: http.Server
 2. ~~Origin 验证~~ ✅
 3. ~~工具 title 字段~~ ✅
 4. ~~annotations 支持~~ ✅
+5. ~~MCP 标准响应格式~~ ✅
+6. ~~标准 JSON-RPC 2.0 协议~~ ✅
 
 ### 7.2 中优先级
 
-1. **支持标准 MCP 响应格式（可选配置）**
-   ```typescript
-   public successMcp(data: any): object {
-       return {
-           content: [{ type: 'text', text: String(data) }],
-           isError: false,
-       };
-   }
-   ```
-
-2. **添加 outputSchema 支持**
+1. **Resource 接口支持**
+   - 将现有文件访问工具包装为标准的 `resources/read` 接口，使 AI 客户端能以标准方式读取文件。
 
 ### 7.3 低优先级（可选）
 
-1. **SSE 支持** - 用于长时间运行操作
-2. **prompts 能力** - 用于交互式提示
-3. **完整 JSON-RPC 2.0 协议** - 用于严格兼容
+1. **SSE 支持** - 用于长时间运行操作和进度通知
+2. **Prompts 接口** - 如果将来需要服务器端管理提示词模板
+3. **Ping 方法** - 用于健康检查
 
 ---
 
@@ -374,19 +383,18 @@ static async handleStreamableRequest(req: http.IncomingMessage, res: http.Server
 
 ### 8.1 与 AI 客户端的兼容性
 
-本项目设计用于与 AI 编程助手集成：
+本项目现在完全符合 MCP JSON-RPC 2.0 规范，因此与所有支持 MCP HTTP 传输的 AI 客户端完全兼容。
 
-- ✅ Claude Desktop - 完全兼容
-- ✅ Cursor - 完全兼容
-- ✅ GitHub Copilot - 完全兼容
-- ✅ 其他 AI 助手 - 通过 REST API 兼容
+- ✅ Claude Desktop
+- ✅ Cursor
+- ✅ GitHub Copilot (Agent mode)
+- ✅ Windsurf
 
 ### 8.2 与标准 MCP 客户端的兼容性
 
 如果需要与严格遵循 MCP 规范的客户端通信：
 
-- ⚠️ 可能需要响应格式适配层
-- 💡 建议添加配置选项切换响应格式
+本项目已完全实现标准响应格式，无需适配层。
 
 ---
 
@@ -396,25 +404,13 @@ ggMCP4VSCode 是一个 **功能完整的 MCP 服务器实现**，针对 VSCode �
 
 ### 最新状态
 
-1. **安全性**: ✅ 完全合规
-   - localhost 绑定
-   - Origin 验证
-   - 可配置的安全策略
+1. **协议层**: ✅ **完全合规** (JSON-RPC 2.0)
+2. **数据层**: ✅ **完全合规** (工具定义、响应格式)
+3. **安全层**: ✅ **完全合规** (Localhost, Origin)
+4. **传输层**: ⚠️ **实用变体** (Direct HTTP vs SSE)
 
-2. **工具接口**: ✅ 合规
-   - 支持所有必需字段
-   - 支持可选的 title 和 annotations
-
-3. **传输层**: ⚠️ 实用变体
-   - 使用纯 HTTP 而非 SSE
-   - 适合当前使用场景
-
-### 建议行动
-
-- ✅ 短期：安全性改进已完成
-- ✅ 短期：工具接口改进已完成
-- 📋 中期：考虑标准响应格式支持
-- 📋 长期：评估 SSE 需求
+**最终评价**:
+项目已达到发布级合规标准。剩余的 Resources 和 Prompts 功能属于可选特性，不影响核心合规性。
 
 ---
 

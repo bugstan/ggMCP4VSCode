@@ -101,7 +101,6 @@ export class RequestHandler {
                 protocolVersion: '2024-11-05',
                 capabilities: {
                     tools: { listChanged: true },
-                    resources: {},
                 },
                 serverInfo: {
                     name: 'vscode-mcp-server',
