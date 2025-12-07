@@ -1,10 +1,10 @@
 # GG MCP for VSCode
 
-[![Version](https://img.shields.io/badge/version-1.2.2-blue.svg)](https://github.com/bugstan/ggMCP4VSCode)
+[![Version](https://img.shields.io/badge/version-1.2.3-blue.svg)](https://github.com/bugstan/ggMCP4VSCode)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/bugstan/ggMCP4VSCode/blob/main/LICENSE)
 [![MCP Compliant](https://img.shields.io/badge/MCP-Fully%20Compliant-success)](https://modelcontextprotocol.io/)
 
-> **Current Version: v1.2.2**
+> **Current Version: v1.2.3**
 
 **Supercharge your AI assistants!** Verify your code, automate tasks, and let AI agents work directly within VS Code.
 
@@ -12,7 +12,7 @@ This extension provides a **fully compliant Model Context Protocol (MCP) Server*
 
 ![MCP Server Status](https://raw.githubusercontent.com/bugstan/ggMCP4VSCode/main/images/status-bar.png)
 
-## 🆕 What's New in 1.2.2
+## 🆕 What's New in 1.2.3
 
 > **CI/CD Update: Open VSX Registry Support**
 
