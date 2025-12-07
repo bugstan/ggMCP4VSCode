@@ -2,11 +2,13 @@
 
 [🇺🇸 English Document](../README.md)
 
-[![Version](https://img.shields.io/badge/version-1.1.2-blue.svg)](https://github.com/bugstan/gg-mcp-for-vscode)
+[![Version](https://img.shields.io/badge/version-1.2.4-blue.svg)](https://github.com/bugstan/gg-mcp-for-vscode)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/bugstan/gg-mcp-for-vscode/blob/main/LICENSE)
 
 [![VS Code Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/bugstan.gg-mcp-for-vscode?label=VS%20Code)](https://marketplace.visualstudio.com/items?itemName=bugstan.gg-mcp-for-vscode)
 [![Open VSX Version](https://img.shields.io/open-vsx/v/bugstan/gg-mcp-for-vscode?label=Open%20VSX)](https://open-vsx.org/extension/bugstan/gg-mcp-for-vscode)
+
+
 
 
 VSCode AI 助手!这个扩展启用了一个模型上下文协议(MCP)服务器,允许 AI 助手直接与您的 VSCode 环境交互。

@@ -2,7 +2,7 @@
 
 All notable changes to the GG MCP for VSCode extension will be documented in this file.
 
-## [1.2.3] - 2025-12-08
+## [1.2.4] - 2024-12-08
 
 ### Changed
 - **Optimization**: Removed ESLint to simplify development workflow and rely on TypeScript.

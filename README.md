@@ -2,7 +2,7 @@
 
 [🇨🇳 中文文档](docs/README-zh.md) | [🇺🇸 English](README.md)
 
-[![Version](https://img.shields.io/badge/version-1.2.3-blue.svg)](https://github.com/bugstan/ggMCP4VSCode)
+[![Version](https://img.shields.io/badge/version-1.2.4-blue.svg)](https://github.com/bugstan/ggMCP4VSCode)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/bugstan/ggMCP4VSCode/blob/main/LICENSE)
 [![MCP Compliant](https://img.shields.io/badge/MCP-Fully%20Compliant-success)](https://modelcontextprotocol.io/)
 
@@ -11,7 +11,7 @@
 [![Open VSX Version](https://img.shields.io/open-vsx/v/bugstan/gg-mcp-for-vscode?label=Open%20VSX)](https://open-vsx.org/extension/bugstan/gg-mcp-for-vscode)
 [![Open VSX Downloads](https://img.shields.io/open-vsx/dt/bugstan/gg-mcp-for-vscode?label=Downloads)](https://open-vsx.org/extension/bugstan/gg-mcp-for-vscode)
 
-> **Current Version: v1.2.3**
+
 
 **Supercharge your AI assistants!** Verify your code, automate tasks, and let AI agents work directly within VS Code.
 
