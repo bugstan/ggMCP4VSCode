@@ -2,6 +2,12 @@
 
 All notable changes to the GG MCP for VSCode extension will be documented in this file.
 
+## [1.2.1] - 2025-12-07
+
+### Documentation
+- Updated README with clearer support for Antigravity, Cursor, and Windsurf
+- Improved SEO keywords in package.json for better discoverability
+
 ## [1.2.0] - 2025-12-07
 
 ### Added

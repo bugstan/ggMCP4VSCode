@@ -1,37 +1,36 @@
 # GG MCP for VSCode
 
-[![Version](https://img.shields.io/badge/version-1.1.2-blue.svg)](https://github.com/bugstan/gg-mcp-for-vscode)
+[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](https://github.com/bugstan/gg-mcp-for-vscode)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/bugstan/gg-mcp-for-vscode/blob/main/LICENSE)
+[![MCP Compliant](https://img.shields.io/badge/MCP-Fully%20Compliant-success)](https://modelcontextprotocol.io/)
 
-Supercharge your AI assistants for VSCode! This extension enables a Model Context Protocol (MCP) server that allows AI assistants to directly interact with your VSCode environment.
+**Supercharge your AI assistants!** verify your code, automate tasks, and let AI agents work directly within VS Code.
+
+This extension provides a **fully compliant Model Context Protocol (MCP) Server** for VS Code, enabling advanced AI assistants like **Claude Desktop**, **Cursor**, **Windsurf**, and **Antigravity** to directly read, write, and analyze code in your workspace.
 
 ![MCP Server Status](https://raw.githubusercontent.com/bugstan/gg-mcp-for-vscode/main/images/status-bar.png)
 
+## 🆕 What's New in 1.2.0
+
+> **Major Update: Full MCP Compliance & Security**
+
+- **✅ Fully MCP Compliant protocols**: Now implements strict **JSON-RPC 2.0**, standard response formats, and tool definitions aligned with official specs.
+- **🔒 Enhanced Security**: Built with "Secure by Design" principles—local binding only (127.0.0.1) and strict Origin validation.
+- **🛠️ 44+ Powerful Tools**: Comprehensive toolset for Files, Git, Terminal, and Debugging operations.
+- **⚡ Improved Performance**: Optimized request handling and file caching.
+
 ## ✨ Key Features
 
-- **Zero Configuration** - Automatically starts when VSCode launches
-- **44 Powerful Tools** - Comprehensive set of tools for file, editor, terminal, Git, and debugging operations
-- **AI Assistant Enhancement** - Enable AI tools to read, modify, and analyze your code
-- **Code Operations** - Let AI assistants create, edit files, and search through code
-- **Advanced Code Analysis** - Symbol extraction, reference finding, and code refactoring
-- **Debugging Integration** - AI assistants can help manage breakpoints and run configurations
-- **Terminal Operations** - Run visible and background commands with output capture
-- **Complete Git Integration** - Branch management, commits, file history, diffs, and more
-- **Cross-Platform Support** - Works on Windows, macOS, and Linux
-- **Claude Desktop Compatible** - Fully compatible with Claude Desktop, enabling AI-driven automated development
-- **File Caching** - Efficient caching mechanism for improved performance
-
-## 🆕 What's New in 1.1.2
-
-- **New Display Name** - Renamed to "GG MCP for VSCode" for better clarity and recognition
-- **Improved Path Handling** - Better cross-platform compatibility and path standardization with the new `pathInProject` parameter
-- **Command Output Capture** - AI assistants can now execute commands and get their output
-- **Enhanced Terminal Tools** - Better terminal text access and command execution
-- **File Partial Replacement Interface** - Added new `replace_specific_text` API for replacing specific text in files
-  - Provides the ability to replace specific code content locally
-  - Supports replacing text within a single line or multiple lines
-  - Preserves the original formatting (such as line endings and indents)
-- **File Caching Mechanism** - Introduced an efficient file caching system to improve performance and reduce redundant file reads
+- **Universal Compatibility**: Works perfectly with **Claude Desktop**, **Cursor**, **Windsurf**, **Antigravity**, and any MCP-compliant client.
+- **Zero Configuration**: Automatically starts a secure local MCP server when VSCode launches.
+- **Complete Toolset**:
+  - **📂 File Operations**: Read, write, create, and patch files safely.
+  - **💻 Terminal Control**: Execute commands, run background tasks, and capture output.
+  - **🔧 Git Integration**: Commit, push, pull, view diffs, and manage branches.
+  - **🐛 Debugging**: Set breakpoints and manage launch configurations.
+  - **🔍 Code Analysis**: Find symbols, references, and definitions.
+- **Secure Architecture**: Localhost-only binding ensuring your code stays private on your machine.
+- **Cross-Platform**: Seamless support for Windows, macOS, and Linux.
 
 ## 🚀 Quick Start
 

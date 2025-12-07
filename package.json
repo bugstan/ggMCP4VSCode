@@ -2,7 +2,7 @@
     "name": "gg-mcp-for-vscode",
     "displayName": "GG MCP for VSCode",
     "description": "A Model Context Protocol (MCP) Server extension for VSCode. Enables AI assistants to read, write, and analyze code in your workspace.",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "publisher": "bugstan",
     "repository": {
         "type": "git",
@@ -24,10 +24,22 @@
     ],
     "keywords": [
         "mcp",
+        "mcp-server",
         "model context protocol",
+        "claude",
+        "claude desktop",
+        "cursor",
+        "windsurf",
+        "antigravity",
         "ai",
-        "artificial intelligence",
-        "ai assistant"
+        "ai assistant",
+        "agent",
+        "llm",
+        "coding assistant",
+        "tool use",
+        "json-rpc",
+        "vscode",
+        "productivity"
     ],
     "activationEvents": [
         "onStartupFinished",
