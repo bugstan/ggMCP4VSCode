@@ -27,6 +27,9 @@ All notable changes to the GG MCP for VSCode extension will be documented in thi
 - **BREAKING: MCP-compliant Response format**: Completely refactored `Response` type from `{status, error}` to MCP standard `{content: McpContent[], isError}` format
 - Added `McpContent` interface supporting text, image, audio, resource_link, and resource content types
 - ResponseHandler methods `success()` and `failure()` now return MCP-compliant responses
+- **BREAKING: JSON-RPC 2.0 Protocol**: Completely rewrote MCPService to implement standard JSON-RPC 2.0 protocol
+- Implements MCP methods: `initialize`, `tools/list`, `tools/call`, `notifications/initialized`, `notifications/cancelled`
+- All requests now use POST with JSON-RPC 2.0 format: `{"jsonrpc": "2.0", "method": "...", "params": {...}, "id": 1}`
 
 ### Fixed
 - Improved cross-platform path handling with `pathInProject` parameter

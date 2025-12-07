@@ -243,6 +243,49 @@ export class RequestHandler {
             responseHandler.handleServerError(res, error, `Error executing tool ${toolName}`);
         }
     }
+
+    // =========================================================================
+    // MCP JSON-RPC Direct Methods (without HTTP response object)
+    // Used by MCPService for standard JSON-RPC protocol
+    // =========================================================================
+
+    /**
+     * Get tools list for MCP tools/list method
+     * Returns MCP-compliant tool definitions
+     */
+    public getToolsList(): any[] {
+        return this.toolManager.getAllTools().map((tool) => ({
+            name: tool.name,
+            title: tool.title || tool.name.split('_').map(word =>
+                word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+            ).join(' '),
+            description: tool.description,
+            inputSchema: tool.inputSchema,
+            ...(tool.annotations && { annotations: tool.annotations }),
+        }));
+    }
+
+    /**
+     * Execute tool directly for MCP tools/call method
+     * Returns MCP-compliant Response (content + isError)
+     */
+    public async executeToolDirect(toolName: string, args: any): Promise<import('../types').Response> {
+        const tool = this.toolManager.getToolByName(toolName);
+        if (!tool) {
+            log.warn(`Unknown tool requested: ${toolName}`);
+            return responseHandler.failure(`Unknown tool: ${toolName}`);
+        }
+
+        try {
+            log.info(`Executing tool: ${toolName}`);
+            const result = await tool.handle(args);
+            return result;
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            log.error(`Tool execution error: ${toolName}`, error);
+            return responseHandler.failure(message);
+        }
+    }
 }
 
 // Export singleton instance

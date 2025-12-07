@@ -1,6 +1,4 @@
 import http from 'http';
-import url from 'url';
-import { NoArgs } from '../types/toolBases';
 import { Logger } from '../utils/logger';
 import { requestHandler } from './requestHandler';
 import { responseHandler } from './responseHandler';
@@ -10,37 +8,66 @@ import { Defaults } from '../config/defaults';
 const log = Logger.forModule('MCPService');
 
 /**
- * MCP Service class - Handles HTTP requests
+ * JSON-RPC 2.0 Request interface
+ * See: https://www.jsonrpc.org/specification
+ */
+interface JsonRpcRequest {
+    jsonrpc: '2.0';
+    id?: string | number | null;
+    method: string;
+    params?: Record<string, any>;
+}
+
+/**
+ * JSON-RPC 2.0 Response interface
+ */
+interface JsonRpcResponse {
+    jsonrpc: '2.0';
+    id: string | number | null;
+    result?: any;
+    error?: {
+        code: number;
+        message: string;
+        data?: any;
+    };
+}
+
+/**
+ * JSON-RPC Error Codes
+ * See: https://www.jsonrpc.org/specification#error_object
+ */
+const JsonRpcErrorCodes = {
+    PARSE_ERROR: -32700,
+    INVALID_REQUEST: -32600,
+    METHOD_NOT_FOUND: -32601,
+    INVALID_PARAMS: -32602,
+    INTERNAL_ERROR: -32603,
+};
+
+/**
+ * MCP Service class - Handles MCP JSON-RPC 2.0 requests
+ * Implements: https://modelcontextprotocol.io/specification/latest
  */
 export class MCPService {
-    private static readonly serviceName = 'mcp';
-
     /**
      * Validate Origin header to prevent DNS rebinding attacks
      * MCP Security requirement: https://modelcontextprotocol.io/docs/concepts/transports#security-warning
-     * @param origin The Origin header value from the request
-     * @returns true if origin is allowed, false otherwise
      */
     private static isOriginAllowed(origin: string | undefined): boolean {
-        // If no origin, it's likely a same-origin request or curl/postman - allow it
         if (!origin) {
             return true;
         }
 
         const allowedOrigins = Defaults.Server.allowedOrigins;
-
-        // If no origins configured, allow all (for backwards compatibility)
         if (!allowedOrigins || allowedOrigins.length === 0) {
             return true;
         }
 
-        // Check if origin matches any allowed pattern
         return allowedOrigins.some(pattern => {
-            // Support wildcard patterns
             if (pattern.includes('*')) {
                 const regexPattern = pattern
-                    .replace(/[.+?^${}()|[\]\\]/g, '\\$&')  // Escape special regex chars
-                    .replace(/\*/g, '.*');  // Convert * to regex .*
+                    .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+                    .replace(/\*/g, '.*');
                 return new RegExp(`^${regexPattern}$`).test(origin);
             }
             return pattern === origin;
@@ -49,182 +76,271 @@ export class MCPService {
 
     /**
      * Set CORS headers for cross-origin requests
-     * MCP Security: Only allows configured origins
-     * @param req HTTP request object
-     * @param res HTTP response object
-     * @returns true if origin is allowed, false if request should be rejected
      */
     private static setCorsHeaders(req: http.IncomingMessage, res: http.ServerResponse): boolean {
         const origin = req.headers['origin'];
 
-        // Validate origin for security
         if (!this.isOriginAllowed(origin)) {
             log.warn(`Rejected request from unauthorized origin: ${origin}`);
             return false;
         }
 
-        // Set CORS headers with validated origin
         if (origin) {
             res.setHeader('Access-Control-Allow-Origin', origin);
         } else {
-            // For same-origin requests without Origin header, allow all
             res.setHeader('Access-Control-Allow-Origin', '*');
         }
-        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+        res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
         res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Accept');
-        res.setHeader('Access-Control-Max-Age', '86400'); // Cache preflight for 24 hours
+        res.setHeader('Access-Control-Max-Age', '86400');
 
         return true;
     }
 
     /**
-     * Handle OPTIONS preflight requests
+     * Send JSON-RPC success response
      */
-    private static handleOptionsRequest(res: http.ServerResponse): void {
-        res.writeHead(200);
-        res.end();
+    private static sendResult(res: http.ServerResponse, id: string | number | null, result: any): void {
+        const response: JsonRpcResponse = {
+            jsonrpc: '2.0',
+            id,
+            result,
+        };
+        res.setHeader('Content-Type', 'application/json');
+        res.statusCode = 200;
+        res.end(JSON.stringify(response));
     }
 
     /**
-     * Extract tool name from request path
+     * Send JSON-RPC error response
      */
-    private static extractPathValue(pathname: string | null): string {
-        if (!pathname) return '';
-        const parts = pathname.split(`/${this.serviceName}/`);
-        // return parts[1]?.replace(/^\\/+/, '') ?? '';
-        return parts[1]?.replace(/^\/+/, '') ?? '';
+    private static sendError(
+        res: http.ServerResponse,
+        id: string | number | null,
+        code: number,
+        message: string,
+        data?: any
+    ): void {
+        const response: JsonRpcResponse = {
+            jsonrpc: '2.0',
+            id,
+            error: { code, message, ...(data && { data }) },
+        };
+        res.setHeader('Content-Type', 'application/json');
+        res.statusCode = 200; // JSON-RPC always returns 200 for protocol-level errors
+        res.end(JSON.stringify(response));
+    }
+
+    /**
+     * Parse request body as JSON-RPC request
+     */
+    private static async parseJsonRpcRequest(req: http.IncomingMessage): Promise<JsonRpcRequest | null> {
+        return new Promise((resolve) => {
+            const chunks: string[] = [];
+
+            req.on('data', (chunk: Buffer) => {
+                chunks.push(chunk.toString('utf8'));
+            });
+
+            req.on('end', () => {
+                if (chunks.length === 0) {
+                    resolve(null);
+                    return;
+                }
+
+                const body = chunks.join('');
+                if (!body || body.trim() === '') {
+                    resolve(null);
+                    return;
+                }
+
+                try {
+                    const parsed = JSON.parse(body);
+                    resolve(parsed);
+                } catch {
+                    resolve(null);
+                }
+            });
+
+            req.on('error', () => resolve(null));
+        });
     }
 
     /**
      * Main entry point for handling HTTP requests
+     * Implements MCP JSON-RPC 2.0 protocol
      */
     static async handleRequest(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
         try {
             // Validate origin and set CORS headers
             const originAllowed = this.setCorsHeaders(req, res);
             if (!originAllowed) {
-                res.writeHead(403); // Forbidden
+                res.writeHead(403);
                 res.end(JSON.stringify({ error: 'Origin not allowed' }));
                 return;
             }
 
+            // Handle OPTIONS preflight
             if (req.method === 'OPTIONS') {
-                this.handleOptionsRequest(res);
+                res.writeHead(200);
+                res.end();
                 return;
             }
 
-            const { pathname, query } = url.parse(req.url || '', true);
-            const pathValue = this.extractPathValue(pathname);
-
-            log.info('Request received', { path: pathValue, method: req.method });
-
-            // Route the request based on the path value
-            switch (pathValue) {
-                case 'list_tools':
-                    await requestHandler.handleListTools(res);
-                    break;
-                case 'initialize':
-                case 'status':
-                    await requestHandler.handleStatusRequest(res, pathValue, query.id);
-                    break;
-                default:
-                    const startTime = performance.now();
-                    const args = await this.parseRequestBody(req);
-                    const parseTime = performance.now() - startTime;
-
-                    // Log large request body parsing time
-                    if (parseTime > Defaults.Thresholds.slowParseMs) {
-                        log.info(`Request body parsing took ${parseTime.toFixed(2)}ms`);
-                    }
-
-                    await requestHandler.handleToolExecution(
-                        pathValue,
-                        args,
-                        req.method || 'GET',
-                        pathname || '/',
-                        res,
-                    );
+            // MCP only accepts POST requests
+            if (req.method !== 'POST') {
+                this.sendError(res, null, JsonRpcErrorCodes.INVALID_REQUEST, 'Only POST method is allowed');
+                return;
             }
+
+            // Parse JSON-RPC request
+            const rpcRequest = await this.parseJsonRpcRequest(req);
+
+            if (!rpcRequest) {
+                this.sendError(res, null, JsonRpcErrorCodes.PARSE_ERROR, 'Parse error: Invalid JSON');
+                return;
+            }
+
+            // Validate JSON-RPC format
+            if (rpcRequest.jsonrpc !== '2.0') {
+                this.sendError(res, rpcRequest.id ?? null, JsonRpcErrorCodes.INVALID_REQUEST, 'Invalid request: jsonrpc must be "2.0"');
+                return;
+            }
+
+            if (!rpcRequest.method || typeof rpcRequest.method !== 'string') {
+                this.sendError(res, rpcRequest.id ?? null, JsonRpcErrorCodes.INVALID_REQUEST, 'Invalid request: method is required');
+                return;
+            }
+
+            const requestId = rpcRequest.id ?? null;
+
+            log.info('JSON-RPC request received', { method: rpcRequest.method, id: requestId });
+
+            // Route based on method
+            await this.handleMethod(res, rpcRequest.method, rpcRequest.params || {}, requestId);
+
         } catch (error) {
             log.error('Error handling request', error);
-            responseHandler.handleServerError(res, error, 'Error handling request');
+            this.sendError(res, null, JsonRpcErrorCodes.INTERNAL_ERROR, 'Internal error');
         }
     }
 
     /**
-     * Parse request body with optimized performance
+     * Handle MCP methods
+     * See: https://modelcontextprotocol.io/docs/concepts/tools
      */
-    private static async parseRequestBody(req: http.IncomingMessage): Promise<any> {
-        return new Promise((resolve, reject) => {
-            // Check content type
-            const contentType = req.headers['content-type'] || '';
-            // Log content type but don't use it in subsequent logic
-            if (contentType) {
-                log.debug(`Request content type: ${contentType}`);
-            }
+    private static async handleMethod(
+        res: http.ServerResponse,
+        method: string,
+        params: Record<string, any>,
+        id: string | number | null
+    ): Promise<void> {
+        switch (method) {
+            // =====================================================
+            // Lifecycle Methods
+            // =====================================================
+            case 'initialize':
+                await this.handleInitialize(res, params, id);
+                break;
 
-            // Use array to collect text chunks, avoid performance issues from string concatenation
-            const chunks: string[] = [];
-            let totalLength = 0;
+            // =====================================================
+            // Tool Methods
+            // See: https://modelcontextprotocol.io/docs/concepts/tools#protocol-messages
+            // =====================================================
+            case 'tools/list':
+                await this.handleToolsList(res, id);
+                break;
 
-            req.on('data', (chunk: Buffer) => {
-                // Always use UTF-8 decoding
-                const textChunk = chunk.toString('utf8');
-                chunks.push(textChunk);
-                totalLength += textChunk.length;
+            case 'tools/call':
+                await this.handleToolsCall(res, params, id);
+                break;
 
-                // Log large request reception progress
-                if (totalLength > Defaults.Limits.largeFileSize && chunks.length % 10 === 0) {
-                    log.info(
-                        `Received ${Math.floor(totalLength / (1024 * 1024))}MB of data so far`,
-                    );
-                }
-            });
+            // =====================================================
+            // Notifications (no response expected)
+            // =====================================================
+            case 'notifications/initialized':
+                // Client notification that initialization is complete
+                log.info('Client initialized notification received');
+                // For notifications, we still send 200 OK but with no body for JSON-RPC
+                res.statusCode = 200;
+                res.end();
+                break;
 
-            req.on('end', () => {
-                // Return empty parameters if no content
-                if (chunks.length === 0) {
-                    resolve(NoArgs);
-                    return;
-                }
+            case 'notifications/cancelled':
+                log.info('Cancellation notification received', params);
+                res.statusCode = 200;
+                res.end();
+                break;
 
-                // Join all text chunks at once
-                const body = chunks.join('');
+            default:
+                this.sendError(res, id, JsonRpcErrorCodes.METHOD_NOT_FOUND, `Method not found: ${method}`);
+        }
+    }
 
-                if (!body || body.trim() === '') {
-                    resolve(NoArgs);
-                    return;
-                }
+    /**
+     * Handle initialize method
+     * See: https://modelcontextprotocol.io/specification/latest/basic/lifecycle
+     */
+    private static async handleInitialize(
+        res: http.ServerResponse,
+        params: Record<string, any>,
+        id: string | number | null
+    ): Promise<void> {
+        const result = {
+            protocolVersion: '2024-11-05',
+            capabilities: {
+                tools: { listChanged: true },
+            },
+            serverInfo: {
+                name: 'ggmcp-vscode',
+                version: '1.1.2',
+            },
+        };
 
-                // Log large request body size
-                if (totalLength > Defaults.Limits.mediumFileSize) {
-                    // Only log if larger than medium file threshold
-                    log.info(`Received large request: ${totalLength} characters`);
-                }
+        log.info('Initialize request handled', { clientInfo: params.clientInfo });
+        this.sendResult(res, id, result);
+    }
 
-                try {
-                    // Measure JSON parsing performance
-                    const parseStartTime = performance.now();
-                    const parsed = JSON.parse(body);
-                    const parseTime = performance.now() - parseStartTime;
+    /**
+     * Handle tools/list method
+     * See: https://modelcontextprotocol.io/docs/concepts/tools#listing-tools
+     */
+    private static async handleToolsList(
+        res: http.ServerResponse,
+        id: string | number | null
+    ): Promise<void> {
+        try {
+            const tools = requestHandler.getToolsList();
+            this.sendResult(res, id, { tools });
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            this.sendError(res, id, JsonRpcErrorCodes.INTERNAL_ERROR, message);
+        }
+    }
 
-                    if (parseTime > Defaults.Thresholds.slowParseMs) {
-                        // Log warning if parsing takes more than threshold
-                        log.warn(
-                            `Slow JSON parsing: ${parseTime.toFixed(2)}ms for ${totalLength} chars`,
-                        );
-                    }
+    /**
+     * Handle tools/call method
+     * See: https://modelcontextprotocol.io/docs/concepts/tools#calling-tools
+     */
+    private static async handleToolsCall(
+        res: http.ServerResponse,
+        params: Record<string, any>,
+        id: string | number | null
+    ): Promise<void> {
+        const { name, arguments: args } = params;
 
-                    resolve(
-                        parsed.jsonrpc && parsed.params ? parsed.params.arguments || {} : parsed,
-                    );
-                } catch (error) {
-                    log.error(`JSON parse error for ${totalLength} character request`, error);
-                    reject(error);
-                }
-            });
+        if (!name || typeof name !== 'string') {
+            this.sendError(res, id, JsonRpcErrorCodes.INVALID_PARAMS, 'Invalid params: name is required');
+            return;
+        }
 
-            req.on('error', reject);
-        });
+        try {
+            const result = await requestHandler.executeToolDirect(name, args || {});
+            this.sendResult(res, id, result);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Tool execution failed';
+            // Tool execution errors are returned as result with isError: true
+            this.sendResult(res, id, responseHandler.failure(message));
+        }
     }
 }
