@@ -169,9 +169,9 @@ VSCode MCP Server Plugin adopts standard MCP protocol:
 
 ## Available VSCode Tools
 
-The plugin provides various tools for operating the VSCode environment, organized by category:
+The plugin provides **44 tools** for operating the VSCode environment, organized by category:
 
-### Editor Tools
+### Editor Tools (5 tools)
 
 #### 1. get_open_in_editor_file_text
 
@@ -259,7 +259,7 @@ The plugin provides various tools for operating the VSCode environment, organize
   }
   ```
 
-### File Read/Write Tools
+### File Read/Write Tools (8 tools)
 
 #### 6. get_file_text_by_path
 
@@ -285,9 +285,9 @@ The plugin provides various tools for operating the VSCode environment, organize
   }
   ```
 
-#### 7. replace_file_text_by_path
+#### 7. rewrite_file_content
 
-- **Description**: Replace the entire content of a specified project file with new text.
+- **Description**: Rewrite the entire content of a specified project file with new text.
 - **Parameters**:
   - `pathInProject` (string, required): The path to the target file, relative to project root.
   - `text` (string, required): The new content to write to the file.
@@ -312,35 +312,7 @@ The plugin provides various tools for operating the VSCode environment, organize
   }
   ```
 
-#### 8. replace_file_content_at_position
-
-- **Description**: Replace a portion of file content at specified line positions. This tool allows replacing content between specific lines in a file, optionally with a character offset within the line. The replacement is precise and only affects the specified range, leaving the rest of the file unchanged.
-- **Parameters**:
-  - `pathInProject` (string, required): The path to the target file, relative to project root.
-  - `startLine` (number, required): The starting line number (1-based).
-  - `endLine` (number, required): The ending line number (1-based).
-  - `content` (string, required): The new content to write.
-  - `offset` (number, optional): The character offset within the line (0-based).
-- **Returns**: "ok" if successful, error message otherwise.
-- **Example Request**:
-  ```json
-  {
-    "pathInProject": "src/utils/helper.js",
-    "startLine": 5,
-    "endLine": 5,
-    "content": "function helper() { return 'Updated'; }",
-    "offset": 0
-  }
-  ```
-- **Example Response**:
-  ```json
-  {
-    "status": "ok",
-    "error": null
-  }
-  ```
-
-#### 9. create_new_file_with_text
+#### 8. create_new_file_with_text
 
 - **Description**: Create a new file at the specified path in the project directory and populate it with content.
 - **Parameters**:
@@ -366,7 +338,7 @@ The plugin provides various tools for operating the VSCode environment, organize
   }
   ```
 
-#### 10. list_files_in_folder
+#### 9. list_files_in_folder
 
 - **Description**: List all files and directories in the specified project folder.
 - **Parameters**:
@@ -388,11 +360,6 @@ The plugin provides various tools for operating the VSCode environment, organize
         "path": "src\\utils\\helper.js"
       },
       {
-        "name": "newFile.js",
-        "type": "file",
-        "path": "src\\utils\\newFile.js"
-      },
-      {
         "name": "config",
         "type": "directory",
         "path": "src\\utils\\config"
@@ -402,9 +369,93 @@ The plugin provides various tools for operating the VSCode environment, organize
   }
   ```
 
-### File Search Tools
+#### 10. replace_file_content_at_position
 
-#### 11. search_in_files_content
+- **Description**: Replace a portion of file content at specified line positions. This tool allows replacing content between specific lines in a file. The replacement is precise and only affects the specified range, leaving the rest of the file unchanged.
+- **Parameters**:
+  - `pathInProject` (string, required): The path to the target file, relative to project root.
+  - `startLine` (number, required): The starting line number (1-based).
+  - `endLine` (number, required): The ending line number (1-based).
+  - `content` (string, required): The new content to write.
+  - `offset` (number, optional): The character offset within the line (0-based).
+- **Returns**: "ok" if successful, error message otherwise.
+- **Example Request**:
+  ```json
+  {
+    "pathInProject": "src/utils/helper.js",
+    "startLine": 5,
+    "endLine": 5,
+    "content": "function helper() { return 'Updated'; }",
+    "offset": 0
+  }
+  ```
+- **Example Response**:
+  ```json
+  {
+    "status": "ok",
+    "error": null
+  }
+  ```
+
+#### 11. append_file_content
+
+- **Description**: Append content to the end of a file.
+- **Parameters**:
+  - `pathInProject` (string, required): The path to the target file, relative to project root.
+  - `text` (string, required): The content to append to the file.
+- **Returns**: JSON object with file information and operation details.
+- **Example Request**:
+  ```json
+  {
+    "pathInProject": "src/utils/helper.js",
+    "text": "\n// Appended content\nfunction newHelper() {}"
+  }
+  ```
+- **Example Response**:
+  ```json
+  {
+    "status": {
+      "path": "C:\\Projects\\MyProject\\src\\utils\\helper.js",
+      "relativePath": "src\\utils\\helper.js",
+      "operationTimeMs": 25
+    },
+    "error": null
+  }
+  ```
+
+#### 12. replace_specific_text
+
+- **Description**: Replace specific text occurrences in a file. Supports replacing single or multiple occurrences.
+- **Parameters**:
+  - `pathInProject` (string, required): The path to the target file, relative to project root.
+  - `searchText` (string, required): The text to search for.
+  - `replaceText` (string, required): The text to replace with.
+  - `replaceAll` (boolean, optional): Whether to replace all occurrences. Default: false.
+- **Returns**: JSON object with replacement count and file information.
+- **Example Request**:
+  ```json
+  {
+    "pathInProject": "src/utils/helper.js",
+    "searchText": "oldFunction",
+    "replaceText": "newFunction",
+    "replaceAll": true
+  }
+  ```
+- **Example Response**:
+  ```json
+  {
+    "status": {
+      "path": "C:\\Projects\\MyProject\\src\\utils\\helper.js",
+      "replacements": 3,
+      "operationTimeMs": 30
+    },
+    "error": null
+  }
+  ```
+
+### File Search Tools (2 tools)
+
+#### 13. search_in_files_content
 
 - **Description**: Search for a text substring within all files in the project.
 - **Parameters**:
@@ -433,7 +484,7 @@ The plugin provides various tools for operating the VSCode environment, organize
   }
   ```
 
-#### 12. find_files_by_name_substring
+#### 14. find_files_by_name_substring
 
 - **Description**: Search for all files in the project whose names contain the specified substring.
 - **Parameters**:
@@ -454,21 +505,15 @@ The plugin provides various tools for operating the VSCode environment, organize
         "name": "helper.js",
         "directory": "src\\utils",
         "absolutePath": "C:\\Projects\\MyProject\\src\\utils\\helper.js"
-      },
-      {
-        "path": "test\\helper.test.js",
-        "name": "helper.test.js",
-        "directory": "test",
-        "absolutePath": "C:\\Projects\\MyProject\\test\\helper.test.js"
       }
     ],
     "error": null
   }
   ```
 
-### Code Analysis Tools
+### Code Analysis Tools (3 tools)
 
-#### 13. get_symbols_in_file
+#### 15. get_symbols_in_file
 
 - **Description**: Get all symbols defined in the file (functions, classes, variables, etc.).
 - **Parameters**:
@@ -483,12 +528,27 @@ The plugin provides various tools for operating the VSCode environment, organize
 - **Example Response**:
   ```json
   {
-    "status": "{\"symbols\":[{\"name\":\"helper\",\"kind\":\"Function\",\"range\":{\"startLine\":0,\"startCharacter\":0,\"endLine\":2,\"endCharacter\":1},\"selectionRange\":{\"startLine\":0,\"startCharacter\":9,\"endLine\":0,\"endCharacter\":15},\"text\":\"helper\",\"detail\":\"\"}]}",
+    "status": {
+      "symbols": [
+        {
+          "name": "helper",
+          "kind": "Function",
+          "range": {
+            "startLine": 0,
+            "startCharacter": 0,
+            "endLine": 2,
+            "endCharacter": 1
+          },
+          "text": "helper",
+          "detail": ""
+        }
+      ]
+    },
     "error": null
   }
   ```
 
-#### 14. find_references
+#### 16. find_references
 
 - **Description**: Find all reference locations of a symbol.
 - **Parameters**:
@@ -507,12 +567,29 @@ The plugin provides various tools for operating the VSCode environment, organize
 - **Example Response**:
   ```json
   {
-    "status": "{\"references\":[{\"path\":\"src\\\\utils\\\\helper.js\",\"line\":0,\"character\":9,\"endLine\":0,\"endCharacter\":15},{\"path\":\"src\\\\index.js\",\"line\":3,\"character\":4,\"endLine\":3,\"endCharacter\":10}]}",
+    "status": {
+      "references": [
+        {
+          "path": "src\\utils\\helper.js",
+          "line": 0,
+          "character": 9,
+          "endLine": 0,
+          "endCharacter": 15
+        },
+        {
+          "path": "src\\index.js",
+          "line": 3,
+          "character": 4,
+          "endLine": 3,
+          "endCharacter": 10
+        }
+      ]
+    },
     "error": null
   }
   ```
 
-#### 15. refactor_code_at_location
+#### 17. refactor_code_at_location
 
 - **Description**: Perform code refactoring at a specific location. Supports rename, extract function, extract variable, and other operations.
 - **Parameters**:
@@ -538,14 +615,17 @@ The plugin provides various tools for operating the VSCode environment, organize
 - **Example Response**:
   ```json
   {
-    "status": "{\"success\":true,\"message\":\"Successfully renamed to helperFunction\"}",
+    "status": {
+      "success": true,
+      "message": "Successfully renamed to helperFunction"
+    },
     "error": null
   }
   ```
 
-### Debug Tools
+### Debug Tools (4 tools)
 
-#### 16. toggle_debugger_breakpoint
+#### 18. toggle_debugger_breakpoint
 
 - **Description**: Toggle a debugger breakpoint at the specified line in a project file.
 - **Parameters**:
@@ -567,7 +647,7 @@ The plugin provides various tools for operating the VSCode environment, organize
   }
   ```
 
-#### 17. get_debugger_breakpoints
+#### 19. get_debugger_breakpoints
 
 - **Description**: Get information about all line breakpoints set in the project.
 - **Parameters**: None
@@ -589,7 +669,7 @@ The plugin provides various tools for operating the VSCode environment, organize
   }
   ```
 
-#### 18. get_run_configurations
+#### 20. get_run_configurations
 
 - **Description**: Get a list of available run configurations in the current project.
 - **Parameters**: None
@@ -606,7 +686,7 @@ The plugin provides various tools for operating the VSCode environment, organize
   }
   ```
 
-#### 19. run_configuration
+#### 21. run_configuration
 
 - **Description**: Run a specific run configuration in the current project.
 - **Parameters**:
@@ -626,27 +706,14 @@ The plugin provides various tools for operating the VSCode environment, organize
   }
   ```
 
-### Terminal Tools
+### Terminal Tools (3 tools)
 
-#### 20. get_terminal_text
+#### 22. execute_terminal_command
 
-- **Description**: Retrieve the current text content from the first active terminal in the IDE.
-- **Parameters**: None
-- **Returns**: String containing the terminal's text content, or empty string if no terminal is open.
-- **Example Response**:
-  ```json
-  {
-    "status": "> npm install\nAdded 125 packages in 3.5s",
-    "error": null
-  }
-  ```
-
-#### 21. execute_terminal_command
-
-- **Description**: Execute a specified shell command in the IDE's integrated terminal.
+- **Description**: Execute a shell command in the IDE's integrated terminal. The command will be visible to the user and only returns execution status.
 - **Parameters**:
   - `command` (string, required): The shell command to execute.
-- **Returns**: String containing command output (if available) or execution status message.
+- **Returns**: JSON object with execution status.
 - **Example Request**:
   ```json
   {
@@ -656,17 +723,22 @@ The plugin provides various tools for operating the VSCode environment, organize
 - **Example Response**:
   ```json
   {
-    "status": "my-project@1.0.0\n├── express@4.18.2\n└── lodash@4.17.21",
+    "status": {
+      "status": "executed"
+    },
     "error": null
   }
   ```
 
-#### 22. execute_command_with_output
+#### 23. run_command_on_background
 
-- **Description**: Execute a specified shell command and capture its output using VS Code's Shell Integration API.
+- **Description**: Execute a command in the background and return its output. The command execution is not visible to the user.
 - **Parameters**:
   - `command` (string, required): The shell command to execute.
-- **Returns**: String containing command output or execution status message.
+  - `cwd` (string, optional): The working directory for the command.
+  - `env` (object, optional): Environment variables for the command.
+  - `timeout` (number, optional): Command execution timeout in milliseconds.
+- **Returns**: JSON object with command output.
 - **Example Request**:
   ```json
   {
@@ -676,22 +748,10 @@ The plugin provides various tools for operating the VSCode environment, organize
 - **Example Response**:
   ```json
   {
-    "status": "v16.14.2",
-    "error": null
-  }
-  ```
-
-#### 23. get_command_output
-
-- **Description**: Get the output from the last command executed with execute_command_with_output.
-- **Parameters**: None
-- **Returns**: JSON object with command status and output.
-- **Example Response**:
-  ```json
-  {
     "status": {
-      "status": "completed",
-      "output": "v16.14.2"
+      "stdout": "v18.17.0",
+      "stderr": "",
+      "exitCode": 0
     },
     "error": null
   }
@@ -699,10 +759,10 @@ The plugin provides various tools for operating the VSCode environment, organize
 
 #### 24. wait
 
-- **Description**: Wait for a specified number of milliseconds.
+- **Description**: Wait for a specified number of milliseconds before continuing.
 - **Parameters**:
   - `milliseconds` (number, required): The duration to wait in milliseconds.
-- **Returns**: `"ok"` after the wait completes.
+- **Returns**: JSON object indicating completion.
 - **Example Request**:
   ```json
   {
@@ -712,16 +772,69 @@ The plugin provides various tools for operating the VSCode environment, organize
 - **Example Response**:
   ```json
   {
-    "status": "ok",
+    "status": {
+      "status": "completed",
+      "message": "Waited for 3000 milliseconds"
+    },
     "error": null
   }
   ```
 
-### Git Tools
+### Terminal Info Tools (2 tools)
 
-#### 25. get_project_vcs_status
+#### 25. get_terminal_info
 
-- **Description**: Get the version control status of files in the project.
+- **Description**: Retrieve information about the current terminal and operating system environment. Returns data about OS type, terminal type, and whether it is the default terminal.
+- **Parameters**: None
+- **Returns**: JSON object with terminal and OS information.
+- **Example Response**:
+  ```json
+  {
+    "status": {
+      "osType": "Windows",
+      "osVersion": "Microsoft Windows [Version 10.0.22621.3007]",
+      "terminalType": "PowerShell",
+      "isIntegratedTerminal": false,
+      "isDefault": true
+    },
+    "error": null
+  }
+  ```
+
+#### 26. execute_os_specific_command
+
+- **Description**: Execute a command with syntax adjusted for the detected operating system and terminal. You can provide different command versions for different platforms, or a generic command.
+- **Parameters**:
+  - `windowsCommand` (string, optional): Command for Windows.
+  - `unixCommand` (string, optional): Command for Linux/Unix.
+  - `macCommand` (string, optional): Command for macOS.
+  - `command` (string, optional): Generic command for all platforms.
+- **Returns**: JSON object with execution status and OS information.
+- **Example Request**:
+  ```json
+  {
+    "windowsCommand": "dir",
+    "unixCommand": "ls -la",
+    "macCommand": "ls -la"
+  }
+  ```
+- **Example Response**:
+  ```json
+  {
+    "status": {
+      "osType": "Windows",
+      "command": "dir",
+      "executed": true
+    },
+    "error": null
+  }
+  ```
+
+### Git Basic Tools (2 tools)
+
+#### 27. get_project_vcs_status
+
+- **Description**: Retrieves the current version control status of files in the project. Use this tool to get information about modified, added, deleted, and moved files in your VCS (e.g., Git).
 - **Parameters**: None
 - **Returns**: JSON array of changed files with paths and change types.
 - **Example Response**:
@@ -729,21 +842,21 @@ The plugin provides various tools for operating the VSCode environment, organize
   {
     "status": [
       {
-        "path": "src/utils/helper.js",
-        "type": "MODIFIED"
+        "pathInProject": "src/utils/helper.js",
+        "type": "MODIFICATION"
       },
       {
-        "path": "src/new-file.js",
-        "type": "ADDED"
+        "pathInProject": "src/new-file.js",
+        "type": "ADDITION"
       }
     ],
     "error": null
   }
   ```
 
-#### 26. find_commit_by_message
+#### 28. find_commit_by_message
 
-- **Description**: Search for a commit based on the provided text or keywords in the project history.
+- **Description**: Search for a commit based on the provided text or keywords in the project history. Useful for finding specific change sets or code modifications by commit messages.
 - **Parameters**:
   - `text` (string, required): The text to search for in commit messages.
 - **Returns**: JSON array of matching commit hashes.
@@ -764,47 +877,250 @@ The plugin provides various tools for operating the VSCode environment, organize
   }
   ```
 
-### Project Tools
+### Git Advanced Tools (8 tools)
 
-#### 27. get_project_modules
+#### 29. get_file_history
 
-- **Description**: Get list of all modules in the project with their dependencies.
-- **Parameters**: None
-- **Returns**: JSON list of module names.
+- **Description**: Get the modification history of a file.
+- **Parameters**:
+  - `pathInProject` (string, required): Path to the file to get history for.
+  - `maxEntries` (number, optional): Maximum number of history entries to return.
+- **Returns**: JSON array of commit information.
+- **Example Request**:
+  ```json
+  {
+    "pathInProject": "src/utils/helper.js",
+    "maxEntries": 10
+  }
+  ```
 - **Example Response**:
   ```json
   {
     "status": [
-      "main",
-      "auth",
-      "api"
+      {
+        "hash": "a1b2c3d4",
+        "message": "Update helper function",
+        "author": "Developer",
+        "date": "2024-01-15T10:30:00Z"
+      }
     ],
     "error": null
   }
   ```
 
-#### 28. get_project_dependencies
+#### 30. get_file_diff
 
-- **Description**: Get list of all dependencies defined in the project.
-- **Parameters**: None
-- **Returns**: JSON list of dependency names.
+- **Description**: Get the diff of a file between two commits or against the working tree.
+- **Parameters**:
+  - `pathInProject` (string, required): Path to the file.
+  - `commit1` (string, optional): First commit hash (or "HEAD").
+  - `commit2` (string, optional): Second commit hash.
+- **Returns**: String containing the diff output.
+- **Example Request**:
+  ```json
+  {
+    "pathInProject": "src/utils/helper.js",
+    "commit1": "HEAD~1",
+    "commit2": "HEAD"
+  }
+  ```
 - **Example Response**:
   ```json
   {
-    "status": [
-      "express",
-      "react",
-      "lodash"
-    ],
+    "status": "diff --git a/src/utils/helper.js b/src/utils/helper.js\n...",
     "error": null
   }
   ```
 
-### Action Tools
+#### 31. get_branch_info
 
-#### 29. list_available_actions
+- **Description**: Get information about current and available branches.
+- **Parameters**: None
+- **Returns**: JSON object with branch information.
+- **Example Response**:
+  ```json
+  {
+    "status": {
+      "current": "main",
+      "branches": ["main", "develop", "feature/new-feature"]
+    },
+    "error": null
+  }
+  ```
 
-- **Description**: List all available actions in VSCode IDE editor.
+#### 32. get_commit_details
+
+- **Description**: Get detailed information about a specific commit.
+- **Parameters**:
+  - `commitHash` (string, required): The hash of the commit.
+- **Returns**: JSON object with commit details.
+- **Example Request**:
+  ```json
+  {
+    "commitHash": "a1b2c3d4e5f6"
+  }
+  ```
+- **Example Response**:
+  ```json
+  {
+    "status": {
+      "hash": "a1b2c3d4e5f6",
+      "message": "Fix critical bug",
+      "author": "Developer",
+      "date": "2024-01-15T10:30:00Z",
+      "files": ["src/index.js", "src/utils/helper.js"]
+    },
+    "error": null
+  }
+  ```
+
+#### 33. commit_changes
+
+- **Description**: Commit staged changes with a message.
+- **Parameters**:
+  - `message` (string, required): The commit message.
+  - `files` (array, optional): Specific files to commit. If not provided, commits all staged changes.
+- **Returns**: JSON object with commit result.
+- **Example Request**:
+  ```json
+  {
+    "message": "Add new feature",
+    "files": ["src/feature.js"]
+  }
+  ```
+- **Example Response**:
+  ```json
+  {
+    "status": {
+      "success": true,
+      "commitHash": "a1b2c3d4e5f6"
+    },
+    "error": null
+  }
+  ```
+
+#### 34. pull_changes
+
+- **Description**: Pull changes from remote repository.
+- **Parameters**:
+  - `remote` (string, optional): Remote name. Default: "origin".
+  - `branch` (string, optional): Branch name.
+- **Returns**: JSON object with pull result.
+- **Example Request**:
+  ```json
+  {
+    "remote": "origin",
+    "branch": "main"
+  }
+  ```
+- **Example Response**:
+  ```json
+  {
+    "status": {
+      "success": true,
+      "message": "Already up to date."
+    },
+    "error": null
+  }
+  ```
+
+#### 35. switch_branch
+
+- **Description**: Switch to a different branch.
+- **Parameters**:
+  - `branch` (string, required): The name of the branch to switch to.
+- **Returns**: JSON object with switch result.
+- **Example Request**:
+  ```json
+  {
+    "branch": "develop"
+  }
+  ```
+- **Example Response**:
+  ```json
+  {
+    "status": {
+      "success": true,
+      "branch": "develop"
+    },
+    "error": null
+  }
+  ```
+
+#### 36. create_branch
+
+- **Description**: Create a new branch.
+- **Parameters**:
+  - `branch` (string, required): The name of the new branch.
+  - `checkout` (boolean, optional): Whether to switch to the new branch after creation.
+- **Returns**: JSON object with creation result.
+- **Example Request**:
+  ```json
+  {
+    "branch": "feature/new-feature",
+    "checkout": true
+  }
+  ```
+- **Example Response**:
+  ```json
+  {
+    "status": {
+      "success": true,
+      "branch": "feature/new-feature",
+      "checkedOut": true
+    },
+    "error": null
+  }
+  ```
+
+### Project Tools (2 tools)
+
+#### 37. get_project_modules
+
+- **Description**: Get information about project modules and dependencies. Detects project type (Node.js, Python, Go, Rust, etc.) and lists relevant VSCode extensions.
+- **Parameters**: None
+- **Returns**: JSON object with project type and extension information.
+- **Example Response**:
+  ```json
+  {
+    "status": {
+      "types": ["node"],
+      "extensions": [
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint"
+      ]
+    },
+    "error": null
+  }
+  ```
+
+#### 38. get_project_dependencies
+
+- **Description**: Get project dependencies from package management files. Supports Node.js (package.json) and Python (requirements.txt) projects.
+- **Parameters**: None
+- **Returns**: JSON object with dependency information.
+- **Example Response**:
+  ```json
+  {
+    "status": {
+      "type": "node",
+      "dependencies": {
+        "express": "^4.18.2",
+        "lodash": "^4.17.21"
+      },
+      "devDependencies": {
+        "typescript": "^5.0.0"
+      }
+    },
+    "error": null
+  }
+  ```
+
+### Action Tools (3 tools)
+
+#### 39. list_available_actions
+
+- **Description**: Lists all available actions in VSCode IDE editor. Returns a JSON array of objects containing action information.
 - **Parameters**: None
 - **Returns**: JSON array of actions with their IDs and presentation text.
 - **Example Response**:
@@ -812,21 +1128,126 @@ The plugin provides various tools for operating the VSCode environment, organize
   {
     "status": [
       {
-        "id": "format.document",
+        "id": "workbench.action.files.save",
+        "text": "Save File"
+      },
+      {
+        "id": "editor.action.formatDocument",
         "text": "Format Document"
       },
       {
-        "id": "editor.action.rename",
-        "text": "Rename Symbol"
+        "id": "workbench.action.debug.start",
+        "text": "Start Debugging"
       }
     ],
     "error": null
   }
   ```
 
-#### 30. execute_action_by_id
+#### 40. execute_action_by_id
 
-- **Description**: Execute an action by its ID in VSCode IDE editor.
+- **Description**: Executes an action by its ID in VSCode IDE editor. Note: This tool doesn't wait for the action to complete.
 - **Parameters**:
   - `actionId` (string, required): The ID of the action to execute.
-- **Returns**: `"ok"`
+- **Returns**: `"ok"` if the action was successfully executed, `"action not found"` otherwise.
+- **Example Request**:
+  ```json
+  {
+    "actionId": "editor.action.formatDocument"
+  }
+  ```
+- **Example Response**:
+  ```json
+  {
+    "status": "ok",
+    "error": null
+  }
+  ```
+
+#### 41. get_progress_indicators
+
+- **Description**: Retrieves the status of all running progress indicators in VSCode IDE editor.
+- **Parameters**: None
+- **Returns**: JSON array of objects containing progress information. Returns an empty array if no progress indicators are running.
+- **Example Response**:
+  ```json
+  {
+    "status": [],
+    "error": null
+  }
+  ```
+
+### Summary: All 44 Tools
+
+| Category | Tool Name | Description |
+|----------|-----------|-------------|
+| **Editor** | `get_open_in_editor_file_text` | Get current file content |
+| **Editor** | `get_open_in_editor_file_path` | Get current file path |
+| **Editor** | `replace_selected_text` | Replace selected text |
+| **Editor** | `replace_current_file_text` | Replace entire file content |
+| **Editor** | `open_file_in_editor` | Open file in editor |
+| **File** | `get_file_text_by_path` | Read file by path |
+| **File** | `rewrite_file_content` | Rewrite entire file |
+| **File** | `create_new_file_with_text` | Create new file |
+| **File** | `list_files_in_folder` | List folder contents |
+| **File** | `replace_file_content_at_position` | Replace at position |
+| **File** | `append_file_content` | Append to file |
+| **File** | `replace_specific_text` | Replace specific text |
+| **File** | `search_in_files_content` | Search file contents |
+| **File** | `find_files_by_name_substring` | Find files by name |
+| **Code** | `get_symbols_in_file` | Get file symbols |
+| **Code** | `find_references` | Find symbol references |
+| **Code** | `refactor_code_at_location` | Refactor code |
+| **Debug** | `toggle_debugger_breakpoint` | Toggle breakpoint |
+| **Debug** | `get_debugger_breakpoints` | Get all breakpoints |
+| **Debug** | `get_run_configurations` | List run configs |
+| **Debug** | `run_configuration` | Execute run config |
+| **Terminal** | `execute_terminal_command` | Run visible command |
+| **Terminal** | `run_command_on_background` | Run background command |
+| **Terminal** | `wait` | Wait milliseconds |
+| **Terminal** | `get_terminal_info` | Get terminal/OS info |
+| **Terminal** | `execute_os_specific_command` | Run OS-specific command |
+| **Git** | `get_project_vcs_status` | Get VCS status |
+| **Git** | `find_commit_by_message` | Search commits |
+| **Git** | `get_file_history` | Get file history |
+| **Git** | `get_file_diff` | Get file diff |
+| **Git** | `get_branch_info` | Get branch info |
+| **Git** | `get_commit_details` | Get commit details |
+| **Git** | `commit_changes` | Commit changes |
+| **Git** | `pull_changes` | Pull changes |
+| **Git** | `switch_branch` | Switch branch |
+| **Git** | `create_branch` | Create branch |
+| **Project** | `get_project_modules` | Get project modules |
+| **Project** | `get_project_dependencies` | Get dependencies |
+| **Action** | `list_available_actions` | List VSCode actions |
+| **Action** | `execute_action_by_id` | Execute VSCode action |
+| **Action** | `get_progress_indicators` | Get progress status |
+
+---
+
+## Error Handling
+
+All tools return errors in a consistent format:
+
+```json
+{
+  "status": null,
+  "error": "Error message describing the issue"
+}
+```
+
+Common error scenarios:
+
+1. **File not found**: When the specified file path doesn't exist
+2. **No active editor**: When an operation requires an active editor but none is open
+3. **Permission denied**: When the operation lacks necessary permissions
+4. **Git not available**: When Git operations are attempted in a non-Git repository
+5. **Invalid parameters**: When required parameters are missing or invalid
+
+## Notes
+
+1. All file paths can be either absolute or relative to the workspace root
+2. Line numbers in most tools are 1-based unless specified otherwise
+3. Character positions are typically 0-based
+4. The `pathInProject` parameter is the recommended way to specify file paths for cross-platform compatibility
+5. Tools that modify files will trigger the file reload mechanism if `ggMCP.autoReloadModifiedFiles` is enabled

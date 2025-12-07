@@ -3,6 +3,7 @@ import * as path from 'path';
 import { getProjectRoot } from './pathUtils';
 import { Logger } from './logger';
 import { FileCache } from '../server/cache';
+import { Defaults } from '../config/defaults';
 
 // Create module-specific logger
 const log = Logger.forModule('FileReloader');
@@ -72,8 +73,8 @@ export class FileReloader {
                 const fileStat = await vscode.workspace.fs.stat(uri);
                 const fileSizeKB = fileStat.size / 1024;
 
-                // For large files (over 1MB) use command reload instead of content replacement
-                if (fileStat.size > 1024 * 1024) {
+                // For large files (over threshold) use command reload instead of content replacement
+                if (fileStat.size > Defaults.Limits.largeFileSize) {
                     log.info(
                         `Using command-based reload for large file (${fileSizeKB.toFixed(2)}KB): ${uri.fsPath}`
                     );
@@ -209,8 +210,8 @@ export class FileReloader {
             const text = new TextDecoder().decode(content);
             const readTime = performance.now() - readStartTime;
 
-            if (readTime > 100) {
-                log.info(`File read took ${readTime.toFixed(2)}ms: ${uri.fsPath}`);
+            if (readTime > Defaults.Thresholds.slowParseMs) {
+                log.debug(`File read took ${readTime.toFixed(2)}ms: ${uri.fsPath}`);
             }
 
             // Optimization: Check if file content has actually changed
@@ -218,7 +219,7 @@ export class FileReloader {
             const currentText = currentDocument.getText();
 
             if (text === currentText) {
-                log.info(`File content unchanged, skipping update: ${uri.fsPath}`);
+                log.debug(`File content unchanged, skipping update: ${uri.fsPath}`);
                 return true;
             }
 
@@ -247,8 +248,8 @@ export class FileReloader {
             const editSuccess = await vscode.workspace.applyEdit(edit);
             const editTime = performance.now() - editStartTime;
 
-            if (editTime > 100) {
-                log.info(`Edit application took ${editTime.toFixed(2)}ms: ${uri.fsPath}`);
+            if (editTime > Defaults.Thresholds.slowParseMs) {
+                log.debug(`Edit application took ${editTime.toFixed(2)}ms: ${uri.fsPath}`);
             }
 
             if (editSuccess) {

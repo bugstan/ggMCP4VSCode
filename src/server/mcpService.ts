@@ -4,6 +4,7 @@ import { NoArgs } from '../types/toolBases';
 import { Logger } from '../utils/logger';
 import { requestHandler } from './requestHandler';
 import { responseHandler } from './responseHandler';
+import { Defaults } from '../config/defaults';
 
 // Create module-specific logger
 const log = Logger.forModule('MCPService');
@@ -73,7 +74,7 @@ export class MCPService {
                     const parseTime = performance.now() - startTime;
 
                     // Log large request body parsing time
-                    if (parseTime > 100) {
+                    if (parseTime > Defaults.Thresholds.slowParseMs) {
                         log.info(`Request body parsing took ${parseTime.toFixed(2)}ms`);
                     }
 
@@ -100,7 +101,7 @@ export class MCPService {
             const contentType = req.headers['content-type'] || '';
             // Log content type but don't use it in subsequent logic
             if (contentType) {
-                log.info(`Request content type: ${contentType}`);
+                log.debug(`Request content type: ${contentType}`);
             }
 
             // Use array to collect text chunks, avoid performance issues from string concatenation
@@ -114,7 +115,7 @@ export class MCPService {
                 totalLength += textChunk.length;
 
                 // Log large request reception progress
-                if (totalLength > 1024 * 1024 && chunks.length % 10 === 0) {
+                if (totalLength > Defaults.Limits.largeFileSize && chunks.length % 10 === 0) {
                     log.info(
                         `Received ${Math.floor(totalLength / (1024 * 1024))}MB of data so far`,
                     );
@@ -137,8 +138,8 @@ export class MCPService {
                 }
 
                 // Log large request body size
-                if (totalLength > 100 * 1024) {
-                    // Only log if larger than 100KB
+                if (totalLength > Defaults.Limits.mediumFileSize) {
+                    // Only log if larger than medium file threshold
                     log.info(`Received large request: ${totalLength} characters`);
                 }
 
@@ -148,8 +149,8 @@ export class MCPService {
                     const parsed = JSON.parse(body);
                     const parseTime = performance.now() - parseStartTime;
 
-                    if (parseTime > 100) {
-                        // Log warning if parsing takes more than 100ms
+                    if (parseTime > Defaults.Thresholds.slowParseMs) {
+                        // Log warning if parsing takes more than threshold
                         log.warn(
                             `Slow JSON parsing: ${parseTime.toFixed(2)}ms for ${totalLength} chars`,
                         );

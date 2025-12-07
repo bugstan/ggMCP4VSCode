@@ -2,6 +2,38 @@
 
 All notable changes to the GG MCP for VSCode extension will be documented in this file.
 
+## [1.1.2] - 2025-12-07
+
+### Added
+- New `replace_specific_text` tool for replacing specific text occurrences in files
+- New `append_file_content` tool for appending content to files
+- New `rewrite_file_content` tool for completely rewriting file content
+- New `run_command_on_background` tool for executing commands in the background
+- New `get_terminal_info` tool for retrieving terminal and OS information
+- New `execute_os_specific_command` tool for platform-specific command execution
+- New Git advanced tools: `get_file_history`, `get_file_diff`, `get_branch_info`, `get_commit_details`, `commit_changes`, `pull_changes`, `switch_branch`, `create_branch`
+- File caching mechanism for improved performance
+
+### Changed
+- Complete INTERFACE.md documentation rewrite with all 44 tools
+- Added comprehensive API documentation with request/response examples
+- Added tool summary table for quick reference
+- Updated README with new features and improved clarity
+- **Refactored magic numbers**: Centralized all hardcoded thresholds and limits into `Defaults.Thresholds` and `Defaults.Limits` in `config/defaults.ts`
+- Migrated threshold values across 8 files to use centralized configuration
+- Reduced log verbosity by changing many high-frequency `log.info()` to `log.debug()`
+
+### Fixed
+- Improved cross-platform path handling with `pathInProject` parameter
+- Enhanced error handling and response consistency
+- Fixed dead code in AbsTools.handle() where if-else branches were identical
+- Fixed incorrect log level (error instead of debug) for normal operation logging
+- Fixed async operations in file writes not waiting for completion, ensuring cache consistency
+- Removed unused EventEmitter code from AbsFileTools reducing complexity
+- Changed high-frequency cache and interceptor logs from info to debug level
+- Fixed potential duplicate interceptor registration with idempotent initialization
+- Added `successRaw()` method to ResponseHandler for clarity on serialization behavior
+
 ## [1.1.1] - 2025-03-30
 
 ### Added

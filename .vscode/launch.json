@@ -13,6 +13,29 @@
                 "${workspaceFolder}/dist/**/*.js"
             ],
             "preLaunchTask": "${defaultBuildTask}"
+        },
+        {
+            "name": "Extension Tests",
+            "type": "extensionHost",
+            "request": "launch",
+            "args": [
+                "--extensionDevelopmentPath=${workspaceFolder}",
+                "--extensionTestsPath=${workspaceFolder}/test",
+                "--inspect=9230"
+            ],
+            "outFiles": [
+                "${workspaceFolder}/dist/**/*.js"
+            ],
+            "preLaunchTask": "${defaultBuildTask}"
+        },
+        {
+            "name": "Unit Tests (Node)",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/test/unit-tests.js",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "preLaunchTask": "${defaultBuildTask}"
         }
     ]
 }

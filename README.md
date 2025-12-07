@@ -10,12 +10,16 @@ Supercharge your AI assistants for VSCode! This extension enables a Model Contex
 ## ✨ Key Features
 
 - **Zero Configuration** - Automatically starts when VSCode launches
+- **44 Powerful Tools** - Comprehensive set of tools for file, editor, terminal, Git, and debugging operations
 - **AI Assistant Enhancement** - Enable AI tools to read, modify, and analyze your code
 - **Code Operations** - Let AI assistants create, edit files, and search through code
+- **Advanced Code Analysis** - Symbol extraction, reference finding, and code refactoring
 - **Debugging Integration** - AI assistants can help manage breakpoints and run configurations
-- **Terminal Operations** - Allow AI assistants to run terminal commands and get results
-- **Git Integration** - Check change status, commit history
+- **Terminal Operations** - Run visible and background commands with output capture
+- **Complete Git Integration** - Branch management, commits, file history, diffs, and more
+- **Cross-Platform Support** - Works on Windows, macOS, and Linux
 - **Claude Desktop Compatible** - Fully compatible with Claude Desktop, enabling AI-driven automated development
+- **File Caching** - Efficient caching mechanism for improved performance
 
 ## 🆕 What's New in 1.1.2
 
@@ -107,6 +111,21 @@ Find all options by searching for "ggMCP" in VS Code settings:
 
 ---
 
+### Available Tools (44 total)
+
+| Category | Count | Examples |
+|----------|-------|----------|
+| Editor Tools | 5 | `get_open_in_editor_file_text`, `replace_selected_text`, `open_file_in_editor` |
+| File Tools | 9 | `get_file_text_by_path`, `create_new_file_with_text`, `replace_specific_text` |
+| Code Analysis | 3 | `get_symbols_in_file`, `find_references`, `refactor_code_at_location` |
+| Debug Tools | 4 | `toggle_debugger_breakpoint`, `run_configuration` |
+| Terminal Tools | 5 | `execute_terminal_command`, `run_command_on_background`, `get_terminal_info` |
+| Git Tools | 10 | `get_project_vcs_status`, `commit_changes`, `switch_branch`, `get_file_diff` |
+| Project Tools | 2 | `get_project_modules`, `get_project_dependencies` |
+| Action Tools | 3 | `list_available_actions`, `execute_action_by_id` |
+
 ### Detailed Documentation
 
-For more technical details and API documentation, please visit our [GitHub repository](https://github.com/bugstan/gg-mcp-for-vscode).
+For complete API documentation with examples, see [INTERFACE.md](docs/INTERFACE.md).
+
+For technical details and source code, visit our [GitHub repository](https://github.com/bugstan/gg-mcp-for-vscode).

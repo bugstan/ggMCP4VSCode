@@ -191,7 +191,7 @@ export function activate(context: vscode.ExtensionContext) {
         const newPortEnd = newConfig.getServerPortEnd();
 
         // Start new server and save reference
-        serverDisposable = startMCPServer(newPortStart, newPortEnd);
+        serverDisposable = startMCPServer(context, newPortStart, newPortEnd);
         vscode.window.showInformationMessage('MCP Server has been restarted');
         log.info('Server has been restarted');
     });
@@ -260,7 +260,7 @@ export function activate(context: vscode.ExtensionContext) {
                 updateServerStatus('starting');
                 currentServerPort = null;
 
-                serverDisposable = startMCPServer(newPortStart, newPortEnd);
+                serverDisposable = startMCPServer(context, newPortStart, newPortEnd);
             }
         }
     });
@@ -277,7 +277,7 @@ export function activate(context: vscode.ExtensionContext) {
     }, 5000);
 
     // Now start the server
-    let serverDisposable = startMCPServer();
+    let serverDisposable = startMCPServer(context);
 
     // Add disposable objects to context for cleanup when plugin is deactivated
     context.subscriptions.push(serverDisposable);

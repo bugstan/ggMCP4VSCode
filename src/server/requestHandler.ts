@@ -6,6 +6,7 @@ import { Logger } from '../utils/logger';
 import { responseHandler } from './responseHandler';
 import { RequestContext, ResponseContext } from './interceptors';
 import { InterceptorChain, initializeInterceptors } from './interceptors';
+import { Defaults } from '../config/defaults';
 
 // Create module-specific logger
 const log = Logger.forModule('RequestHandler');
@@ -221,7 +222,7 @@ export class RequestHandler {
 
             // Log interceptor performance
             const totalTime = performance.now() - startTime;
-            if (totalTime > 50) {
+            if (totalTime > Defaults.Thresholds.slowRequestHandlingMs) {
                 log.info(
                     `Interceptor chain processing: before=${beforeTime.toFixed(2)}ms, after=${afterTime.toFixed(2)}ms, total=${totalTime.toFixed(2)}ms`
                 );

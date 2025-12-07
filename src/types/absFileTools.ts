@@ -5,44 +5,17 @@ import { responseHandler } from '../server/responseHandler';
 import { FileOperationPerformance } from '../utils/performanceMonitor';
 import { FileCache } from '../server/cache';
 import { FileReloader } from '../utils/fileReloader';
+import { Defaults } from '../config/defaults';
 import path from 'path';
-import { EventEmitter } from 'events';
 
 /**
  * Base class for file operation tools
  * Provides file path handling, security checks, and performance monitoring functionality
  */
 export abstract class AbsFileTools<T extends Record<string, any> = any> extends AbsTools<T> {
-    // Add static encoder instances
+    // Static encoder instances for efficient text encoding/decoding
     private static readonly textEncoder = new TextEncoder();
     private static readonly textDecoder = new TextDecoder();
-    protected eventEmitter: EventEmitter;
-
-    constructor(name: string, description: string, parameters: any) {
-        super(name, description, parameters);
-        this.eventEmitter = new EventEmitter();
-    }
-
-    /**
-     * Emit an event
-     */
-    protected emit(event: string, data: any): void {
-        this.eventEmitter.emit(event, data);
-    }
-
-    /**
-     * Add event listener
-     */
-    public on(event: string, listener: (data: any) => void): void {
-        this.eventEmitter.on(event, listener);
-    }
-
-    /**
-     * Remove event listener
-     */
-    public off(event: string, listener: (data: any) => void): void {
-        this.eventEmitter.off(event, listener);
-    }
 
     /**
      * Core implementation of file operation logic
@@ -78,10 +51,12 @@ export abstract class AbsFileTools<T extends Record<string, any> = any> extends 
      * Record performance data
      */
     protected recordPerformance(path: string, timeMs: number): void {
-        if (timeMs > 200) {
+        const { slowFileOperationMs, verySlowFileOperationMs } = Defaults.Thresholds;
+
+        if (timeMs > slowFileOperationMs) {
             this.log.info(`File operation on ${path} took ${timeMs.toFixed(2)}ms`);
             // Record file operation performance (if involves large content)
-            if (timeMs > 500) {
+            if (timeMs > verySlowFileOperationMs) {
                 FileOperationPerformance.recordFileWrite(path, 0, timeMs);
             }
         }
@@ -123,21 +98,30 @@ export abstract class AbsFileTools<T extends Record<string, any> = any> extends 
             const data = AbsFileTools.textEncoder.encode(content);
             await vscode.workspace.fs.writeFile(uri, data);
 
-            // Handle cache update and file reload asynchronously if not skipped
+            // Handle cache update and file reload synchronously to ensure data consistency
             if (!options?.skipCacheUpdate) {
-                setImmediate(() => {
-                    // Update cache with new content
+                const postWriteOperations: Promise<void>[] = [];
+
+                // Update cache with new content
+                postWriteOperations.push(
                     FileCache.updateCache(uri.fsPath, content).catch((err) => {
                         this.log.error(`Error updating cache for file: ${uri.fsPath}`, err);
                         // If cache update fails, invalidate the cache to ensure consistency
                         FileCache.invalidate(uri.fsPath);
-                    });
+                    })
+                );
 
-                    // Reload file in editor
-                    FileReloader.reloadFile(uri.fsPath).catch((err) => {
-                        this.log.error(`Error reloading file: ${uri.fsPath}`, err);
-                    });
-                });
+                // Reload file in editor (convert boolean result to void)
+                postWriteOperations.push(
+                    FileReloader.reloadFile(uri.fsPath)
+                        .then(() => { /* ignore boolean result */ })
+                        .catch((err) => {
+                            this.log.error(`Error reloading file: ${uri.fsPath}`, err);
+                        })
+                );
+
+                // Wait for all post-write operations to complete
+                await Promise.allSettled(postWriteOperations);
             }
         } catch (error) {
             // If file write fails, invalidate the cache
@@ -298,11 +282,12 @@ export abstract class AbsFileTools<T extends Record<string, any> = any> extends 
             reloadAfterWrite?: boolean;
             delayReloadMs?: number;
             useCache?: boolean;
+            waitForReload?: boolean; // New option to wait for reload completion
         },
     ): Promise<{ writeTimeMs: number; size: number }> {
         const startTime = performance.now();
         const textLength = content?.length || 0;
-        const isLargeFile = textLength > 1024 * 1024; // Consider files larger than 1MB as large files
+        const isLargeFile = textLength > Defaults.Limits.largeFileSize;
 
         if (isLargeFile) {
             this.log.info(`Processing large file write: ${textLength} characters`);
@@ -326,7 +311,7 @@ export abstract class AbsFileTools<T extends Record<string, any> = any> extends 
             100,
         );
 
-        this.log.info('Text encoding -- encodeTimeMs:', encodeTimeMs, 'bytes:', bytes);
+        this.log.debug('Text encoding -- encodeTimeMs:', encodeTimeMs, 'bytes:', bytes.length);
 
         // Write file and measure performance
         const { timeMs: writeTimeMs } = await this.measurePerformance(
@@ -342,8 +327,7 @@ export abstract class AbsFileTools<T extends Record<string, any> = any> extends 
 
         // Handle file reload
         if (options?.reloadAfterWrite !== false && fileExists) {
-            const delayMs = options?.delayReloadMs || (isLargeFile ? 100 : 10);
-            setTimeout(async () => {
+            const reloadOperation = async () => {
                 try {
                     const { timeMs: reloadTimeMs, result: reloadSuccess } =
                         await this.measurePerformance(
@@ -351,7 +335,7 @@ export abstract class AbsFileTools<T extends Record<string, any> = any> extends 
                             async () => FileReloader.reloadFile(absolutePath),
                             200,
                         );
-                    this.log.info(
+                    this.log.debug(
                         'reloadAfterWrite -- timeMs:',
                         reloadTimeMs,
                         'reloadSuccess:',
@@ -360,7 +344,18 @@ export abstract class AbsFileTools<T extends Record<string, any> = any> extends 
                 } catch (reloadErr) {
                     this.log.error(`Error reloading file: ${absolutePath}`, reloadErr);
                 }
-            }, delayMs);
+            };
+
+            // Wait for reload if specified, otherwise execute in background
+            if (options?.waitForReload) {
+                await reloadOperation();
+            } else {
+                // For backward compatibility, still allow async reload but with proper error handling
+                const delayMs = options?.delayReloadMs || (isLargeFile ? 100 : 10);
+                setTimeout(() => {
+                    reloadOperation();
+                }, delayMs);
+            }
         }
 
         // Record file write performance data

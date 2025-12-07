@@ -93,17 +93,41 @@ export class ResponseHandler {
     }
 
     /**
-     * Create standard response object
-     * @param data Response data
-     * @param error Error message
+     * Create standard response object with automatic JSON serialization.
+     *
+     * Note: This method automatically converts non-string data to JSON string
+     * for MCP protocol compatibility. If you want to preserve the original
+     * data type, use successRaw() instead.
+     *
+     * @param data Response data (will be JSON.stringify'd if not a string)
+     * @param error Error message (optional)
      * @returns Standard response object
      */
     public success(data: any, error: string | null = null): Response {
-        // Convert data to string if it's not already a string
+        // Convert data to JSON string if it's not already a string
+        // This is required for MCP protocol compatibility
+        let serializedData = data;
         if (data !== null && typeof data !== 'string') {
-            data = JSON.stringify(data);
+            serializedData = JSON.stringify(data);
         }
 
+        return {
+            status: serializedData,
+            error,
+        };
+    }
+
+    /**
+     * Create standard response object without automatic serialization.
+     *
+     * Use this method when you want to preserve the original data type
+     * (e.g., for internal use or when data is already serialized).
+     *
+     * @param data Response data (preserved as-is)
+     * @param error Error message (optional)
+     * @returns Standard response object with raw data
+     */
+    public successRaw(data: any, error: string | null = null): Response {
         return {
             status: data,
             error,

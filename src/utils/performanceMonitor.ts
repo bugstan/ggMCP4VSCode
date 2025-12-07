@@ -1,4 +1,5 @@
 import { Logger } from './logger';
+import { Defaults } from '../config/defaults';
 
 // Define category types
 type CategoryKey = 'small' | 'medium' | 'large';
@@ -59,9 +60,9 @@ export class FileOperationPerformance {
 
         // Determine file size category
         let category: CategoryKey = 'small';
-        if (chars > 1024 * 1024) {
+        if (chars > Defaults.Limits.largeFileSize) {
             category = 'large';
-        } else if (chars > 100 * 1024) {
+        } else if (chars > Defaults.Limits.mediumFileSize) {
             category = 'medium';
         }
 
@@ -72,8 +73,8 @@ export class FileOperationPerformance {
         cat.totalChars += chars;
 
         // Record slow operations
-        if (timeMs > 1000) {
-            // Consider operations taking more than 1 second as slow
+        if (timeMs > Defaults.Performance.slowOperationThreshold) {
+            // Consider operations taking more than threshold as slow
             this.metrics.slowOperations++;
 
             // Update slowest operation record

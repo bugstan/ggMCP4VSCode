@@ -7,6 +7,7 @@
 import { Logger } from '../../utils/logger';
 import { Interceptor, RequestContext, ResponseContext } from './types';
 import { getConfig } from '../../config';
+import { Defaults } from '../../config/defaults';
 
 // Create module-specific logger
 const log = Logger.forModule('InterceptorChain');
@@ -83,14 +84,14 @@ export class InterceptorChain {
         let currentContext = { ...context };
 
         // Log start of interception processing
-        log.info(`Processing interceptors for request: ${context.toolName}`);
+        log.debug(`Processing interceptors for request: ${context.toolName}`);
 
         // Execute beforeRequest methods of all interceptors in sequence
         for (const interceptor of this.interceptors) {
             try {
                 // Check if interceptor is enabled in configuration
                 if (!this.isInterceptorEnabled(interceptor)) {
-                    log.info(`Skipping disabled interceptor: ${interceptor.name}`);
+                    log.debug(`Skipping disabled interceptor: ${interceptor.name}`);
                     continue;
                 }
 
@@ -110,8 +111,8 @@ export class InterceptorChain {
                 currentContext = result;
 
                 // Log interceptors that take more than 10ms to process
-                if (duration > 10) {
-                    log.info(
+                if (duration > Defaults.Thresholds.slowInterceptorMs) {
+                    log.debug(
                         `Interceptor ${interceptor.name}.beforeRequest took ${duration.toFixed(2)}ms`
                     );
                 }
@@ -138,7 +139,7 @@ export class InterceptorChain {
         let currentResponse = { ...response };
 
         // Log start of interception processing
-        log.info(`Processing interceptors for response: ${request.toolName}`);
+        log.debug(`Processing interceptors for response: ${request.toolName}`);
 
         // Execute afterResponse methods of all interceptors in reverse sequence
         // Note: afterResponse execution order is opposite to beforeRequest
@@ -146,7 +147,7 @@ export class InterceptorChain {
             try {
                 // Check if interceptor is enabled in configuration
                 if (!this.isInterceptorEnabled(interceptor)) {
-                    log.info(`Skipping disabled interceptor: ${interceptor.name}`);
+                    log.debug(`Skipping disabled interceptor: ${interceptor.name}`);
                     continue;
                 }
 
@@ -155,8 +156,8 @@ export class InterceptorChain {
                 const duration = performance.now() - startTime;
 
                 // Log interceptors that take more than 10ms to process
-                if (duration > 10) {
-                    log.info(
+                if (duration > Defaults.Thresholds.slowInterceptorMs) {
+                    log.debug(
                         `Interceptor ${interceptor.name}.afterResponse took ${duration.toFixed(2)}ms`
                     );
                 }

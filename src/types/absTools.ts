@@ -2,6 +2,7 @@ import { Response } from './index';
 import { JsonSchemaObject, McpTool } from './toolInterfaces';
 import { formatError, responseHandler } from '../server/responseHandler';
 import { Logger } from '../utils/logger';
+import { Defaults } from '../config/defaults';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import {
@@ -11,6 +12,7 @@ import {
     toAbsolutePath,
     toRelativePath,
 } from '../utils/pathUtils';
+
 
 /**
  * Abstract Tool Base Class
@@ -42,19 +44,21 @@ export abstract class AbsTools<T = any> implements McpTool<T> {
             // Parameter validation (optional)
             this.validateArgs(args);
 
-            // Log operation start
-            this.log.error(`Executing ${this.name}`, this.getLogSafeArgs(args));
+            // Log operation start at debug level (not error level)
+            this.log.debug(`Executing ${this.name}`, this.getLogSafeArgs(args));
 
             // Call core logic implemented by subclasses
             const result = await this.executeCore(args);
 
             // Log operation completion time
             const totalTime = performance.now() - startTime;
+            const slowThreshold = Defaults.Thresholds.slowToolOperationMs;
 
-            if (totalTime > 100) {
-                this.log.info(`${this.name} completed in ${totalTime.toFixed(2)}ms`);
+            // Only log at info level if operation took longer than threshold
+            if (totalTime > slowThreshold) {
+                this.log.info(`${this.name} completed in ${totalTime.toFixed(2)}ms (slow)`);
             } else {
-                this.log.info(`${this.name} completed in ${totalTime.toFixed(2)}ms`);
+                this.log.debug(`${this.name} completed in ${totalTime.toFixed(2)}ms`);
             }
 
             return result;
@@ -96,14 +100,15 @@ export abstract class AbsTools<T = any> implements McpTool<T> {
         if (!args) return {};
 
         const safeArgs: Record<string, any> = {};
+        const truncationLength = Defaults.Thresholds.logTruncationLength;
 
         // Handle common parameter types
         for (const [key, value] of Object.entries(args as Record<string, any>)) {
             if (typeof value === 'string') {
                 // Truncate long strings
                 safeArgs[key] =
-                    value.length > 100
-                        ? `${value.substring(0, 100)}... (${value.length} chars)`
+                    value.length > truncationLength
+                        ? `${value.substring(0, truncationLength)}... (${value.length} chars)`
                         : value;
             } else if (
                 key.toLowerCase().includes('password') ||

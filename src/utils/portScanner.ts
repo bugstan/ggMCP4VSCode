@@ -216,7 +216,7 @@ async function checkPortWithRetries(
  * @param timeout Timeout time (milliseconds)
  * @returns Whether the port is available
  */
-function isPortAvailable(port: number, timeout: number): Promise<boolean> {
+export function isPortAvailable(port: number, timeout: number): Promise<boolean> {
     return new Promise((resolve: (value: boolean) => void) => {
         // Create a server instance to try binding the port
         const server = net.createServer();

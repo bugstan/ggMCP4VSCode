@@ -7,6 +7,7 @@
 import { Interceptor, RequestContext, ResponseContext } from './types';
 import { Logger } from '../../utils/logger';
 import { FileCache } from '../cache';
+import { Defaults } from '../../config/defaults';
 
 // Create module-specific logger
 const log = Logger.forModule('OperationInterceptor');
@@ -41,7 +42,7 @@ export class OperationInterceptor implements Interceptor {
         try {
             // Log operation start
             const operationType = this.getOperationType(context.toolName);
-            log.info(`Starting operation: ${context.toolName} (${operationType})`);
+            log.debug(`Starting operation: ${context.toolName} (${operationType})`);
 
             // Log request parameters (excluding sensitive information and large content)
             this.logRequestParams(context);
@@ -74,7 +75,7 @@ export class OperationInterceptor implements Interceptor {
 
             // Log operation results
             const status = response.response.error ? 'ERROR' : 'SUCCESS';
-            log.info(
+            log.debug(
                 `Operation ${request.toolName} completed: ${status} (${duration.toFixed(2)}ms)`
             );
 
@@ -121,6 +122,7 @@ export class OperationInterceptor implements Interceptor {
     private logRequestParams(context: RequestContext): void {
         try {
             const { toolName, params } = context;
+            const truncationLength = Defaults.Thresholds.logTruncationLength;
 
             // Deep copy parameters for safe handling
             const safeParams = JSON.parse(JSON.stringify(params || {}));
@@ -129,13 +131,13 @@ export class OperationInterceptor implements Interceptor {
             if (
                 safeParams.text &&
                 typeof safeParams.text === 'string' &&
-                safeParams.text.length > 100
+                safeParams.text.length > truncationLength
             ) {
-                safeParams.text = `${safeParams.text.substring(0, 100)}... (${safeParams.text.length} characters)`;
+                safeParams.text = `${safeParams.text.substring(0, truncationLength)}... (${safeParams.text.length} characters)`;
             }
 
             // Log processed request parameters
-            log.info(`Request params for ${toolName}:`, safeParams);
+            log.debug(`Request params for ${toolName}:`, safeParams);
         } catch (error) {
             log.warn(`Error logging request params for ${context.toolName}:`, error);
         }
@@ -157,7 +159,7 @@ export class OperationInterceptor implements Interceptor {
                 if (params.filePath) {
                     // Directly invalidate specific file cache
                     const path = params.filePath;
-                    log.info(`Invalidating file cache for: ${path}`);
+                    log.debug(`Invalidating file cache for: ${path}`);
                     FileCache.invalidate(path);
                 }
             }

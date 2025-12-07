@@ -152,7 +152,7 @@ export class CacheManager<T> {
             this.cache.set(key, entry);
             this.totalSize += size;
 
-            log.info(
+            log.debug(
                 `Cache set: "${key}" (${size} bytes), total size: ${this.totalSize} bytes, entries: ${this.cache.size}`
             );
             return true;
@@ -173,19 +173,19 @@ export class CacheManager<T> {
 
             // Return undefined if not found
             if (!entry) {
-                log.info(`Cache miss: "${key}"`);
+                log.debug(`Cache miss: "${key}"`);
                 return undefined;
             }
 
             // Check if entry has expired
             const now = Date.now();
             if (now - entry.timestamp > this.options.ttl) {
-                log.info(`Cache expired: "${key}", age: ${now - entry.timestamp}ms`);
+                log.debug(`Cache expired: "${key}", age: ${now - entry.timestamp}ms`);
                 this.delete(key);
                 return undefined;
             }
 
-            log.info(`Cache hit: "${key}", age: ${now - entry.timestamp}ms`);
+            log.debug(`Cache hit: "${key}", age: ${now - entry.timestamp}ms`);
             return entry.data;
         } catch (error) {
             log.error(`Error getting cache entry for key "${key}":`, error);
@@ -204,19 +204,19 @@ export class CacheManager<T> {
 
             // Return undefined if not found
             if (!entry) {
-                log.info(`Cache miss: "${key}"`);
+                log.debug(`Cache miss: "${key}"`);
                 return undefined;
             }
 
             // Check if entry has expired
             const now = Date.now();
             if (now - entry.timestamp > this.options.ttl) {
-                log.info(`Cache expired: "${key}", age: ${now - entry.timestamp}ms`);
+                log.debug(`Cache expired: "${key}", age: ${now - entry.timestamp}ms`);
                 this.delete(key);
                 return undefined;
             }
 
-            log.info(`Cache hit with metadata: "${key}", age: ${now - entry.timestamp}ms`);
+            log.debug(`Cache hit with metadata: "${key}", age: ${now - entry.timestamp}ms`);
             return entry;
         } catch (error) {
             log.error(`Error getting cache entry with metadata for key "${key}":`, error);
@@ -235,7 +235,7 @@ export class CacheManager<T> {
             if (entry) {
                 this.totalSize -= entry.size;
                 this.cache.delete(key);
-                log.info(
+                log.debug(
                     `Cache delete: "${key}", total size: ${this.totalSize} bytes, entries: ${this.cache.size}`
                 );
                 return true;
@@ -282,7 +282,7 @@ export class CacheManager<T> {
                 const size = this.cache.get(oldestKey)!.size;
                 this.cache.delete(oldestKey);
                 this.totalSize -= size;
-                log.info(
+                log.debug(
                     `Cache evicted oldest entry: "${oldestKey}", age: ${Date.now() - oldestTime}ms`
                 );
                 return true;

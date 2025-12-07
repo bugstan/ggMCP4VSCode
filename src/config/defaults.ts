@@ -130,4 +130,45 @@ export const Defaults = {
         /** Whether to capture detailed timing information */
         captureTimingInfo: false,
     },
+
+    /**
+     * Thresholds for logging and performance monitoring
+     * These values control when operations are considered "slow" and logged
+     */
+    Thresholds: {
+        /** Time threshold for logging slow tool operations (ms) */
+        slowToolOperationMs: 100,
+        /** Time threshold for logging slow file operations (ms) */
+        slowFileOperationMs: 200,
+        /** Time threshold for warning about very slow file operations (ms) */
+        verySlowFileOperationMs: 500,
+        /** Time threshold for logging slow interceptor operations (ms) */
+        slowInterceptorMs: 10,
+        /** Time threshold for logging slow request handling (ms) */
+        slowRequestHandlingMs: 50,
+        /** Time threshold for logging slow parse operations (ms) */
+        slowParseMs: 100,
+        /** String length threshold for truncation in logs */
+        logTruncationLength: 100,
+    },
+
+    /**
+     * Size limits for various operations
+     */
+    Limits: {
+        /** Large file size threshold (bytes) */
+        largeFileSize: 1024 * 1024, // 1MB
+        /** Medium file size threshold (bytes) */
+        mediumFileSize: 100 * 1024, // 100KB
+        /** Maximum buffer size for command output (bytes) */
+        commandBufferSize: 1024 * 1024, // 1MB
+        /** Maximum number of concurrent file operations */
+        maxConcurrentFileOps: 10,
+        /** Maximum output lines for terminal commands */
+        maxTerminalOutputLines: 100,
+        /** Large file reload delay (milliseconds) */
+        largeFileReloadDelayMs: 100,
+        /** Small file reload delay (milliseconds) */
+        smallFileReloadDelayMs: 10,
+    },
 };

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import http from 'http';
-import { findAvailablePort } from '../utils/portScanner';
+import { findAvailablePort, isPortAvailable } from '../utils/portScanner';
 import { Logger } from '../utils/logger';
 import { MCPService } from './mcpService';
 import { getConfig } from '../config';
@@ -8,12 +8,56 @@ import { getConfig } from '../config';
 // Create module-specific logger
 const log = Logger.forModule('ServerManager');
 
+// Key for storing last successful port in workspace storage
+const LAST_PORT_STORAGE_KEY = 'ggMCP.lastSuccessfulPort';
+
 /**
  * Server Manager - Responsible for starting and managing the HTTP server
  */
 export class ServerManager {
     private server: http.Server | null = null;
     private isDisposed = false;
+    private extensionContext: vscode.ExtensionContext | null = null;
+
+    /**
+     * Initialize server manager with extension context for storage
+     * @param context Extension context for storage access
+     */
+    public initialize(context: vscode.ExtensionContext): void {
+        this.extensionContext = context;
+        log.info('Server manager initialized with extension context');
+    }
+
+    /**
+     * Get last successfully used port from storage
+     * @returns Last used port or null if not available
+     */
+    private getLastSuccessfulPort(): number | null {
+        if (!this.extensionContext) {
+            log.warn('No extension context available, cannot retrieve last port');
+            return null;
+        }
+
+        const lastPort = this.extensionContext.globalState.get<number>(LAST_PORT_STORAGE_KEY);
+        if (lastPort) {
+            log.info(`Found last successful port in storage: ${lastPort}`);
+        }
+        return lastPort || null;
+    }
+
+    /**
+     * Save successfully used port to storage
+     * @param port Port number to save
+     */
+    private saveSuccessfulPort(port: number): void {
+        if (!this.extensionContext) {
+            log.warn('No extension context available, cannot save port');
+            return;
+        }
+
+        this.extensionContext.globalState.update(LAST_PORT_STORAGE_KEY, port);
+        log.info(`Saved successful port ${port} to storage`);
+    }
 
     /**
      * Start MCP server
@@ -36,14 +80,38 @@ export class ServerManager {
             const timeout = config.getPortScanTimeout();
             const concurrency = config.getPortScanConcurrency();
             const retries = config.getPortScanRetries();
+            let port: number | null = null;
 
-            // Find available port using configuration options
-            const port = await findAvailablePort(portStart, portEnd, {
-                timeout,
-                concurrency,
-                retries,
-                preferredPorts: config.getPreferredPorts(),
-            });
+            // First try last successful port if available
+            const lastPort = this.getLastSuccessfulPort();
+            if (lastPort) {
+                log.info(`Trying last successful port: ${lastPort}`);
+                
+                // Check if the last port is still available
+                const isAvailable = await isPortAvailable(lastPort, timeout);
+                if (isAvailable) {
+                    log.info(`Last port ${lastPort} is available, using it`);
+                    port = lastPort;
+                } else {
+                    log.info(`Last port ${lastPort} is no longer available, searching for new port`);
+                }
+            }
+
+            // If we couldn't use the last port, find a new one
+            if (!port) {
+                // Add last port to preferred ports if available
+                const preferredPorts = lastPort 
+                    ? [lastPort, ...config.getPreferredPorts()]
+                    : config.getPreferredPorts();
+
+                // Find available port using configuration options
+                port = await findAvailablePort(portStart, portEnd, {
+                    timeout,
+                    concurrency,
+                    retries,
+                    preferredPorts: preferredPorts,
+                });
+            }
 
             if (!port) {
                 const errorMsg = `Could not find available port in range ${portStart}-${portEnd}`;
@@ -70,6 +138,9 @@ export class ServerManager {
 
             // Start listening on the port
             await this.startListening(port);
+
+            // Save successful port for future use
+            this.saveSuccessfulPort(port);
 
             return {
                 dispose: () => this.dispose(),
