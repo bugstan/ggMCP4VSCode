@@ -76,7 +76,7 @@
                 "ggMCP.terminalTimeout": {
                     "type": "number",
                     "default": 15000,
-                    "description": "Terminal command execution execution timeout (milliseconds)"
+                    "description": "Terminal command execution timeout (milliseconds)"
                 },
                 "ggMCP.enableLogging": {
                     "type": "boolean",
