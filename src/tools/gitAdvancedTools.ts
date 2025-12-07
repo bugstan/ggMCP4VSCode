@@ -1,4 +1,5 @@
 import { AbsGitTools } from '../types/absGitTools';
+import { GitRepository } from '../types/gitTypes';
 import { Response, ToolParams } from '../types';
 import { responseHandler } from '../server/responseHandler';
 
@@ -26,7 +27,7 @@ export class GetFileHistoryTool extends AbsGitTools<ToolParams['getFileHistory']
      * Execute Git get file history operation (implementing base class abstract method)
      */
     protected async executeGitOperation(
-        _repository: any,
+        _repository: GitRepository,
         args: ToolParams['getFileHistory']
     ): Promise<Response> {
         try {
@@ -88,7 +89,7 @@ export class GetFileDiffTool extends AbsGitTools<ToolParams['getFileDiff']> {
      * Execute git operation (implementing base class abstract method)
      */
     protected async executeGitOperation(
-        _repository: any,
+        _repository: GitRepository,
         args: ToolParams['getFileDiff']
     ): Promise<Response> {
         try {
@@ -149,7 +150,7 @@ export class GetBranchInfoTool extends AbsGitTools {
     /**
      * Execute Git get branch info operation (implementing base class abstract method)
      */
-    protected async executeGitOperation(_repository: any, _args: any): Promise<Response> {
+    protected async executeGitOperation(_repository: GitRepository, _args: Record<string, never>): Promise<Response> {
         try {
             const command =
                 'git branch -a --format="%(refname:short)|%(upstream:short)|%(objectname:short)"';
@@ -193,7 +194,7 @@ export class GetCommitDetailsTool extends AbsGitTools<ToolParams['getCommitDetai
      * Execute Git get commit details operation (implementing base class abstract method)
      */
     protected async executeGitOperation(
-        _repository: any,
+        _repository: GitRepository,
         args: ToolParams['getCommitDetails']
     ): Promise<Response> {
         try {
@@ -254,7 +255,7 @@ export class CommitChangesTool extends AbsGitTools<ToolParams['commitChanges']> 
      * Execute Git commit changes operation (implementing base class abstract method)
      */
     protected async executeGitOperation(
-        _repository: any,
+        _repository: GitRepository,
         args: ToolParams['commitChanges']
     ): Promise<Response> {
         try {
@@ -356,7 +357,7 @@ export class PullChangesTool extends AbsGitTools<ToolParams['pullChanges']> {
     }
 
     protected async executeGitOperation(
-        _repository: any,
+        _repository: GitRepository,
         args: ToolParams['pullChanges']
     ): Promise<Response> {
         try {
@@ -454,7 +455,7 @@ export class SwitchBranchTool extends AbsGitTools<ToolParams['switchBranch']> {
     }
 
     protected async executeGitOperation(
-        _repository: any,
+        _repository: GitRepository,
         args: ToolParams['switchBranch']
     ): Promise<Response> {
         try {
@@ -530,7 +531,7 @@ export class CreateBranchTool extends AbsGitTools<ToolParams['createBranch']> {
     }
 
     protected async executeGitOperation(
-        _repository: any,
+        _repository: GitRepository,
         args: ToolParams['createBranch']
     ): Promise<Response> {
         try {

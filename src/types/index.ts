@@ -1,15 +1,33 @@
 /**
  * Unified response interface definition
+ *
+ * @template T - The type of the status data (defaults to string for MCP protocol compatibility)
+ *
+ * Note: The MCP protocol expects string responses, so most tools return stringified JSON.
+ * Use Response<T> when you need type-safe internal responses.
  */
-export interface Response {
-    status: any | null;
+export interface Response<T = string | null> {
+    /** Response data - typically a JSON string for MCP protocol or null on error */
+    status: T;
+    /** Error message if operation failed, null otherwise */
     error: string | null;
 }
+
+/**
+ * Success response type - convenience type for successful responses
+ */
+export type SuccessResponse<T = string> = Response<T> & { error: null };
+
+/**
+ * Error response type - convenience type for error responses
+ */
+export type ErrorResponse = Response<null> & { error: string };
 
 /**
  * Tool handler type definition
  */
 export type ToolHandler = (args: any) => Promise<Response>;
+
 
 /**
  * Common tool parameters type definitions

@@ -22,6 +22,9 @@ All notable changes to the GG MCP for VSCode extension will be documented in thi
 - **Refactored magic numbers**: Centralized all hardcoded thresholds and limits into `Defaults.Thresholds` and `Defaults.Limits` in `config/defaults.ts`
 - Migrated threshold values across 8 files to use centralized configuration
 - Reduced log verbosity by changing many high-frequency `log.info()` to `log.debug()`
+- **Improved type safety**: Added generic support to `Response<T>` interface with `SuccessResponse` and `ErrorResponse` types
+- Added `GitRepository` and related Git types in `src/types/gitTypes.ts` for type-safe Git operations
+- Updated all Git tools to use `GitRepository` type instead of `any`
 
 ### Fixed
 - Improved cross-platform path handling with `pathInProject` parameter

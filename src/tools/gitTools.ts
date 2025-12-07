@@ -1,4 +1,5 @@
 import { AbsGitTools } from '../types/absGitTools';
+import { GitRepository } from '../types/gitTypes';
 import { Response, ToolParams } from '../types';
 import { responseHandler } from '../server/responseHandler';
 import { toRelativePath } from '../utils/pathUtils';
@@ -22,7 +23,7 @@ export class GetProjectVcsStatusTool extends AbsGitTools {
     /**
      * Execute Git version control status operation (implementing base class abstract method)
      */
-    protected async executeGitOperation(repository: any, _args: any): Promise<Response> {
+    protected async executeGitOperation(repository: GitRepository, _args: Record<string, never>): Promise<Response> {
         try {
             // Use base class getWorkingTreeChanges method to get changes
             const changes = this.getWorkingTreeChanges(repository);
@@ -88,7 +89,7 @@ export class FindCommitByMessageTool extends AbsGitTools<ToolParams['findCommitB
      * Execute Git find commit operation (implementing base class abstract method)
      */
     protected async executeGitOperation(
-        _repository: any,
+        _repository: GitRepository,
         args: ToolParams['findCommitByMessage']
     ): Promise<Response> {
         try {

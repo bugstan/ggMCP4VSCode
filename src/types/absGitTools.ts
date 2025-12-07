@@ -1,4 +1,5 @@
 import { Response } from './index';
+import { GitRepository } from './gitTypes';
 import { AbsTools } from './absTools';
 import { responseHandler } from '../server/responseHandler';
 import { withGitRepository, executeGitCommand, escapeShellArg } from '../utils/gitUtils';
@@ -25,14 +26,16 @@ export abstract class AbsGitTools<T = any> extends AbsTools<T> {
             }
 
             // Execute specific Git operation
-            return await this.executeGitOperation(repository, args);
+            return await this.executeGitOperation(repository as GitRepository, args);
         });
     }
 
     /**
      * Execute specific Git operation, to be implemented by subclasses
+     * @param repository Git repository instance
+     * @param args Tool arguments
      */
-    protected abstract executeGitOperation(repository: any, args: T): Promise<Response>;
+    protected abstract executeGitOperation(repository: GitRepository, args: T): Promise<Response>;
 
     /**
      * Execute Git command and parse output
