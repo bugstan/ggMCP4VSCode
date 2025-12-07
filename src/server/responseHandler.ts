@@ -1,5 +1,5 @@
 import http from 'http';
-import { Response } from '../types';
+import { Response, McpContent } from '../types';
 import { Logger } from '../utils/logger';
 import { ResponseContext } from './interceptors';
 
@@ -7,8 +7,8 @@ import { ResponseContext } from './interceptors';
 const log = Logger.forModule('ResponseHandler');
 
 /**
- * Response Handler Class - Processes various types of HTTP responses
- * Responsible for formatting responses, adding necessary headers, and handling error cases
+ * Response Handler Class - Handles MCP-compliant HTTP responses
+ * All responses follow MCP specification: https://modelcontextprotocol.io/docs/concepts/tools#tool-result
  */
 export class ResponseHandler {
     /**
@@ -32,26 +32,22 @@ export class ResponseHandler {
 
             // Log response information
             const responseSize = Buffer.byteLength(jsonResponse, 'utf8');
-            log.info(`Sent response (status=${statusCode}, size=${responseSize} bytes)`);
+            log.debug(`Sent response (status=${statusCode}, size=${responseSize} bytes)`);
         } catch (error) {
             // Handle errors that might occur during response sending
             log.error('Error sending response:', error);
 
-            // Try to send a simple error response
+            // Try to send a simple error response in MCP format
             try {
                 res.statusCode = 500;
                 res.setHeader('Content-Type', 'application/json');
-                res.end(
-                    JSON.stringify({
-                        error: 'Internal server error while sending response',
-                    })
-                );
+                res.end(JSON.stringify(this.failure('Internal server error while sending response')));
             } catch {
                 // If even simple error response cannot be sent, try to end response
                 try {
                     res.end();
                 } catch {
-                    // Nothing more we can do, we've tried our best
+                    // Nothing more we can do
                 }
             }
         }
@@ -68,7 +64,7 @@ export class ResponseHandler {
     }
 
     /**
-     * Handle server errors
+     * Handle server errors - returns MCP-compliant error response
      * @param res HTTP response object
      * @param error Error object
      * @param message Error message
@@ -80,62 +76,65 @@ export class ResponseHandler {
         this.sendJsonResponse(res, 500, this.failure(`${message}: ${errorMessage}`));
     }
 
+    // =========================================================================
+    // MCP Protocol Compliant Response Methods
+    // See: https://modelcontextprotocol.io/docs/concepts/tools#tool-result
+    // =========================================================================
+
     /**
-     * Create error response object
+     * Create MCP-compliant success response with text content
+     *
+     * @param data Response data (will be converted to text content)
+     * @returns MCP tool result with content array
+     */
+    public success(data: any): Response {
+        const text = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+        return {
+            content: [{ type: 'text', text }],
+            isError: false,
+        };
+    }
+
+    /**
+     * Create MCP-compliant error response
+     *
      * @param message Error message
-     * @returns Error response object
+     * @returns MCP tool result with isError flag
      */
     public failure(message: string): Response {
         return {
-            status: null,
-            error: message,
+            content: [{ type: 'text', text: message }],
+            isError: true,
         };
     }
 
     /**
-     * Create standard response object with automatic JSON serialization.
+     * Create MCP-compliant response with multiple content items
      *
-     * Note: This method automatically converts non-string data to JSON string
-     * for MCP protocol compatibility. If you want to preserve the original
-     * data type, use successRaw() instead.
-     *
-     * @param data Response data (will be JSON.stringify'd if not a string)
-     * @param error Error message (optional)
-     * @returns Standard response object
+     * @param contents Array of content items
+     * @param isError Whether this is an error response
+     * @returns MCP tool result
      */
-    public success(data: any, error: string | null = null): Response {
-        // Convert data to JSON string if it's not already a string
-        // This is required for MCP protocol compatibility
-        let serializedData = data;
-        if (data !== null && typeof data !== 'string') {
-            serializedData = JSON.stringify(data);
-        }
-
+    public result(contents: McpContent[], isError: boolean = false): Response {
         return {
-            status: serializedData,
-            error,
+            content: contents,
+            isError,
         };
     }
 
     /**
-     * Create standard response object without automatic serialization.
+     * Create text content item
      *
-     * Use this method when you want to preserve the original data type
-     * (e.g., for internal use or when data is already serialized).
-     *
-     * @param data Response data (preserved as-is)
-     * @param error Error message (optional)
-     * @returns Standard response object with raw data
+     * @param text Text content
+     * @returns MCP text content item
      */
-    public successRaw(data: any, error: string | null = null): Response {
-        return {
-            status: data,
-            error,
-        };
+    public textContent(text: string): McpContent {
+        return { type: 'text', text };
     }
 
     /**
-     * Create JSON-RPC response
+     * Create JSON-RPC 2.0 response wrapper
+     * Used for initialize/status endpoints
      * @param result Result object
      * @param id Request ID
      * @returns JSON-RPC response object

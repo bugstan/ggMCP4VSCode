@@ -1,27 +1,59 @@
+// ============================================================================
+// MCP Protocol Compliant Types
+// See: https://modelcontextprotocol.io/docs/concepts/tools
+// ============================================================================
+
 /**
- * Unified response interface definition
- *
- * @template T - The type of the status data (defaults to string for MCP protocol compatibility)
- *
- * Note: The MCP protocol expects string responses, so most tools return stringified JSON.
- * Use Response<T> when you need type-safe internal responses.
+ * MCP Content item - represents a piece of content in a tool result
+ * See: https://modelcontextprotocol.io/docs/concepts/tools#tool-result
  */
-export interface Response<T = string | null> {
-    /** Response data - typically a JSON string for MCP protocol or null on error */
-    status: T;
-    /** Error message if operation failed, null otherwise */
-    error: string | null;
+export interface McpContent {
+    /** Content type: text, image, audio, resource_link, or resource */
+    type: 'text' | 'image' | 'audio' | 'resource_link' | 'resource';
+    /** Text content (for type: text) */
+    text?: string;
+    /** Base64-encoded data (for type: image, audio) */
+    data?: string;
+    /** MIME type (for type: image, audio) */
+    mimeType?: string;
+    /** Resource URI (for type: resource_link) */
+    uri?: string;
+    /** Resource name (for type: resource_link) */
+    name?: string;
+    /** Resource description (for type: resource_link) */
+    description?: string;
+    /** Embedded resource (for type: resource) */
+    resource?: {
+        uri: string;
+        mimeType?: string;
+        text?: string;
+        blob?: string;
+    };
+    /** Content annotations */
+    annotations?: {
+        audience?: ('user' | 'assistant')[];
+        priority?: number;
+    };
 }
 
 /**
- * Success response type - convenience type for successful responses
+ * MCP Tool Result - the standard response format for tool calls
+ * This is the main Response type used throughout the application
+ * See: https://modelcontextprotocol.io/docs/concepts/tools#tool-result
  */
-export type SuccessResponse<T = string> = Response<T> & { error: null };
+export interface Response {
+    /** Array of content items */
+    content: McpContent[];
+    /** Whether this result represents an error */
+    isError?: boolean;
+    /** Structured content (optional, for outputSchema support) */
+    structuredContent?: Record<string, unknown>;
+}
 
 /**
- * Error response type - convenience type for error responses
+ * Alias for Response - for clarity when referring to MCP tool results
  */
-export type ErrorResponse = Response<null> & { error: string };
+export type McpToolResult = Response;
 
 /**
  * Tool handler type definition

@@ -73,7 +73,7 @@ export class CacheInterceptor implements Interceptor {
             }
 
             // Cache response if successful and status code is 200
-            if (response.statusCode === 200 && !response.response.error) {
+            if (response.statusCode === 200 && !response.response.isError) {
                 ResponseCache.set(request.toolName, request.params, response.response);
                 log.info(`Cached response for ${request.toolName}`);
             }

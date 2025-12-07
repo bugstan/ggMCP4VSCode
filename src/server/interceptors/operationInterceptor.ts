@@ -74,7 +74,7 @@ export class OperationInterceptor implements Interceptor {
             const duration = endTime - startTime;
 
             // Log operation results
-            const status = response.response.error ? 'ERROR' : 'SUCCESS';
+            const status = response.response.isError ? 'ERROR' : 'SUCCESS';
             log.debug(
                 `Operation ${request.toolName} completed: ${status} (${duration.toFixed(2)}ms)`
             );
