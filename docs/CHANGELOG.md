@@ -2,7 +2,7 @@
 
 All notable changes to the GG MCP for VSCode extension will be documented in this file.
 
-## [1.1.2] - 2025-12-07
+## [1.2.0] - 2025-12-07
 
 ### Added
 - New `replace_specific_text` tool for replacing specific text occurrences in files
