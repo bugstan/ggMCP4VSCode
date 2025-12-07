@@ -46,7 +46,6 @@ tmp/
 
 # Workspace files not needed for publishing
 *.code-workspace
-/test/
 /x-plan/
 /.cursor/
 /.vscode/
