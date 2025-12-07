@@ -1,23 +1,24 @@
 # GG MCP for VSCode
 
-[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](https://github.com/bugstan/gg-mcp-for-vscode)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/bugstan/gg-mcp-for-vscode/blob/main/LICENSE)
+[![Version](https://img.shields.io/badge/version-1.2.1-blue.svg)](https://github.com/bugstan/ggMCP4VSCode)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/bugstan/ggMCP4VSCode/blob/main/LICENSE)
 [![MCP Compliant](https://img.shields.io/badge/MCP-Fully%20Compliant-success)](https://modelcontextprotocol.io/)
 
-**Supercharge your AI assistants!** verify your code, automate tasks, and let AI agents work directly within VS Code.
+> **Current Version: v1.2.1**
+
+**Supercharge your AI assistants!** Verify your code, automate tasks, and let AI agents work directly within VS Code.
 
 This extension provides a **fully compliant Model Context Protocol (MCP) Server** for VS Code, enabling advanced AI assistants like **Claude Desktop**, **Cursor**, **Windsurf**, and **Antigravity** to directly read, write, and analyze code in your workspace.
 
-![MCP Server Status](https://raw.githubusercontent.com/bugstan/gg-mcp-for-vscode/main/images/status-bar.png)
+![MCP Server Status](https://raw.githubusercontent.com/bugstan/ggMCP4VSCode/main/images/status-bar.png)
 
-## 🆕 What's New in 1.2.0
+## 🆕 What's New in 1.2.1
 
-> **Major Update: Full MCP Compliance & Security**
+> **CI/CD Update: Open VSX Registry Support**
 
-- **✅ Fully MCP Compliant protocols**: Now implements strict **JSON-RPC 2.0**, standard response formats, and tool definitions aligned with official specs.
-- **🔒 Enhanced Security**: Built with "Secure by Design" principles—local binding only (127.0.0.1) and strict Origin validation.
-- **🛠️ 44+ Powerful Tools**: Comprehensive toolset for Files, Git, Terminal, and Debugging operations.
-- **⚡ Improved Performance**: Optimized request handling and file caching.
+- **🌐 Open VSX Publishing**: Now automatically publishes to Open VSX Registry alongside VS Code Marketplace.
+- **✅ Full MCP Compliance**: Strict JSON-RPC 2.0 implementation with standard response formats.
+- **🔒 Enhanced Security**: Local binding only (127.0.0.1) and strict Origin validation.
 
 ## ✨ Key Features
 
