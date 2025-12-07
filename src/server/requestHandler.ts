@@ -30,14 +30,23 @@ export class RequestHandler {
 
     /**
      * Handle tools list request
+     * Returns tool definitions following MCP specification
      * @param res HTTP response object
      */
     public async handleListTools(res: http.ServerResponse): Promise<void> {
         try {
+            // Format tool list according to MCP specification
+            // See: https://modelcontextprotocol.io/docs/concepts/tools#listing-tools
             const toolsList = this.toolManager.getAllTools().map((tool) => ({
                 name: tool.name,
+                // Generate title from name if not provided (convert snake_case to Title Case)
+                title: tool.title || tool.name.split('_').map(word =>
+                    word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+                ).join(' '),
                 description: tool.description,
                 inputSchema: tool.inputSchema,
+                // Include annotations if present
+                ...(tool.annotations && { annotations: tool.annotations }),
             }));
 
             log.info('Tools list requested', { count: toolsList.length });

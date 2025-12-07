@@ -16,12 +16,65 @@ export class MCPService {
     private static readonly serviceName = 'mcp';
 
     /**
-     * Set CORS headers for cross-origin requests
+     * Validate Origin header to prevent DNS rebinding attacks
+     * MCP Security requirement: https://modelcontextprotocol.io/docs/concepts/transports#security-warning
+     * @param origin The Origin header value from the request
+     * @returns true if origin is allowed, false otherwise
      */
-    private static setCorsHeaders(res: http.ServerResponse): void {
-        res.setHeader('Access-Control-Allow-Origin', '*');
+    private static isOriginAllowed(origin: string | undefined): boolean {
+        // If no origin, it's likely a same-origin request or curl/postman - allow it
+        if (!origin) {
+            return true;
+        }
+
+        const allowedOrigins = Defaults.Server.allowedOrigins;
+
+        // If no origins configured, allow all (for backwards compatibility)
+        if (!allowedOrigins || allowedOrigins.length === 0) {
+            return true;
+        }
+
+        // Check if origin matches any allowed pattern
+        return allowedOrigins.some(pattern => {
+            // Support wildcard patterns
+            if (pattern.includes('*')) {
+                const regexPattern = pattern
+                    .replace(/[.+?^${}()|[\]\\]/g, '\\$&')  // Escape special regex chars
+                    .replace(/\*/g, '.*');  // Convert * to regex .*
+                return new RegExp(`^${regexPattern}$`).test(origin);
+            }
+            return pattern === origin;
+        });
+    }
+
+    /**
+     * Set CORS headers for cross-origin requests
+     * MCP Security: Only allows configured origins
+     * @param req HTTP request object
+     * @param res HTTP response object
+     * @returns true if origin is allowed, false if request should be rejected
+     */
+    private static setCorsHeaders(req: http.IncomingMessage, res: http.ServerResponse): boolean {
+        const origin = req.headers['origin'];
+
+        // Validate origin for security
+        if (!this.isOriginAllowed(origin)) {
+            log.warn(`Rejected request from unauthorized origin: ${origin}`);
+            return false;
+        }
+
+        // Set CORS headers with validated origin
+        if (origin) {
+            res.setHeader('Access-Control-Allow-Origin', origin);
+        } else {
+            // For same-origin requests without Origin header, allow all
+            res.setHeader('Access-Control-Allow-Origin', '*');
+        }
         res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Accept');
+        res.setHeader('Access-Control-Max-Age', '86400'); // Cache preflight for 24 hours
+
+        return true;
     }
 
     /**
@@ -47,7 +100,13 @@ export class MCPService {
      */
     static async handleRequest(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
         try {
-            this.setCorsHeaders(res);
+            // Validate origin and set CORS headers
+            const originAllowed = this.setCorsHeaders(req, res);
+            if (!originAllowed) {
+                res.writeHead(403); // Forbidden
+                res.end(JSON.stringify({ error: 'Origin not allowed' }));
+                return;
+            }
 
             if (req.method === 'OPTIONS') {
                 this.handleOptionsRequest(res);

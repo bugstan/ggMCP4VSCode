@@ -86,7 +86,7 @@ export class ServerManager {
             const lastPort = this.getLastSuccessfulPort();
             if (lastPort) {
                 log.info(`Trying last successful port: ${lastPort}`);
-                
+
                 // Check if the last port is still available
                 const isAvailable = await isPortAvailable(lastPort, timeout);
                 if (isAvailable) {
@@ -100,7 +100,7 @@ export class ServerManager {
             // If we couldn't use the last port, find a new one
             if (!port) {
                 // Add last port to preferred ports if available
-                const preferredPorts = lastPort 
+                const preferredPorts = lastPort
                     ? [lastPort, ...config.getPreferredPorts()]
                     : config.getPreferredPorts();
 
@@ -161,7 +161,9 @@ export class ServerManager {
                 return;
             }
 
-            this.server.listen(port, () => {
+            // MCP Security: Only bind to localhost to prevent external access
+            // See: https://modelcontextprotocol.io/docs/concepts/transports#security-warning
+            this.server.listen(port, '127.0.0.1', () => {
                 log.info(`MCP server running on port ${port}`);
 
                 // First update port information

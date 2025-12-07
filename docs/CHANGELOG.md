@@ -37,6 +37,13 @@ All notable changes to the GG MCP for VSCode extension will be documented in thi
 - Fixed potential duplicate interceptor registration with idempotent initialization
 - Added `successRaw()` method to ResponseHandler for clarity on serialization behavior
 
+### Security (MCP Compliance)
+- **Localhost binding**: Server now binds only to `127.0.0.1` instead of all interfaces, following [MCP security guidelines](https://modelcontextprotocol.io/docs/concepts/transports#security-warning)
+- **Origin validation**: Added Origin header validation to prevent DNS rebinding attacks
+- **Improved CORS**: CORS headers now reflect actual request origin instead of wildcard `*`
+- **Tool interface compliance**: Added `title` and `annotations` optional fields to McpTool interface per MCP specification
+- **Tool list response**: Now includes `title` field (auto-generated from name if not provided) and `annotations` when present
+
 ## [1.1.1] - 2025-03-30
 
 ### Added

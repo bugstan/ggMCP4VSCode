@@ -20,6 +20,17 @@ export const Defaults = {
         requestTimeout: 30000,
         /** Server startup retry count */
         startupRetries: 3,
+        /**
+         * MCP Security: Only bind to localhost (127.0.0.1) instead of all interfaces (0.0.0.0)
+         * See: https://modelcontextprotocol.io/docs/concepts/transports#security-warning
+         */
+        bindToLocalhost: true,
+        /**
+         * Allowed Origins for CORS validation
+         * MCP Security: Validates Origin header to prevent DNS rebinding attacks
+         * Empty array means accept all origins (not recommended for production)
+         */
+        allowedOrigins: ['vscode-webview://*', 'http://localhost:*', 'http://127.0.0.1:*'],
     },
 
     /** Port scanner configuration */
