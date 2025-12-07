@@ -6,11 +6,11 @@
     "publisher": "bugstan",
     "repository": {
         "type": "git",
-        "url": "https://github.com/bugstan/ggMCP4VSCode.git"
+        "url": "https://github.com/n2ns/ggMCP4VSCode.git"
     },
-    "homepage": "https://github.com/bugstan/ggMCP4VSCode",
+    "homepage": "https://github.com/n2ns/ggMCP4VSCode",
     "bugs": {
-        "url": "https://github.com/bugstan/ggMCP4VSCode/issues"
+        "url": "https://github.com/n2ns/ggMCP4VSCode/issues"
     },
     "license": "MIT",
     "engines": {

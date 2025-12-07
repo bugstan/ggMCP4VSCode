@@ -37,7 +37,7 @@
 
 1. 克隆仓库：
    ```bash
-   git clone https://github.com/bugstan/ggMCP4VSCode.git
+   git clone https://github.com/n2ns/ggMCP4VSCode.git
    cd ggMCP4VSCode
    ```
 

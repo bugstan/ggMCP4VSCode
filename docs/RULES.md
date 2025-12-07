@@ -2,6 +2,56 @@
 
 This document outlines the development rules and conventions for the ggMCP4VSCode project.
 
+## ⚠️ CRITICAL: Extension Identity Protection
+
+### Published Platforms
+
+This extension is published to the following platforms:
+
+| Platform | Extension ID | URL |
+|----------|--------------|-----|
+| **VS Code Marketplace** | `bugstan.gg-mcp-for-vscode` | https://marketplace.visualstudio.com/items?itemName=bugstan.gg-mcp-for-vscode |
+| **Open VSX Registry** | `bugstan.gg-mcp-for-vscode` | https://open-vsx.org/extension/bugstan/gg-mcp-for-vscode |
+
+### Publisher and Extension Name (DO NOT MODIFY)
+
+The following fields in `package.json` are **PERMANENTLY LOCKED** and MUST NEVER be changed:
+
+```json
+{
+  "name": "gg-mcp-for-vscode",
+  "publisher": "bugstan"
+}
+```
+
+**Reason**: This extension is published to VS Code Marketplace. Changing these fields would:
+- Create a completely new extension on VS Code Marketplace
+- Break all existing users' installations (no auto-update)
+- Lose all download statistics, ratings, and reviews
+- Users would have to manually uninstall old and install new extension
+
+### What CAN Be Changed
+
+| Field | Can Change? | Notes |
+|-------|-------------|-------|
+| `name` | ❌ NO | Extension ID component |
+| `publisher` | ❌ NO | Extension ID component |
+| `displayName` | ✅ YES | User-facing name |
+| `version` | ✅ YES | Follow semver |
+| `repository.url` | ✅ YES | GitHub URL can change |
+| `homepage` | ✅ YES | GitHub URL can change |
+| `bugs.url` | ✅ YES | GitHub URL can change |
+| `description` | ✅ YES | Can update |
+
+### Repository Migration Notes
+
+This project was migrated from `github.com/bugstan/ggMCP4VSCode` to `github.com/n2ns/ggMCP4VSCode`.
+
+- **GitHub repository**: `n2ns/ggMCP4VSCode` (new)
+- **VS Code Marketplace ID**: `bugstan.gg-mcp-for-vscode` (unchanged, must remain)
+
+---
+
 ## Code Quality Tools
 
 ### ESLint: Not Required

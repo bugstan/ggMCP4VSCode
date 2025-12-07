@@ -2,8 +2,8 @@
 
 [🇨🇳 中文文档](docs/README-zh.md) | [🇺🇸 English](README.md)
 
-[![Version](https://img.shields.io/badge/version-1.2.4-blue.svg)](https://github.com/bugstan/ggMCP4VSCode)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/bugstan/ggMCP4VSCode/blob/main/LICENSE)
+[![Version](https://img.shields.io/badge/version-1.2.4-blue.svg)](https://github.com/n2ns/ggMCP4VSCode)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/n2ns/ggMCP4VSCode/blob/main/LICENSE)
 [![MCP Compliant](https://img.shields.io/badge/MCP-Fully%20Compliant-success)](https://modelcontextprotocol.io/)
 
 [![VS Code Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/bugstan.gg-mcp-for-vscode?label=VS%20Code)](https://marketplace.visualstudio.com/items?itemName=bugstan.gg-mcp-for-vscode)
@@ -17,7 +17,7 @@
 
 This extension provides a **fully compliant Model Context Protocol (MCP) Server** for VS Code, enabling advanced AI assistants like **Claude Desktop**, **Cursor**, **Windsurf**, and **Antigravity** to directly read, write, and analyze code in your workspace.
 
-![MCP Server Status](https://raw.githubusercontent.com/bugstan/ggMCP4VSCode/main/images/status-bar.png)
+![MCP Server Status](https://raw.githubusercontent.com/n2ns/ggMCP4VSCode/main/images/status-bar.png)
 
 
 ## ✨ Key Features
@@ -101,8 +101,8 @@ Find all options by searching for "ggMCP" in VS Code settings:
 
 ## 🔗 Links
 
-- [GitHub Repository](https://github.com/bugstan/gg-mcp-for-vscode)
-- [Report Issues](https://github.com/bugstan/gg-mcp-for-vscode/issues)
+- [GitHub Repository](https://github.com/n2ns/ggMCP4VSCode)
+- [Report Issues](https://github.com/n2ns/ggMCP4VSCode/issues)
 - [Model Context Protocol Specification](https://github.com/microsoft/model-context-protocol)
 
 ## 📝 License
@@ -128,4 +128,4 @@ Find all options by searching for "ggMCP" in VS Code settings:
 
 For complete API documentation with examples, see [INTERFACE.md](docs/INTERFACE.md).
 
-For technical details and source code, visit our [GitHub repository](https://github.com/bugstan/gg-mcp-for-vscode).
+For technical details and source code, visit our [GitHub repository](https://github.com/n2ns/ggMCP4VSCode).

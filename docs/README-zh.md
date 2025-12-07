@@ -2,8 +2,8 @@
 
 [🇺🇸 English Document](../README.md)
 
-[![Version](https://img.shields.io/badge/version-1.2.4-blue.svg)](https://github.com/bugstan/gg-mcp-for-vscode)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/bugstan/gg-mcp-for-vscode/blob/main/LICENSE)
+[![Version](https://img.shields.io/badge/version-1.2.4-blue.svg)](https://github.com/n2ns/ggMCP4VSCode)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/n2ns/ggMCP4VSCode/blob/main/LICENSE)
 
 [![VS Code Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/bugstan.gg-mcp-for-vscode?label=VS%20Code)](https://marketplace.visualstudio.com/items?itemName=bugstan.gg-mcp-for-vscode)
 [![Open VSX Version](https://img.shields.io/open-vsx/v/bugstan/gg-mcp-for-vscode?label=Open%20VSX)](https://open-vsx.org/extension/bugstan/gg-mcp-for-vscode)
@@ -13,7 +13,7 @@
 
 VSCode AI 助手!这个扩展启用了一个模型上下文协议(MCP)服务器,允许 AI 助手直接与您的 VSCode 环境交互。
 
-![MCP Server Status](https://raw.githubusercontent.com/bugstan/gg-mcp-for-vscode/main/images/status-bar.png)
+![MCP Server Status](https://raw.githubusercontent.com/n2ns/ggMCP4VSCode/main/images/status-bar.png)
 
 ## ✨ 主要特性
 
@@ -54,7 +54,7 @@ VSCode AI 助手!这个扩展启用了一个模型上下文协议(MCP)服务器,
     - 接受并执行来自 Claude 的开发指令
     - 通过 Claude 的 AI 能力实现自动化编码辅助
     - 让 Claude 在适当的权限下直接读取和修改您的代码库
-- **MCPxHub**: 为获得更好的体验,请与 [MCPxHub](https://github.com/bugstan/MCPxHub) 插件一起使用
+- **MCPxHub**: 为获得更好的体验,请与 [MCPxHub](https://github.com/n2ns/MCPxHub) 插件一起使用
 
 ### 3. 验证服务器是否正在运行
 
@@ -110,8 +110,8 @@ VSCode AI 助手!这个扩展启用了一个模型上下文协议(MCP)服务器,
 
 ## 🔗 链接
 
-- [GitHub Repository](https://github.com/bugstan/gg-mcp-for-vscode)
-- [Report Issues](https://github.com/bugstan/gg-mcp-for-vscode/issues)
+- [GitHub Repository](https://github.com/n2ns/ggMCP4VSCode)
+- [Report Issues](https://github.com/n2ns/ggMCP4VSCode/issues)
 - [Model Context Protocol Specification](https://github.com/microsoft/model-context-protocol)
 
 ## 📝 许可
@@ -137,4 +137,4 @@ VSCode AI 助手!这个扩展启用了一个模型上下文协议(MCP)服务器,
 
 完整的 API 文档和示例，请参阅 [INTERFACE.md](docs/INTERFACE.md)。
 
-技术细节和源代码，请访问我们的 [GitHub 仓库](https://github.com/bugstan/gg-mcp-for-vscode)。
+技术细节和源代码，请访问我们的 [GitHub 仓库](https://github.com/n2ns/ggMCP4VSCode)。

@@ -37,7 +37,7 @@ If you want to contribute code directly, please follow these steps:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/bugstan/ggMCP4VSCode.git
+   git clone https://github.com/n2ns/ggMCP4VSCode.git
    cd ggMCP4VSCode
    ```
 
