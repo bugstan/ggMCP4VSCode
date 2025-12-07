@@ -39,13 +39,15 @@ ${colors.yellow}Available Test Commands:${colors.reset}
 
   ${colors.green}File Operations:${colors.reset}
     get_file_text_by_path   - Read file content
+    rewrite_file_content    - Rewrite entire file content
     list_files_in_folder    - List directory contents
     find_files_by_name_substring - Search files by name
 
   ${colors.green}Editor Operations:${colors.reset}
-    get_current_file_text   - Get active editor content
-    get_all_open_file_paths - List all open files
-    get_selected_text       - Get selected text
+    get_open_in_editor_file_text - Get active editor content
+    get_open_in_editor_file_path - Get active editor file path
+    replace_selected_text   - Replace selected text
+    replace_current_file_text - Replace current file content
 
   ${colors.green}Git Operations:${colors.reset}
     get_project_vcs_status  - Get VCS status

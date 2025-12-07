@@ -1,4 +1,4 @@
-const { findMCPServerPort, makeRequest, colors, getStandardApiPath } = require('./utils');
+const { findMCPServerPort, makeRequest, colors, buildJsonRpcRequest } = require('./utils');
 
 /**
  * Test get available tools list
@@ -8,17 +8,20 @@ async function testListTools(port) {
     console.log(`\n========== Test Get Available Tools ==========`);
     
     try {
-        // Get standard API path
-        const apiPath = getStandardApiPath('list_tools');
+        // Use root API path
+        const apiPath = '/';
+        
+        // Build JSON-RPC request
+        const body = buildJsonRpcRequest('tools/list', {});
         
         // Display API endpoint (blue)
         console.log(`\n${colors.blue}API Endpoint: http://localhost:${port}${apiPath}${colors.reset}`);
         
         // Show request information
-        console.log(`\nOriginal Request: None`);
+        console.log(`\nOriginal Request:\n${JSON.stringify(body, null, 2)}`);
         
         // Send request
-        const response = await makeRequest(port, apiPath, 'GET');
+        const response = await makeRequest(port, apiPath, 'POST', body);
         
         // Add port to response for display purposes
         response.port = port;

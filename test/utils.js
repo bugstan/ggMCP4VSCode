@@ -42,10 +42,22 @@ const config = {
         end: 9990
     },
     paths: {
-        standard: '/api/mcp/',
-        alternative: '/mcp/'
+        standard: '/',
+        alternative: '/'
     }
 };
+
+/**
+ * Build JSON-RPC 2.0 request body
+ */
+function buildJsonRpcRequest(method, params = {}, id = 1) {
+    return {
+        jsonrpc: "2.0",
+        method: method,
+        params: params,
+        id: id
+    };
+}
 
 /**
  * Get port from command line arguments, if not provided return null
@@ -107,6 +119,7 @@ async function makeRequest(port, path, method, body = null) {
             });
 
             res.on('end', () => {
+                // For JSON-RPC, 200 is always returned even for application errors
                 if (res.statusCode >= 200 && res.statusCode < 300) {
                     try {
                         const originalResponseText = data;
@@ -157,17 +170,21 @@ async function makeRequest(port, path, method, body = null) {
 }
 
 /**
- * Build request body
+ * Build request body (Deprecated, use buildJsonRpcRequest)
  */
 function buildRequestBody(toolName, args = {}) {
-    return args;
+    return buildJsonRpcRequest('tools/call', {
+        name: toolName,
+        arguments: args
+    });
 }
 
 /**
- * Get standard API path
+ * Get standard API path (Deprecated/Modified)
  */
 function getStandardApiPath(methodName) {
-    return config.paths.standard + methodName;
+    // For JSON-RPC, the path is usually root, method is in body
+    return '/'; 
 }
 
 /**
@@ -182,6 +199,7 @@ function displayResponse(response) {
     console.log(`\nOriginal Request:${requestBody ? '\n' + JSON.stringify(requestBody, null, 2) : ' None'}`);
 
     // Display original response (green for success, red for failure)
+    // Check JSON-RPC specific error
     const isSuccess = response.statusCode >= 200 && response.statusCode < 300 && 
                      (!response.parsedResponse || !response.parsedResponse.error);
     
@@ -201,6 +219,7 @@ module.exports = {
     findMCPServerPort,
     makeRequest,
     buildRequestBody,
+    buildJsonRpcRequest,
     displayResponse,
     getPortFromArgs,
     colors,

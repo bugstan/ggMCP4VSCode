@@ -8,7 +8,6 @@ tsconfig.json
 *.log
 .github/**
 CONTRIBUTING*
-README-zh.md
 .idea/**
 test/**
 doc/**

@@ -2,6 +2,14 @@
 
 All notable changes to the GG MCP for VSCode extension will be documented in this file.
 
+## [1.2.3] - 2025-12-08
+
+### Changed
+- **Optimization**: Removed ESLint to simplify development workflow and rely on TypeScript.
+- **Fix**: Corrected CRLF line ending issues in `replace_file_content_at_position` tool.
+- **Fix**: Updated and fixed outdated test scripts (e.g., `rewrite_file_content_test.js`).
+- **Documentation**: Standardized documentation structure (moved Chinese docs to `docs/`) and added `RULES.md`.
+
 ## [1.2.1] - 2025-12-07
 
 ### Documentation

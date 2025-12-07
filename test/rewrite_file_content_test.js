@@ -1,14 +1,15 @@
 const { findMCPServerPort, makeRequest, buildRequestBody, displayResponse } = require('./utils');
 
 /**
- * Test get_file_text_by_path tool
+ * Test rewrite_file_content tool
  */
-async function testGetFileTextByPath(port) {
-    console.log(`\n========== Test Get File Text By Path ==========`);
+async function testRewriteFileContent(port) {
+    console.log(`\n========== Test Rewrite File Content ==========`);
 
-    const toolName = 'get_file_text_by_path';
+    const toolName = 'rewrite_file_content';
     const args = {
-        pathInProject: 'package.json'
+        pathInProject: 'test_output.txt',
+        text: '// Test content - this would replace the file content (Dry Run Test)'
     };
 
     // Build JSON-RPC request body
@@ -29,8 +30,8 @@ async function testGetFileTextByPath(port) {
 if (require.main === module) {
     (async () => {
         const port = await findMCPServerPort();
-        await testGetFileTextByPath(port);
+        await testRewriteFileContent(port);
     })();
 }
 
-module.exports = { testGetFileTextByPath };
+module.exports = { testRewriteFileContent };

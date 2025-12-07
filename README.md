@@ -1,8 +1,15 @@
 # GG MCP for VSCode
 
+[🇨🇳 中文文档](docs/README-zh.md) | [🇺🇸 English](README.md)
+
 [![Version](https://img.shields.io/badge/version-1.2.3-blue.svg)](https://github.com/bugstan/ggMCP4VSCode)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/bugstan/ggMCP4VSCode/blob/main/LICENSE)
 [![MCP Compliant](https://img.shields.io/badge/MCP-Fully%20Compliant-success)](https://modelcontextprotocol.io/)
+
+[![VS Code Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/bugstan.gg-mcp-for-vscode?label=VS%20Code)](https://marketplace.visualstudio.com/items?itemName=bugstan.gg-mcp-for-vscode)
+[![VS Code Marketplace Downloads](https://img.shields.io/visual-studio-marketplace/d/bugstan.gg-mcp-for-vscode)](https://marketplace.visualstudio.com/items?itemName=bugstan.gg-mcp-for-vscode)
+[![Open VSX Version](https://img.shields.io/open-vsx/v/bugstan/gg-mcp-for-vscode?label=Open%20VSX)](https://open-vsx.org/extension/bugstan/gg-mcp-for-vscode)
+[![Open VSX Downloads](https://img.shields.io/open-vsx/dt/bugstan/gg-mcp-for-vscode?label=Downloads)](https://open-vsx.org/extension/bugstan/gg-mcp-for-vscode)
 
 > **Current Version: v1.2.3**
 
@@ -12,13 +19,6 @@ This extension provides a **fully compliant Model Context Protocol (MCP) Server*
 
 ![MCP Server Status](https://raw.githubusercontent.com/bugstan/ggMCP4VSCode/main/images/status-bar.png)
 
-## 🆕 What's New in 1.2.3
-
-> **CI/CD Update: Open VSX Registry Support**
-
-- **🌐 Open VSX Publishing**: Now automatically publishes to Open VSX Registry alongside VS Code Marketplace.
-- **✅ Full MCP Compliance**: Strict JSON-RPC 2.0 implementation with standard response formats.
-- **🔒 Enhanced Security**: Local binding only (127.0.0.1) and strict Origin validation.
 
 ## ✨ Key Features
 

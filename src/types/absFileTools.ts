@@ -153,6 +153,37 @@ export abstract class AbsFileTools<T extends Record<string, any> = any> extends 
     }
 
     /**
+     * Adapt line endings of new content to match the original file's format.
+     * This ensures that when AI sends content (which may use LF), it gets converted
+     * to match the original file's line ending format (CRLF or LF).
+     * 
+     * @param originalContent The original file content (used to detect line ending format)
+     * @param newContent The new content from AI to be adapted
+     * @returns The new content with line endings matching the original file
+     */
+    protected adaptLineEndings(originalContent: string, newContent: string): string {
+        // Quick check: does original file use CRLF?
+        const originalIsCRLF = originalContent.includes('\r\n');
+        
+        // Quick check: does new content already match?
+        const newHasCRLF = newContent.includes('\r\n');
+        const newHasLF = newContent.includes('\n');
+        
+        // If original is CRLF and new content only has LF (no CR), convert to CRLF
+        if (originalIsCRLF && newHasLF && !newHasCRLF) {
+            return newContent.replace(/\n/g, '\r\n');
+        }
+        
+        // If original is LF and new content has CRLF, convert to LF
+        if (!originalIsCRLF && newHasCRLF) {
+            return newContent.replace(/\r\n/g, '\n');
+        }
+        
+        // Otherwise, return as-is (already matches or no line endings)
+        return newContent;
+    }
+
+    /**
      * Check if file is likely to be binary (by extension)
      */
     protected isProbablyBinaryFile(filePath: string): boolean {

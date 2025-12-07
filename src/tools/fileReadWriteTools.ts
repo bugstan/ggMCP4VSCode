@@ -305,7 +305,13 @@ export class ReplaceFileContentAtPositionTool extends AbsFileTools<
 
             // Read current file content
             const currentContent = await this.readFile(fileUri);
-            const lines = currentContent.split('\n');
+            
+            // Detect original line ending format
+            const originalLineEnding = currentContent.includes('\r\n') ? '\r\n' : '\n';
+            
+            // Normalize to LF for processing (preserves line structure)
+            const normalizedContent = currentContent.replace(/\r\n/g, '\n');
+            const lines = normalizedContent.split('\n');
 
             // Validate line numbers
             if (startLine < 1 || endLine > lines.length || startLine > endLine) {
@@ -316,21 +322,24 @@ export class ReplaceFileContentAtPositionTool extends AbsFileTools<
             const startIndex = startLine - 1;
             const endIndex = endLine - 1;
 
+            // Adapt the incoming content's line endings to LF for consistent processing
+            const adaptedContent = content.replace(/\r\n/g, '\n');
+
             // Replace content at specified position
             if (startLine === endLine) {
                 // Single line replacement
                 const lineToModify = lines[startIndex] as string;
                 lines[startIndex] = lineToModify.substring(0, offset) +
-                    content +
-                    lineToModify.substring(offset + content.length);
+                    adaptedContent +
+                    lineToModify.substring(offset + adaptedContent.length);
             } else {
                 // Multi-line replacement
-                const newLines = content.split('\n');
+                const newLines = adaptedContent.split('\n');
                 lines.splice(startIndex, endIndex - startIndex + 1, ...newLines);
             }
 
-            // Join lines back together
-            const newContent = lines.join('\n');
+            // Join lines back together with original line ending format
+            const newContent = lines.join(originalLineEnding);
 
             // Write updated content
             await this.writeFileSimple(fileUri, newContent, {
@@ -409,8 +418,11 @@ export class AppendFileContentTool extends AbsFileTools<ToolParams['appendFileCo
             // Read existing content
             const existingContent = await this.readFile(fileUri);
 
+            // Adapt the new content's line endings to match the existing file
+            const adaptedContent = this.adaptLineEndings(existingContent, content);
+
             // Append new content
-            const newContent = existingContent + content;
+            const newContent = existingContent + adaptedContent;
 
             // Write back to file
             await this.writeFileSimple(fileUri, newContent, {
