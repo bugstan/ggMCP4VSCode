@@ -69,10 +69,10 @@ function updateStatusBar(): void {
             statusBarItem.backgroundColor = undefined;
             break;
         case 'running':
-            statusBarItem.text = '$(zap) MCP Server';
+            statusBarItem.text = `$(plug) ${currentServerPort || 'MCP Server'}`;
             statusBarItem.tooltip = currentServerPort
-                ? `MCP Server running on port ${currentServerPort}, using /mcp/ path`
-                : 'MCP Server is running';
+                ? `GGServer running on port ${currentServerPort}, click to restart`
+                : 'GGServer is running, click to restart';
             statusBarItem.backgroundColor = undefined;
             break;
         case 'error':
@@ -192,7 +192,7 @@ export function activate(context: vscode.ExtensionContext) {
 
         // Start new server and save reference
         serverDisposable = startMCPServer(context, newPortStart, newPortEnd);
-        vscode.window.showInformationMessage('MCP Server has been restarted');
+        vscode.window.setStatusBarMessage('MCP Server has been restarted', 3000);
         log.info('Server has been restarted');
     });
 
@@ -200,7 +200,8 @@ export function activate(context: vscode.ExtensionContext) {
     const errorCommand = vscode.commands.registerCommand('ggMCP.reportError', (error: string) => {
         log.error('Server reported error:', error);
         updateServerStatus('error', error);
-        vscode.window.showErrorMessage(`MCP Server error: ${error}`);
+        // Silenced error notification as per user request
+        // vscode.window.showErrorMessage(`MCP Server error: ${error}`);
     });
 
     // Register command: Server status update
@@ -247,9 +248,7 @@ export function activate(context: vscode.ExtensionContext) {
                     old: `${portStart}-${portEnd}`,
                     new: `${newPortStart}-${newPortEnd}`,
                 });
-                vscode.window.showInformationMessage(
-                    `Port configuration has changed, restarting MCP server...`
-                );
+                vscode.window.setStatusBarMessage(`Port configuration has changed, restarting MCP server...`, 3000);
 
                 // Restart server
                 if (serverDisposable) {

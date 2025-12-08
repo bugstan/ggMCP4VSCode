@@ -2,6 +2,13 @@
 
 All notable changes to the GG MCP for VSCode extension will be documented in this file.
 
+## [1.3.0] - 2024-12-09
+### Changed
+- **UX**: Replaced modal dialogs with status bar messages for server startup, retries, and manual restarts.
+- **Port Management**: Added runtime port blacklist and automatic cache clearing to resolve port conflicts.
+- **UI**: Status bar now displays the active server port number.
+- **Dependencies**: Updated `@types/node` to ^20.19.25, `typescript` to ^5.9.3, `@vscode/vsce` to ^3.7.1.
+
 ## [1.2.4] - 2024-12-08
 
 ### Changed

@@ -18,6 +18,7 @@ export class ServerManager {
     private server: http.Server | null = null;
     private isDisposed = false;
     private extensionContext: vscode.ExtensionContext | null = null;
+    private failedPorts = new Set<number>(); // Track ports that failed to bind
 
     /**
      * Initialize server manager with extension context for storage
@@ -84,7 +85,8 @@ export class ServerManager {
 
             // First try last successful port if available
             const lastPort = this.getLastSuccessfulPort();
-            if (lastPort) {
+            // Check if lastPort exists AND has not failed recently
+            if (lastPort && !this.failedPorts.has(lastPort)) {
                 log.info(`Trying last successful port: ${lastPort}`);
 
                 // Check if the last port is still available
@@ -95,6 +97,8 @@ export class ServerManager {
                 } else {
                     log.info(`Last port ${lastPort} is no longer available, searching for new port`);
                 }
+            } else if (lastPort && this.failedPorts.has(lastPort)) {
+                log.info(`Last port ${lastPort} is in failed list, skipping`);
             }
 
             // If we couldn't use the last port, find a new one
@@ -104,12 +108,19 @@ export class ServerManager {
                     ? [lastPort, ...config.getPreferredPorts()]
                     : config.getPreferredPorts();
 
+                // Combine excluded ports (from config) with runtime failed ports
+                const runtimeExcluded = Array.from(this.failedPorts);
+
+                log.info(`Scanning with excluded ports: ${runtimeExcluded.join(', ')}`);
+
                 // Find available port using configuration options
                 port = await findAvailablePort(portStart, portEnd, {
                     timeout,
                     concurrency,
                     retries,
                     preferredPorts: preferredPorts,
+                    // Critical: Exclude ports that have already failed in this session
+                    exclude: runtimeExcluded,
                 });
             }
 
@@ -117,7 +128,8 @@ export class ServerManager {
                 const errorMsg = `Could not find available port in range ${portStart}-${portEnd}`;
                 log.error(errorMsg);
                 vscode.commands.executeCommand('ggMCP.reportError', errorMsg);
-                vscode.window.showErrorMessage(errorMsg);
+                // vscode.window.showErrorMessage(errorMsg);
+                vscode.window.setStatusBarMessage(`MCP Server Error: ${errorMsg}`, 5000);
                 return { dispose: () => {} };
             }
 
@@ -133,7 +145,7 @@ export class ServerManager {
 
             // Set up error handling
             this.server.on('error', (err: Error) =>
-                this.handleServerError(err, portStart, portEnd)
+                this.handleServerError(err, portStart, portEnd, port)
             );
 
             // Start listening on the port
@@ -141,6 +153,10 @@ export class ServerManager {
 
             // Save successful port for future use
             this.saveSuccessfulPort(port);
+
+            // Clear failed ports on successful start?
+            // Maybe not, to avoid oscillating between bad ports.
+            // But if we successfully bound, it means this port is good now.
 
             return {
                 dispose: () => this.dispose(),
@@ -174,7 +190,7 @@ export class ServerManager {
                 vscode.commands.executeCommand('ggMCP.updateServerStatus', 'running');
 
                 // Finally show notification
-                vscode.window.showInformationMessage(`MCP server started, port: ${port}`);
+                // vscode.window.showInformationMessage(`MCP server started, port: ${port}`);
 
                 log.info('Server status updated to running');
 
@@ -196,12 +212,37 @@ export class ServerManager {
     /**
      * Handle server errors
      */
-    private handleServerError(err: Error, portStart: number, portEnd: number): void {
+    private handleServerError(err: Error, portStart: number, portEnd: number, currentPort: number | null = null): void {
         log.error('MCP server error:', err);
         vscode.commands.executeCommand('ggMCP.reportError', err.message);
-        vscode.window.showErrorMessage(`MCP server error: ${err.message}`);
+
+        // check if port is in use
+        const code = (err as any).code;
+        const message = err.message || '';
+        const isPortInUse = code === 'EADDRINUSE' || message.includes('EADDRINUSE');
+
+        // Logic to suppress notification is now handled globally by silencing reportError in extension.ts
+        // But we double ensure it here by not calling showErrorMessage directly either.
+
+        if (isPortInUse) {
+            log.info('Port already in use, suppressing notification and will attempt restart');
+
+            // Critical fix 1: Clear the last successful port from storage
+            if (this.extensionContext) {
+                this.extensionContext.globalState.update(LAST_PORT_STORAGE_KEY, undefined);
+            }
+
+            // Critical fix 2: Add current port to failed blacklist to prevent reuse
+            if (currentPort) {
+                this.failedPorts.add(currentPort);
+                log.info(`Added port ${currentPort} to runtime failed list. Current failed ports: ${Array.from(this.failedPorts).join(', ')}`);
+            }
+        }
 
         if (!this.isDisposed) {
+            // If port is in use, retry faster (e.g. 1s) compared to other errors (5s)
+            const retryDelay = isPortInUse ? 1000 : 5000;
+
             setTimeout(() => {
                 if (!this.isDisposed && this.server) {
                     log.info('Attempting to automatically restart MCP server...');
@@ -211,7 +252,7 @@ export class ServerManager {
                         log.error('Failed to restart server:', restartErr);
                     });
                 }
-            }, 5000);
+            }, retryDelay);
         }
     }
 
@@ -222,7 +263,8 @@ export class ServerManager {
         const errorMsg = error instanceof Error ? error.message : String(error);
         log.error('Error starting MCP server:', error);
         vscode.commands.executeCommand('ggMCP.reportError', `Start failed: ${errorMsg}`);
-        vscode.window.showErrorMessage(`Error starting MCP server: ${errorMsg}`);
+        // vscode.window.showErrorMessage(`Error starting MCP server: ${errorMsg}`);
+        vscode.window.setStatusBarMessage(`Error starting MCP server: ${errorMsg}`, 5000);
 
         if (this.server) {
             this.server.close();

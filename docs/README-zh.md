@@ -2,44 +2,41 @@
 
 [🇺🇸 English Document](../README.md)
 
-[![Version](https://img.shields.io/badge/version-1.2.4-blue.svg)](https://github.com/n2ns/ggMCP4VSCode)
+[![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)](https://github.com/n2ns/ggMCP4VSCode)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/n2ns/ggMCP4VSCode/blob/main/LICENSE)
+[![MCP Compliant](https://img.shields.io/badge/MCP-Fully%20Compliant-success)](https://modelcontextprotocol.io/)
 
 [![VS Code Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/bugstan.gg-mcp-for-vscode?label=VS%20Code)](https://marketplace.visualstudio.com/items?itemName=bugstan.gg-mcp-for-vscode)
+[![VS Code Marketplace Downloads](https://img.shields.io/visual-studio-marketplace/d/bugstan.gg-mcp-for-vscode)](https://marketplace.visualstudio.com/items?itemName=bugstan.gg-mcp-for-vscode)
 [![Open VSX Version](https://img.shields.io/open-vsx/v/bugstan/gg-mcp-for-vscode?label=Open%20VSX)](https://open-vsx.org/extension/bugstan/gg-mcp-for-vscode)
+[![Open VSX Downloads](https://img.shields.io/open-vsx/dt/bugstan/gg-mcp-for-vscode?label=Downloads)](https://open-vsx.org/extension/bugstan/gg-mcp-for-vscode)
 
 
+**为 AI 助手启用 MCP 支持。** 让 **Claude Desktop** 直接在您的 IDE 中工作。
 
+本扩展是一个**符合模型上下文协议 (MCP) 规范的服务器**，支持 **VS Code**、**Cursor**、**Windsurf** 和 **Antigravity**。
 
-VSCode AI 助手!这个扩展启用了一个模型上下文协议(MCP)服务器,允许 AI 助手直接与您的 VSCode 环境交互。
+它充当 Claude Desktop 与您本地代码库之间的桥梁：**Claude Desktop** 发起指令，本扩展作为服务器负责在您的项目中**执行开发工作**（如文件编辑、代码修改和运行命令）。
 
 ![MCP Server Status](https://raw.githubusercontent.com/n2ns/ggMCP4VSCode/main/images/status-bar.png)
 
-## ✨ 主要特性
 
-- **零配置** - 随 VSCode 启动自动开始
-- **44 个强大工具** - 涵盖文件、编辑器、终端、Git 和调试操作的完整工具集
-- **增强 AI 助手** - 使 AI 工具能够阅读、修改和分析您的代码
-- **代码操作** - 让 AI 助手创建、编辑文件,并搜索代码
-- **高级代码分析** - 符号提取、引用查找和代码重构
-- **调试集成** - AI 助手可以帮助管理断点和运行配置
-- **终端操作** - 运行可见和后台命令并捕获输出
-- **完整 Git 集成** - 分支管理、提交、文件历史、差异对比等
-- **跨平台支持** - 适用于 Windows、macOS 和 Linux
-- **兼容 Claude Desktop** - 与 Claude Desktop 完全兼容,实现 AI 驱动的自动化开发
-- **文件缓存** - 高效的缓存机制,提升性能
+## ✨ 核心特性
 
-## 🆕 1.1.2 版新功能
-
-- **新的显示名称** - 重命名为 "GG MCP for VSCode",以提高清晰度和识别度
-- **改进的路径处理** - 通过新的 `pathInProject` 参数实现更好的跨平台兼容性和路径标准化
-- **命令输出捕获** - AI 助手现在可以执行命令并获取其输出
-- **增强的终端工具** - 更好的终端文本访问和命令执行
-- **文件局部替换接口** - 添加了新的 `replace_specific_text` API,用于替换文件中的特定文本
-    - 提供在本地替换特定代码内容的能力
-    - 支持在单行或多行内替换文本
-    - 保留原始格式(如换行符和缩进)
-- **文件缓存机制** - 引入了高效的文件缓存系统,以提高性能并减少冗余的文件读取
+- **多 IDE 支持**：支持 **VS Code**、**Cursor**、**Windsurf** 和 **Antigravity** 等 IDE。
+- **Claude Desktop 集成**：响应 Claude Desktop 的开发请求，支持自动化编程任务。
+- **兼容性**：支持任何符合 MCP 标准的客户端。
+- **零配置**：VS Code 启动时自动开启本地 MCP 服务器。
+- **工具集**：
+  - **📂 文件操作**：读取、写入、创建和修补文件。
+  - **💻 终端控制**：执行命令、运行后台任务并捕获输出。
+  - **🔧 Git 集成**：提交、推送、拉取、查看差异和管理分支。
+  - **🐛 调试支持**：设置断点和管理启动配置。
+  - **🔍 代码分析**：查找符号、引用和定义。
+- **安全架构**：仅绑定本地主机 (Localhost)。
+- **端口管理**：自动解决端口冲突，并使用状态栏消息进行通知。
+- **跨平台支持**：支持 Windows、macOS 和 Linux。
+- **文件缓存**：内置文件内容缓存机制。
 
 ## 🚀 快速开始
 
@@ -50,53 +47,52 @@ VSCode AI 助手!这个扩展启用了一个模型上下文协议(MCP)服务器,
 
 ### 2. 推荐设置
 
-- **Claude Desktop 集成**: 本扩展与 Claude Desktop 完全兼容,允许您:
-    - 接受并执行来自 Claude 的开发指令
-    - 通过 Claude 的 AI 能力实现自动化编码辅助
-    - 让 Claude 在适当的权限下直接读取和修改您的代码库
-- **MCPxHub**: 为获得更好的体验,请与 [MCPxHub](https://github.com/n2ns/MCPxHub) 插件一起使用
+- **Claude Desktop 集成**：本扩展与 Claude Desktop 兼容，功能包括：
+  - 执行来自 Claude 的开发指令
+  - 通过 Claude 实现辅助编码
+  - 允许 Claude 读取和修改代码库
+- **MCPxHub**：建议配合 [MCPxHub](https://github.com/bugstan/MCPxHub) 插件使用
 
 ### 3. 验证服务器是否正在运行
 
-安装后,MCP 服务器会自动启动。查看右下角状态栏:
+安装后，MCP 服务器会自动启动。查看右下角状态栏：
 
 - **🔄 MCP Server** - 服务器正在启动
-- **⚡ MCP Server** - 服务器正在运行
+- **🔌 [端口号]** - 服务器正在运行 (例如 `🔌 9961`)
 - **❌ MCP Server** - 发生错误
 
-单击状态栏项以查看详细信息或重新启动服务器。
+单击状态栏项以查看信息或重新启动服务器。
 
 ### 4. 与 AI 助手一起使用
 
-当与支持 MCP 协议的 AI 助手(如 Claude Desktop)交互时,您现在可以:
-
-- 要求助手查看您当前打开的文件
-- 请求助手修改代码
-- 让助手执行项目任务
-- 让 Claude 根据您的需求自动开发功能
-- 执行终端命令并获取其输出
+当与支持 MCP 协议的 AI 助手（如 Claude Desktop）交互时，可以：
+- 查看当前打开的文件
+- 修改代码
+- 执行项目任务
+- 开发功能
+- 执行终端命令并获取输出
 
 ## 💻 使用 Claude Desktop 进行自动化开发
 
-借助 GG MCP for VSCode 和 Claude Desktop,您可以:
+借助 GG MCP for VSCode 和 Claude Desktop，功能包括：
 
-- 指示 Claude 分析您的整个代码库
-- 让 Claude 自动实现新功能或修复错误
-- 要求 Claude 在保持功能的同时重构代码
-- 让 Claude 对您的代码架构提出改进建议
-- 使用自然语言描述编码任务,让 Claude 处理实现
+- 分析代码库
+- 实现功能或修复错误
+- 重构代码
+- 提出代码架构建议
+- 处理编码任务
 
 ## ⚙️ 配置选项
 
 ### 文件缓存
 
-该扩展现在包含一个智能文件缓存机制:
+该扩展包含文件缓存机制：
 - 减少文件系统读取操作
-- 提高重复文件访问的性能
-- 文件修改时自动使缓存失效
+- 优化文件访问性能
+- 文件修改时清除缓存
 - 可在扩展设置中进行配置
 
-在 VS Code 设置中搜索 "ggMCP" 以找到所有选项:
+在 VS Code 设置中搜索 "ggMCP" 查看选项：
 
 - 端口范围
 - 终端超时
@@ -110,9 +106,9 @@ VSCode AI 助手!这个扩展启用了一个模型上下文协议(MCP)服务器,
 
 ## 🔗 链接
 
-- [GitHub Repository](https://github.com/n2ns/ggMCP4VSCode)
-- [Report Issues](https://github.com/n2ns/ggMCP4VSCode/issues)
-- [Model Context Protocol Specification](https://github.com/microsoft/model-context-protocol)
+- [GitHub 仓库](https://github.com/n2ns/ggMCP4VSCode)
+- [报告问题](https://github.com/n2ns/ggMCP4VSCode/issues)
+- [Model Context Protocol 规范](https://github.com/microsoft/model-context-protocol)
 
 ## 📝 许可
 

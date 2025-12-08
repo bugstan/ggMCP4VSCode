@@ -52,7 +52,7 @@ export const Defaults = {
         /** Default log level */
         level: 'info',
         /** Whether file logging is enabled */
-        enableFileLogging: false,
+        enableFileLogging: true,
         /** Log file path */
         logFilePath: '${workspaceFolder}/.vscode/ggmcp-logs',
         /** Maximum log file size (bytes) */
